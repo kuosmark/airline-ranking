@@ -1,8 +1,9 @@
 import type { ElementRef, OnDestroy, OnInit, QueryList } from '@angular/core';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ViewChildren, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ViewChildren, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import type { Airline, Snapshot } from '../shared/ranking';
 import { rankAirlines } from '../shared/ranking';
+import { formatSnapshotAge } from './snapshot-age';
 
 @Component({
   selector: 'app-root',
@@ -20,6 +21,11 @@ export class AppComponent implements OnInit, OnDestroy {
   private animations: Animation[] = [];
 
   readonly snapshot = signal<Snapshot | null>(null);
+  private readonly now = signal(Date.now());
+  readonly snapshotAge = computed(() => {
+    const snapshot = this.snapshot();
+    return snapshot ? formatSnapshotAge(snapshot.updatedAt, this.now()) : '';
+  });
   readonly error = signal<string | null>(null);
   readonly rows = signal<Airline[]>([]);
   readonly displayedCounts = signal<Record<string, number>>({});
@@ -40,6 +46,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private async loadRanking(): Promise<void> {
+    this.now.set(Date.now());
     try {
       const response = await fetch('/api/ranking', {
         signal: AbortSignal.any([this.abort.signal, AbortSignal.timeout(10_000)]),
@@ -103,7 +110,7 @@ export class AppComponent implements OnInit, OnDestroy {
       const count = row.querySelector('.count');
       if (airline && count && previous[airline.id] !== airline.count) {
         this.animations.push(count.animate([
-          { color: '#176957', backgroundColor: '#e8f3ed' },
+          { color: '#171c24', backgroundColor: '#e9edf1' },
           { color: '#171c24', backgroundColor: 'transparent' },
         ], { duration: 1500, easing: 'ease-out' }));
       }

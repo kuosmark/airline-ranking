@@ -6,7 +6,7 @@ A TypeScript backend fetches a worldwide SkyLink snapshot on startup and every 1
 
 ![Airline leaderboard showing rank movement](docs/preview.png)
 
-Preview uses synthetic snapshots to illustrate up, down, unchanged, and new entries.
+Preview uses synthetic data to illustrate rank indicators and the aircraft-type breakdown.
 
 ## Run locally
 
@@ -34,9 +34,9 @@ npm start
 
 Open http://127.0.0.1:4200. Both services listen on loopback only. Angular proxies `/api/ranking` to the backend on port 3000; the API key stays on the backend.
 
-The browser checks the cache every minute. Row changes and counts animate briefly; reduced-motion preferences disable animation. If an update fails, the last successful ranking and its original timestamp remain visible with a delay notice. Before the first successful snapshot, the UI shows an unavailable message and retries automatically.
+The browser checks the cache every minute. The sticky leaderboard header shows the snapshot age, exact UTC time, and any delay notice while scrolling; the relative age updates on each browser check. Row changes and counts animate briefly; reduced-motion preferences disable animation. If an update fails, the last successful ranking and its original timestamp remain visible with a delay notice. Before the first successful snapshot, the UI shows an unavailable message and retries automatically.
 
-Click an airline to expand its aircraft-type breakdown; only one row is expanded at a time. The same cached snapshot supplies both the total and its breakdown, without extra provider requests. The expanded airline stays open when the ranking changes, and its total updates immediately with its breakdown. Other totals retain their brief count animation.
+Click an airline to expand its aircraft-type breakdown; only one row is expanded at a time. The same cached snapshot supplies both the total and its breakdown, without extra provider requests. The expanded airline stays open when the ranking changes, and its total updates immediately with its breakdown. Other totals retain their brief count animation with a neutral update highlight. Breakdown bars show each type’s share of that operator’s total, alongside the exact counts.
 
 Rank indicators compare each operator's position with the previous successful, distinct snapshot: a green upward caret for a higher rank, a red downward caret for a lower rank, and “New” for an operator absent from the previous top 100 (including returning operators). Unchanged ranks show nothing. Equal aircraft counts still use prefix order, so indicators reflect row position rather than count changes. Screen-reader text describes each indicator.
 
@@ -56,7 +56,7 @@ Run `npm run check` before committing. GitHub Actions runs the same command on p
 | `npm run lint` | Check strict TypeScript rules, Angular conventions, and template accessibility |
 | `npm run lint:fix` | Apply automatic lint fixes |
 | `npm run typecheck:backend` | Type-check the backend and shared ranking types |
-| `npm test` | Test counting, ordering, response validation, caching, and HTTP failure behavior |
+| `npm test` | Test counting, ordering, snapshot ages, response validation, caching, and HTTP failure behavior |
 | `npm run build` | Build the frontend into `dist/airline-ranking` |
 
 Tests use Node's built-in test runner and synthetic data. They do not require an API key or contact SkyLink. Lint warnings fail the check.

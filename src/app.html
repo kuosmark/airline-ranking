@@ -6,14 +6,28 @@
   </header>
 
   <section class="leaderboard" aria-label="Airline leaderboard">
-    <div class="board-heading">
-      <h2>In the air</h2>
-      <span class="refresh-label">15-minute snapshots</span>
+    <div class="board-header">
+      <div class="board-heading">
+        <h2>In the air</h2>
+        <div class="snapshot-status">
+          @if (snapshot(); as currentSnapshot) {
+            <span>Updated {{ snapshotAge() }} <span aria-hidden="true">·</span> Every 15 minutes</span>
+            <time [attr.datetime]="currentSnapshot.updatedAt">{{ currentSnapshot.updatedAt | date: 'd MMM, HH:mm' : 'UTC' }} UTC</time>
+          } @else {
+            <span>Every 15 minutes</span>
+          }
+        </div>
+      </div>
+      @if (snapshot() && (snapshot()?.isStale || error())) {
+        <p class="update-warning" role="status">Updates delayed. Showing the last successful snapshot.</p>
+      }
+      @if (snapshot()) {
+        <div class="column-headings" aria-hidden="true">
+          <span>RANK</span><span>OPERATOR</span><span>AIRBORNE</span><span></span>
+        </div>
+      }
     </div>
     @if (snapshot(); as currentSnapshot) {
-      <div class="column-headings" aria-hidden="true">
-        <span>RANK</span><span>OPERATOR</span><span>AIRBORNE</span>
-      </div>
       <ol>
         @for (airline of rows(); track airline.id; let rank = $index) {
           <li #row [attr.data-id]="airline.id">
@@ -21,39 +35,54 @@
               [attr.aria-expanded]="expandedAirlineId() === airline.id"
               [attr.aria-controls]="'types-' + airline.id">
               <span class="rank">
-                <span aria-hidden="true">{{ rank + 1 | number: '2.0-0' }}</span>
-                @switch (airline.rankMovement) {
-                  @case ('up') {
-                    <span class="rank-caret rank-up" aria-hidden="true"></span>
-                    <span class="visually-hidden">Rank increased since the previous snapshot.</span>
+                <span class="visually-hidden">Rank </span><span>{{ rank + 1 | number: '2.0-0' }}</span>
+                <span class="rank-indicator">
+                  @switch (airline.rankMovement) {
+                    @case ('up') {
+                      <span class="rank-caret rank-up" aria-hidden="true"></span>
+                      <span class="visually-hidden">Rank increased since the previous snapshot.</span>
+                    }
+                    @case ('down') {
+                      <span class="rank-caret rank-down" aria-hidden="true"></span>
+                      <span class="visually-hidden">Rank decreased since the previous snapshot.</span>
+                    }
+                    @case ('new') {
+                      <span class="rank-new" aria-hidden="true">New</span>
+                      <span class="visually-hidden">New to the top 100 since the previous snapshot.</span>
+                    }
                   }
-                  @case ('down') {
-                    <span class="rank-caret rank-down" aria-hidden="true"></span>
-                    <span class="visually-hidden">Rank decreased since the previous snapshot.</span>
-                  }
-                  @case ('new') {
-                    <span class="rank-new" aria-hidden="true">New</span>
-                    <span class="visually-hidden">New to the top 100 since the previous snapshot.</span>
-                  }
-                }
+                </span>
               </span>
-              <span class="airline-name">{{ airline.name }}<span class="chevron" aria-hidden="true"></span></span>
+              <span class="airline-name">{{ airline.name }}</span>
               <span class="count" [attr.aria-label]="airline.count + ' aircraft airborne'">
                 <span aria-hidden="true">{{ (expandedAirlineId() === airline.id ? airline.count : displayedCounts()[airline.id]) | number }}</span>
               </span>
+              <span class="chevron" aria-hidden="true"></span>
             </button>
             @if (expandedAirlineId() === airline.id) {
               <div class="aircraft-details" [id]="'types-' + airline.id" animate.enter="details-enter" animate.leave="details-leave">
                 <div class="details-content">
-                  @if (airline.count === 0) {
-                    <p class="no-aircraft">No aircraft currently observed airborne.</p>
-                  } @else {
-                    <dl aria-label="Aircraft types">
-                      @for (type of airline.aircraftTypes; track type.name) {
-                        <div class="aircraft-type"><dt>{{ type.name }}</dt><dd>{{ type.count | number }}</dd></div>
-                      }
-                    </dl>
-                  }
+                  <div class="details-panel">
+                    <h3>Aircraft types</h3>
+                    @if (airline.count === 0) {
+                      <p class="no-aircraft">No aircraft currently observed airborne.</p>
+                    } @else {
+                      <p class="details-note">Share of this operator’s airborne aircraft</p>
+                      <dl aria-label="Aircraft types">
+                        @for (type of airline.aircraftTypes; track type.name) {
+                          <div class="aircraft-type">
+                            <dt>
+                              {{ type.name }}
+                              <span class="type-track" aria-hidden="true">
+                                <span [style.width.%]="type.count / airline.count * 100"></span>
+                              </span>
+                            </dt>
+                            <dd>{{ type.count | number }}</dd>
+                          </div>
+                        }
+                      </dl>
+                    }
+                  </div>
                 </div>
               </div>
             }
@@ -61,8 +90,8 @@
         }
       </ol>
       <div class="board-footer">
-        <span>Snapshot <time [attr.datetime]="currentSnapshot.updatedAt">{{ currentSnapshot.updatedAt | date: 'd MMM, HH:mm' : 'UTC' }} UTC</time></span>
         <span>{{ currentSnapshot.airlines.length }} operators</span>
+        <span>Rank changes compare snapshots</span>
       </div>
     } @else if (error()) {
       <p class="empty-state" role="alert">{{ error() }}</p>
@@ -71,9 +100,6 @@
     }
   </section>
 
-  @if (snapshot() && (snapshot()?.isStale || error())) {
-    <p class="update-warning" role="status">Updates are delayed. Showing the last successful snapshot.</p>
-  }
   <p class="method-note">Observed by SkyLink; coverage varies. Top 100 by observed airborne aircraft, grouped by callsign prefix. Registration matches are excluded. Unresolved prefixes are shown as codes; operator identity is not guaranteed. Rank indicators compare consecutive snapshots.</p>
   <p class="visually-hidden" role="status">{{ announcement() }}</p>
 </main>
