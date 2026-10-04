@@ -1,17 +1,22 @@
 <main>
   <header class="page-header">
-    <div class="eyebrow">THE VIEW FROM ABOVE</div>
     <h1>Airline Ranking</h1>
-    <p class="subtitle">Observed aircraft airborne</p>
+    <p class="subtitle">Top 100 operators by observed airborne aircraft</p>
+    <p class="data-source">SkyLink observations · Updated every 15 minutes. Coverage varies.</p>
+    <details class="method-details">
+      <summary>How rankings work</summary>
+      <p>Operators are grouped by their callsign prefix, including cargo, regional and private operators. These are observed counts, not complete worldwide totals. Equal counts are ordered by prefix.</p>
+      <p>Callsigns matching aircraft registrations are excluded. Unresolved operators appear as codes; callsigns do not guarantee operator identity. Aircraft types use verified labels where available; unfamiliar model labels remain separate.</p>
+      <p>Arrows compare positions with the previous successful snapshot. NEW means an operator was outside the previous top 100; a dash means no change or no previous comparison. After a delay, the comparison still uses the last successful snapshot.</p>
+      @if (snapshot(); as currentSnapshot) {
+        <p>Snapshot <time [attr.datetime]="currentSnapshot.updatedAt">{{ currentSnapshot.updatedAt | date: 'd MMM, HH:mm' : 'UTC' }} UTC</time></p>
+      }
+    </details>
   </header>
 
-  <div class="snapshot-status">
-    @if (snapshot()) {
-      <span>Updated {{ snapshotAge() }}</span>
-    } @else {
-      <span>Every 15 minutes</span>
-    }
-  </div>
+  @if (snapshot()) {
+    <div class="snapshot-status">Updated {{ snapshotAge() }}</div>
+  }
 
   <section class="leaderboard" aria-label="Airline leaderboard">
     <div class="board-header">
@@ -20,7 +25,7 @@
       }
       @if (snapshot()) {
         <div class="column-headings" aria-hidden="true">
-          <span></span><span>RANK</span><span>OPERATOR</span><span>AIRBORNE</span><span></span>
+          <span></span><span>#</span><span>OPERATOR</span><span>AIRBORNE</span><span></span>
         </div>
       }
     </div>
@@ -54,7 +59,7 @@
               <span class="rank"><span class="visually-hidden">Rank </span>{{ rank + 1 | number: '2.0-0' }}</span>
               <span class="airline-name">{{ airline.name }}</span>
               <span class="count" [attr.aria-label]="airline.count + ' aircraft airborne'">
-                <span aria-hidden="true">{{ (expandedAirlineId() === airline.id ? airline.count : displayedCounts()[airline.id]) | number }}</span>
+                <span aria-hidden="true">{{ airline.count | number }}</span>
               </span>
               <span class="chevron" aria-hidden="true"></span>
             </button>
@@ -66,16 +71,10 @@
                     @if (airline.count === 0) {
                       <p class="no-aircraft">No aircraft currently observed airborne.</p>
                     } @else {
-                      <p class="details-note">Share of this operator’s airborne aircraft</p>
                       <dl aria-label="Aircraft types">
                         @for (type of airline.aircraftTypes; track type.name) {
                           <div class="aircraft-type">
-                            <dt>
-                              {{ type.name }}
-                              <span class="type-track" aria-hidden="true">
-                                <span [style.width.%]="type.count / airline.count * 100"></span>
-                              </span>
-                            </dt>
+                            <dt>{{ type.name }}</dt>
                             <dd>{{ type.count | number }}</dd>
                           </div>
                         }
@@ -88,10 +87,9 @@
           </li>
         }
       </ol>
-      <div class="board-footer">
-        <span>{{ currentSnapshot.airlines.length }} operators</span>
-        <span>Snapshot <time [attr.datetime]="currentSnapshot.updatedAt">{{ currentSnapshot.updatedAt | date: 'd MMM, HH:mm' : 'UTC' }} UTC</time></span>
-      </div>
+      @if (currentSnapshot.airlines.length < 100) {
+        <p class="results-note">Showing {{ currentSnapshot.airlines.length }} of up to 100 operators.</p>
+      }
     } @else if (error()) {
       <p class="empty-state" role="alert">{{ error() }}</p>
     } @else {
@@ -99,6 +97,5 @@
     }
   </section>
 
-  <p class="method-note">Observed by SkyLink; coverage varies. Top 100 by observed airborne aircraft, grouped by callsign prefix. Registration matches are excluded. Unresolved prefixes are shown as codes; operator identity is not guaranteed. Snapshots refresh every 15 minutes. Arrows compare consecutive rankings; a dash means no change or no previous comparison.</p>
   <p class="visually-hidden" role="status">{{ announcement() }}</p>
 </main>
