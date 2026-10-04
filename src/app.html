@@ -17,11 +17,30 @@
       <ol>
         @for (airline of rows(); track airline.id; let rank = $index) {
           <li #row [attr.data-id]="airline.id">
-            <span class="rank" aria-hidden="true">{{ rank + 1 | number: '2.0-0' }}</span>
-            <span class="airline-name">{{ airline.name }}</span>
-            <span class="count" [attr.aria-label]="airline.count + ' aircraft airborne'">
-              <span aria-hidden="true">{{ displayedCounts()[airline.id] | number }}</span>
-            </span>
+            <button class="airline-toggle" type="button" (click)="toggleAirline(airline)"
+              [attr.aria-expanded]="expandedAirlineId() === airline.id"
+              [attr.aria-controls]="'types-' + airline.id">
+              <span class="rank" aria-hidden="true">{{ rank + 1 | number: '2.0-0' }}</span>
+              <span class="airline-name">{{ airline.name }}<span class="chevron" aria-hidden="true"></span></span>
+              <span class="count" [attr.aria-label]="airline.count + ' aircraft airborne'">
+                <span aria-hidden="true">{{ (expandedAirlineId() === airline.id ? airline.count : displayedCounts()[airline.id]) | number }}</span>
+              </span>
+            </button>
+            @if (expandedAirlineId() === airline.id) {
+              <div class="aircraft-details" [id]="'types-' + airline.id" animate.enter="details-enter" animate.leave="details-leave">
+                <div class="details-content">
+                  @if (airline.count === 0) {
+                    <p class="no-aircraft">No aircraft currently observed airborne.</p>
+                  } @else {
+                    <dl aria-label="Aircraft types">
+                      @for (type of airline.aircraftTypes; track type.name) {
+                        <div class="aircraft-type"><dt>{{ type.name }}</dt><dd>{{ type.count | number }}</dd></div>
+                      }
+                    </dl>
+                  }
+                </div>
+              </div>
+            }
           </li>
         }
       </ol>

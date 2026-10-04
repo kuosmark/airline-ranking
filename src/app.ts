@@ -24,6 +24,15 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly rows = signal<Airline[]>([]);
   readonly displayedCounts = signal<Record<string, number>>({});
   readonly announcement = signal('');
+  readonly expandedAirlineId = signal<string | null>(null);
+  private readonly immediateCountIds = new Set<string>();
+
+  toggleAirline(airline: Airline): void {
+    const isExpanded = this.expandedAirlineId() === airline.id;
+    this.expandedAirlineId.set(isExpanded ? null : airline.id);
+    this.immediateCountIds.add(airline.id);
+    this.displayedCounts.update(counts => ({ ...counts, [airline.id]: airline.count }));
+  }
 
   ngOnInit(): void {
     void this.loadRanking();
@@ -62,6 +71,9 @@ export class AppComponent implements OnInit, OnDestroy {
       this.displayedCounts.set(this.counts(snapshot));
       return;
     }
+    this.immediateCountIds.clear();
+    const expandedId = this.expandedAirlineId();
+    if (expandedId) { this.immediateCountIds.add(expandedId); }
     const previous = this.displayedCounts();
     const positions = new Map(this.rowElements.map(({ nativeElement: row }) => [row.dataset['id'], row.getBoundingClientRect().top]));
     this.animations.forEach(animation => { animation.cancel(); });
@@ -101,7 +113,7 @@ export class AppComponent implements OnInit, OnDestroy {
       const eased = 1 - Math.pow(1 - progress, 3);
       this.displayedCounts.set(Object.fromEntries(snapshot.airlines.map(airline => {
         const from = previous[airline.id] ?? airline.count;
-        return [airline.id, Math.round(from + (airline.count - from) * eased)];
+        return [airline.id, this.immediateCountIds.has(airline.id) ? airline.count : Math.round(from + (airline.count - from) * eased)];
       })));
       if (progress < 1) {this.frame = requestAnimationFrame(tick);}
     };

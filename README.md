@@ -34,6 +34,10 @@ Open http://127.0.0.1:4200. Both services listen on loopback only. Angular proxi
 
 The browser checks the cache every minute. Row changes and counts animate briefly; reduced-motion preferences disable animation. If an update fails, the last successful ranking and its original timestamp remain visible with a delay notice. Before the first successful snapshot, the UI shows an unavailable message and retries automatically.
 
+Click an airline to expand its aircraft-type breakdown; only one row is expanded at a time. The same cached snapshot supplies both the total and its breakdown, without extra provider requests. The expanded airline stays open when the ranking changes, and its total updates immediately with its breakdown. Other totals retain their brief count animation.
+
+Aircraft types come from SkyLink's `aircraft_type` field. Common ICAO designators and a few exact model aliases are normalized using the [FAA type table](https://www.faa.gov/air_traffic/publications/atpubs/foa_html/appendix_3.html), with labels in `backend/aircraft-types.ts`. Distinct variants remain separate. Unrecognized labels retain the provider wording with normalized whitespace and capitalization; missing or invalid values become “Unknown type”. Metadata can be incomplete or incorrect, and unfamiliar aliases may remain separate. Breakdown counts always sum to the airline total.
+
 One continuously running backend makes approximately 96 provider requests per day. Every restart adds an immediate request; opening more browser tabs does not trigger more provider requests. Failed requests are retried at the next scheduled refresh.
 
 ## Checks
