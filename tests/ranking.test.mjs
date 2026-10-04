@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { rankAirlines } from '../src/sample-data.ts';
+import { rankAirlines } from '../shared/ranking.ts';
 
 test('ranks airlines by airborne count, highest first', () => {
   const airlines = [

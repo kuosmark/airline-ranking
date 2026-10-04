@@ -1,8 +1,8 @@
-import type { ElementRef, OnDestroy, QueryList} from '@angular/core';
+import type { ElementRef, OnDestroy, OnInit, QueryList } from '@angular/core';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ViewChildren, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import type { Snapshot } from './sample-data';
-import { rankAirlines, samples } from './sample-data';
+import type { Airline, Snapshot } from '../shared/ranking';
+import { rankAirlines } from '../shared/ranking';
 
 @Component({
   selector: 'app-root',
@@ -11,24 +11,44 @@ import { rankAirlines, samples } from './sample-data';
   templateUrl: './app.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AppComponent implements OnDestroy {
+export class AppComponent implements OnInit, OnDestroy {
   @ViewChildren('row') private rowElements!: QueryList<ElementRef<HTMLElement>>;
   private readonly changeDetector = inject(ChangeDetectorRef);
-  private sampleIndex = 0;
+  private readonly abort = new AbortController();
+  private pollTimer?: ReturnType<typeof setInterval>;
   private frame = 0;
   private animations: Animation[] = [];
 
-  readonly snapshot = signal<Snapshot | null>(samples[0]);
+  readonly snapshot = signal<Snapshot | null>(null);
   readonly error = signal<string | null>(null);
-  readonly rows = signal(rankAirlines(samples[0].airlines));
-  readonly displayedCounts = signal<Record<string, number>>(this.counts(samples[0]));
-  readonly updating = signal(false);
+  readonly rows = signal<Airline[]>([]);
+  readonly displayedCounts = signal<Record<string, number>>({});
   readonly announcement = signal('');
 
-  showSampleUpdate(): void {
-    if (this.updating()) {return;}
-    this.sampleIndex = (this.sampleIndex + 1) % samples.length;
-    this.applySnapshot(samples[this.sampleIndex]);
+  ngOnInit(): void {
+    void this.loadRanking();
+    this.pollTimer = setInterval(() => { void this.loadRanking(); }, 60_000);
+  }
+
+  private async loadRanking(): Promise<void> {
+    try {
+      const response = await fetch('/api/ranking', {
+        signal: AbortSignal.any([this.abort.signal, AbortSignal.timeout(10_000)]),
+      });
+      if (!response.ok) { throw new Error('Ranking request failed'); }
+      const snapshot = await response.json() as Snapshot;
+      if (this.abort.signal.aborted) { return; }
+      this.error.set(null);
+      if (snapshot.updatedAt !== this.snapshot()?.updatedAt) {
+        this.applySnapshot(snapshot);
+      } else {
+        this.snapshot.set(snapshot);
+      }
+    } catch {
+      if (!this.abort.signal.aborted) {
+        this.error.set('The ranking is temporarily unavailable. Retrying automatically.');
+      }
+    }
   }
 
   private counts(snapshot: Snapshot): Record<string, number> {
@@ -36,6 +56,12 @@ export class AppComponent implements OnDestroy {
   }
 
   private applySnapshot(snapshot: Snapshot): void {
+    if (!this.snapshot()) {
+      this.snapshot.set(snapshot);
+      this.rows.set(rankAirlines(snapshot.airlines));
+      this.displayedCounts.set(this.counts(snapshot));
+      return;
+    }
     const previous = this.displayedCounts();
     const positions = new Map(this.rowElements.map(({ nativeElement: row }) => [row.dataset['id'], row.getBoundingClientRect().top]));
     this.animations.forEach(animation => { animation.cancel(); });
@@ -43,7 +69,7 @@ export class AppComponent implements OnDestroy {
     cancelAnimationFrame(this.frame);
     this.snapshot.set(snapshot);
     this.rows.set(rankAirlines(snapshot.airlines));
-    this.announcement.set('Sample ranking updated.');
+    this.announcement.set('Ranking updated.');
     this.changeDetector.detectChanges();
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -51,7 +77,6 @@ export class AppComponent implements OnDestroy {
       return;
     }
 
-    this.updating.set(true);
     this.rowElements.forEach(({ nativeElement: row }) => {
       const distance = (positions.get(row.dataset['id']) ?? row.getBoundingClientRect().top) - row.getBoundingClientRect().top;
       if (distance) {
@@ -79,12 +104,13 @@ export class AppComponent implements OnDestroy {
         return [airline.id, Math.round(from + (airline.count - from) * eased)];
       })));
       if (progress < 1) {this.frame = requestAnimationFrame(tick);}
-      else {this.updating.set(false);}
     };
     this.frame = requestAnimationFrame(tick);
   }
 
   ngOnDestroy(): void {
+    this.abort.abort();
+    clearInterval(this.pollTimer);
     cancelAnimationFrame(this.frame);
     this.animations.forEach(animation => { animation.cancel(); });
   }

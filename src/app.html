@@ -8,7 +8,7 @@
   <section class="leaderboard" aria-label="Airline leaderboard">
     <div class="board-heading">
       <h2>In the air</h2>
-      <span class="sample-label"><span class="sample-dot" aria-hidden="true"></span>Sample data</span>
+      <span class="refresh-label">15-minute snapshots</span>
     </div>
     @if (snapshot(); as currentSnapshot) {
       <div class="column-headings" aria-hidden="true">
@@ -26,8 +26,8 @@
         }
       </ol>
       <div class="board-footer">
-        <span>Sample snapshot <time [attr.datetime]="currentSnapshot.updatedAt">{{ currentSnapshot.updatedAt | date: 'd MMM, HH:mm' : 'UTC' }} UTC</time></span>
-        <span>10 airlines</span>
+        <span>Snapshot <time [attr.datetime]="currentSnapshot.updatedAt">{{ currentSnapshot.updatedAt | date: 'd MMM, HH:mm' : 'UTC' }} UTC</time></span>
+        <span>{{ currentSnapshot.airlines.length }} airlines</span>
       </div>
     } @else if (error()) {
       <p class="empty-state" role="alert">{{ error() }}</p>
@@ -36,12 +36,9 @@
     }
   </section>
 
-  <div class="preview-controls">
-    <p>See how the ranking moves.</p>
-    <button type="button" (click)="showSampleUpdate()" [disabled]="updating()">
-      Show sample update <span aria-hidden="true">↗</span>
-    </button>
-  </div>
-  <p class="method-note">Counts follow selected airline callsigns. Regional flights using other callsigns are excluded. This preview uses illustrative data.</p>
+  @if (snapshot() && (snapshot()?.stale || error())) {
+    <p class="update-warning" role="status">Updates are delayed. Showing the last successful snapshot.</p>
+  }
+  <p class="method-note">Observed by SkyLink; coverage varies. Counts follow selected airline callsigns. Regional flights using other callsigns are excluded.</p>
   <p class="visually-hidden" role="status">{{ announcement() }}</p>
 </main>
