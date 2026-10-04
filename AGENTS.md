@@ -5,6 +5,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Do not build for hypothetical future requirements.
 - Do not add speculative features, dependencies, abstractions, infrastructure, documentation, or tooling.
 - Prefer the simplest implementation that meets the current requirements.
+- Prioritize readability over brevity. Use clear names and intermediate variables when they make logic easier to follow; avoid dense expressions and unnecessary verbosity.
 - Reuse existing code where appropriate. Add dependencies or abstractions only when the current change has a concrete need for them.
 - Keep changes focused; avoid unrelated refactoring, duplicate logic, and configuration for hypothetical use cases.
 - Name project-owned boolean variables, parameters, and properties with an `is` prefix and a descriptive condition, such as `isAirborne` or `isStale`. Preserve names required by external APIs and libraries.
@@ -31,6 +32,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 
 - Compare the complete diff against the agreed requirements and inspect relevant surrounding code.
 - Trace important behavior from input to output, including boundary conditions, external input validation, and failure handling.
+- Check that the code is easy to follow, and suggest simpler expressions or clearer names where they help.
 - Check that each new dependency, abstraction, configuration option, and file serves a current requirement. Flag concrete duplication or unnecessary complexity, and suggest the smallest sufficient alternative.
 - Check that tests verify observable behavior and meaningful failure cases. Flag unjustified changes that weaken tests, linting, or CI.
 - Report actionable findings with file locations, impact, and supporting evidence or a reproducible scenario. Distinguish blocking issues from optional suggestions; avoid speculative requirements and stylistic preferences already handled by tooling.
