@@ -2,6 +2,7 @@ export interface Airline {
   id: string;
   name: string;
   count: number;
+  aircraftTypes: { name: string; count: number }[];
 }
 
 export interface Snapshot {

@@ -105,6 +105,49 @@ test('treats timezone-less provider timestamps as UTC and honors explicit offset
   }
 });
 
+test('groups verified type labels, preserves variants and unfamiliar labels, and accounts for unknown types', () => {
+  const types = ['B738', ' Boeing  B738 ', 'THE BOEING COMPANY B738', 'Boeing 737-800',
+    'Airbus A320', 'a20n', 'Boeing 737-8', 'B38M', 'New model 123', ' new  MODEL 123 ',
+    null, undefined, '', '   ', 42];
+  const records = types.map((aircraft_type, i) => aircraft({ icao24: i.toString(16).padStart(6, '0'), aircraft_type }));
+  const snapshot = countAircraft(payload(records), now);
+  const airline = snapshot.airlines.find(item => item.id === 'american-airlines');
+  assert.equal(airline.count, types.length);
+  assert.deepEqual(airline.aircraftTypes, [
+    { name: 'Unknown type', count: 5 },
+    { name: 'Boeing 737-800', count: 4 },
+    { name: 'Boeing 737 MAX 8', count: 2 },
+    { name: 'NEW MODEL 123', count: 2 },
+    { name: 'Airbus A320', count: 1 },
+    { name: 'Airbus A320neo', count: 1 },
+  ]);
+  for (const row of snapshot.airlines) {
+    assert.equal(row.aircraftTypes.reduce((total, type) => total + type.count, 0), row.count);
+    if (row.count === 0) { assert.deepEqual(row.aircraftTypes, []); }
+  }
+});
+
+test('uses only the newest eligible observation for both the type breakdown and airline total', () => {
+  const older = aircraft({ aircraft_type: 'A320', last_seen: '2026-10-04T11:59:00Z' });
+  const newer = aircraft({ aircraft_type: 'A359' });
+  const excluded = [
+    aircraft({ icao24: '000002', aircraft_type: 'B738', is_on_ground: true }),
+    aircraft({ icao24: '000003', aircraft_type: 'B738', last_seen: '2026-10-04T11:54:59Z' }),
+    aircraft({ icao24: '000004', aircraft_type: 'B738', last_seen: '2026-10-04T12:00:01Z' }),
+    aircraft({ icao24: '000005', aircraft_type: 'B738', callsign: 'ENY123' }),
+    aircraft({ icao24: '000006', aircraft_type: 'B738', callsign: 'AAL' }),
+    aircraft({ icao24: '000007', aircraft_type: 'B738', callsign: 'FIN123' }),
+  ];
+  for (const records of [[older, newer], [newer, older]]) {
+    const snapshot = countAircraft(payload([...records, ...excluded]), now);
+    assert.deepEqual(snapshot.airlines.find(item => item.id === 'american-airlines').aircraftTypes,
+      [{ name: 'Airbus A350-900', count: 1 }]);
+    assert.deepEqual(snapshot.airlines.find(item => item.id === 'finnair').aircraftTypes,
+      [{ name: 'Boeing 737-800', count: 1 }]);
+    assert.equal(count(snapshot, 'american-airlines'), 1);
+  }
+});
+
 test('rejects malformed or incomplete global responses instead of publishing zero counts', () => {
   const invalid = [null, {}, payload([]), { ...payload([aircraft()]), total_count: 2 },
     payload([aircraft()], 'invalid'), payload([aircraft({ icao24: 'not-hex' })]),
