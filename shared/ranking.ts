@@ -2,7 +2,8 @@ export interface Airline {
   id: string;
   name: string;
   count: number;
-  rankMovement?: 'up' | 'down' | 'new';
+  // Positive values move up; zero is unchanged. Omitted before the first comparison.
+  rankChange?: number | 'new';
   aircraftTypes: { name: string; count: number }[];
 }
 
