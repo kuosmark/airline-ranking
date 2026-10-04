@@ -1,6 +1,20 @@
 import { createServer } from 'node:http';
-import type { Snapshot } from '../shared/ranking.ts';
+import { rankAirlines, type Airline, type Snapshot } from '../shared/ranking.ts';
 import { REFRESH_INTERVAL_MS } from './skylink.ts';
+
+function compareRanks(next: Snapshot, previous: Snapshot | null): Snapshot {
+  if (!previous) { return next; }
+  const previousRanks = new Map(rankAirlines(previous.airlines).map((airline, index) => [airline.id, index]));
+  const airlines = rankAirlines(next.airlines).map((airline, index) => {
+    const previousRank = previousRanks.get(airline.id);
+    let rankMovement: Airline['rankMovement'];
+    if (previousRank === undefined) { rankMovement = 'new'; }
+    else if (index < previousRank) { rankMovement = 'up'; }
+    else if (index > previousRank) { rankMovement = 'down'; }
+    return { ...airline, rankMovement };
+  });
+  return { ...next, airlines };
+}
 
 export function createRankingService(load: () => Promise<Snapshot>, now = Date.now, enrich?: (snapshot: Snapshot) => Promise<Snapshot>) {
   let snapshot: Snapshot | null = null;
@@ -23,10 +37,11 @@ export function createRankingService(load: () => Promise<Snapshot>, now = Date.n
           if (snapshot && Date.parse(next.updatedAt) < Date.parse(snapshot.updatedAt)) {
             throw new Error('Snapshot moved backwards');
           }
-          snapshot = next;
+          const isNewSnapshot = !snapshot || Date.parse(next.updatedAt) > Date.parse(snapshot.updatedAt);
+          if (isNewSnapshot) { snapshot = compareRanks(next, snapshot); }
           isRefreshFailed = false;
-          if (enrich) {
-            try { snapshot = await enrich(next); }
+          if (enrich && snapshot) {
+            try { snapshot = await enrich(snapshot); }
             catch { console.error('Operator names unavailable; keeping the current ranking.'); }
           }
         } catch {
