@@ -9,7 +9,8 @@ export const LOOKUP_COOLDOWN_MS = DAY_MS;
 export const LOOKUP_WINDOW_MS = 30 * DAY_MS;
 export const MAX_LOOKUP_ATTEMPTS = 1000;
 
-interface Entry { name: string | null; checkedAt: string }
+interface OperatorDetails { name: string | null; country: string | null }
+interface Entry { name: string | null; country?: string | null; checkedAt: string }
 interface Cache {
   names: Record<string, Entry | undefined>;
   attempts: number[];
@@ -30,18 +31,29 @@ function isCache(value: unknown): value is Cache {
   return Object.entries(value['names']).every(([prefix, entry]) =>
     /^[A-Z]{3}$/.test(prefix) && isRecord(entry) &&
     (entry['name'] === null || (typeof entry['name'] === 'string' && entry['name'].trim().length > 0)) &&
+    (entry['country'] === undefined || entry['country'] === null || typeof entry['country'] === 'string') &&
     typeof entry['checkedAt'] === 'string' && Number.isFinite(Date.parse(entry['checkedAt'])));
 }
 
-export function operatorName(payload: unknown, prefix: string): string | null {
+export function operatorDetails(payload: unknown, prefix: string): OperatorDetails {
   if (!Array.isArray(payload)) { throw new Error('Invalid directory response'); }
   const matches = payload.filter((entry: unknown): entry is Record<string, unknown> =>
     isRecord(entry) && entry['icao'] === prefix && typeof entry['name'] === 'string' && entry['name'].trim().length > 0);
   if (payload.length > 0 && matches.length === 0) { throw new Error('Invalid directory match'); }
   const names = new Set(matches.map(entry => (entry['name'] as string).trim()));
-  if (names.size === 1) { return [...names][0]; }
   const activeNames = new Set(matches.filter(entry => entry['active'] === 'Y').map(entry => (entry['name'] as string).trim()));
-  return activeNames.size === 1 ? [...activeNames][0] : null;
+  let name: string | null = null;
+  if (names.size === 1) { name = [...names][0]; }
+  else if (activeNames.size === 1) { name = [...activeNames][0]; }
+  if (!name) { return { name: null, country: null }; }
+
+  const namedMatches = matches.filter(entry => (entry['name'] as string).trim() === name);
+  const activeMatches = namedMatches.filter(entry => entry['active'] === 'Y');
+  const countryMatches = activeMatches.length > 0 ? activeMatches : namedMatches;
+  const countries = new Set(countryMatches.map(entry => entry['country'])
+    .filter((country): country is string => typeof country === 'string' && country.trim().length > 0)
+    .map(country => country.trim()));
+  return { name, country: countries.size === 1 ? [...countries][0] : null };
 }
 
 export function createOperatorDirectory(apiKey: string, path: string, now = Date.now) {
@@ -93,13 +105,13 @@ export function createOperatorDirectory(apiKey: string, path: string, now = Date
           signal: AbortSignal.timeout(10_000),
           redirect: 'error',
         });
-        let name: string | null = null;
+        let details: OperatorDetails = { name: null, country: null };
         if (response.status !== 404) {
           if (!response.ok) { throw new Error('Directory lookup failed'); }
           const payload: unknown = await response.json();
-          name = operatorName(payload, prefix);
+          details = operatorDetails(payload, prefix);
         }
-        cache.names[prefix] = { name, checkedAt: new Date(now()).toISOString() };
+        cache.names[prefix] = { ...details, checkedAt: new Date(now()).toISOString() };
         cache.cooldownUntil = 0;
         if (!save()) { return; }
       } catch {
@@ -115,6 +127,7 @@ export function createOperatorDirectory(apiKey: string, path: string, now = Date
     apply(snapshot: Snapshot): Snapshot {
       return { ...snapshot, airlines: snapshot.airlines.map(airline => ({
         ...airline, name: cache.names[airline.id]?.name ?? airline.id,
+        country: cache.names[airline.id]?.country ?? null,
       })) };
     },
     refresh(prefixes: string[]): Promise<void> {

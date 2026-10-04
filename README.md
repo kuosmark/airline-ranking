@@ -6,7 +6,7 @@ A TypeScript backend fetches a worldwide SkyLink snapshot on startup and every 1
 
 ![Airline leaderboard showing rank movement](docs/preview.png)
 
-Preview uses synthetic data to illustrate rank indicators and the aircraft-type breakdown.
+Preview uses synthetic data to illustrate rank indicators, operator country and the aircraft-type breakdown.
 
 ## Run locally
 
@@ -36,7 +36,7 @@ Open http://127.0.0.1:4200. Both services listen on loopback only. Angular proxi
 
 The browser checks the cache every minute. The snapshot age sits above the table and updates on each browser check. The 15-minute refresh interval sits beside “How does it work” below the table; that disclosure contains the exact UTC timestamp and grouping rules. Column labels and any delay notice stay visible in the sticky table header while scrolling. Rows animate to their new positions; counts update immediately with a brief neutral highlight. Reduced-motion preferences disable these effects. If an update fails, the last successful ranking and its original timestamp remain visible with a delay notice. Before the first successful snapshot, the UI shows an unavailable message and retries automatically.
 
-Click an airline to expand its aircraft-type breakdown; only one row is expanded at a time. Expanded rows use a pale green background; hovering a closed row uses neutral gray. The same cached snapshot supplies both the total and its breakdown, without extra provider requests. The expanded airline stays open when the ranking changes, and its total updates immediately with its breakdown. The breakdown initially shows the five most common types, with “Show more” revealing the remaining types and “Show less” returning to five. Opening an operator starts with five again; the current choice persists across snapshot updates while that operator stays open.
+Click an airline to expand its aircraft-type breakdown; only one row is expanded at a time. When available, the operator’s country appears beneath its name only while expanded. This is the country supplied by the airline directory, not the aircraft’s current location. Expanded rows use a pale green background; hovering a closed row uses neutral gray. The same cached snapshot supplies both the total and its breakdown, without extra provider requests. The expanded airline stays open when the ranking changes, and its total updates immediately with its breakdown. The breakdown initially shows the five most common types, with “Show more” revealing the remaining types and “Show less” returning to five. Opening an operator starts with five again; the current choice persists across snapshot updates while that operator stays open.
 
 Rank indicators compare each operator's position with the previous successful, distinct snapshot: a green upward arrow with the number of places gained, a red downward arrow with the number of places lost, and “New” for an operator absent from the previous top 100 (including returning operators). A dash marks an unchanged rank (zero movement); a blank cell means no previous snapshot is available. Movement has its own column before the rank. Equal aircraft counts still use prefix order, so indicators reflect row position rather than count changes. Hover text explains the comparison period; screen-reader text describes the direction and number of places. The API represents this as `rankChange`: a signed integer (positive means up, zero means unchanged), `"new"`, or an omitted field when no comparison exists.
 
@@ -63,25 +63,27 @@ Tests use Node's built-in test runner and synthetic data. They do not require an
 
 ## Scope
 
-The backend uses Node's built-in HTTP server and fetch API. The latest ranking lives in memory; operator names and lookup cost controls are persisted in an untracked JSON cache. There is no database or deployment configuration.
+The backend uses Node's built-in HTTP server and fetch API. The latest ranking lives in memory; operator names, countries and lookup cost controls are persisted in an untracked JSON cache. There is no database or deployment configuration.
 
 Aircraft are deduplicated by ICAO24, keeping the newest observation (ground wins equal-time conflicts). We count only explicitly airborne aircraft observed within five minutes of the snapshot. Callsigns must contain three letters followed by one to four letters or digits. Callsigns matching the aircraft registration after removing spaces and hyphens are excluded. Malformed, incomplete, or outdated global snapshots are rejected.
 
 Every qualifying prefix is counted, including cargo and regional operators. The 100 highest counts are selected, with prefix order breaking ties; fewer qualifying operators means fewer rows. Separate prefixes are not combined under a brand. The format check is a heuristic, not proof of operator identity. These are observed counts, dependent on SkyLink coverage, not worldwide fleet totals.
 
-## Operator names and lookup costs
+## Operator details and lookup costs
 
 Names come from [SkyLink's airline lookup](https://skylinkapi.com/docs/v31/airlines/) for prefixes in the top 100 only. Matching records that agree on a name use that name; conflicting names use a single distinct active name if available, otherwise the prefix. A lone inactive record can still supply a name. Missing results (HTTP 404 or an empty array) and unresolved duplicate names are cached as `null`. Provider names can be outdated. Names do not control eligibility or tie-breaking.
 
-The backend publishes the ranking before directory lookups complete. Browsers may initially display prefixes, then receive names on their next normal poll. Name-only updates keep the snapshot timestamp and do not trigger movement or count highlights.
+Country is retained from the same lookup, using records for the resolved name and preferring active records. Missing, invalid or conflicting countries are omitted from the UI. Existing cache entries without a country remain valid and keep their original expiry; countries populate on normal refreshes, with no extra requests or shorter TTL for missing countries.
+
+The backend publishes the ranking before directory lookups complete. Browsers may initially display prefixes, then receive names on their next normal poll. Directory-only updates keep the snapshot timestamp and do not trigger movement or count highlights.
 
 `.cache/operator-names.json` is created relative to the project root and excluded from Git. For example:
 
 ```json
 {
   "names": {
-    "FIN": { "name": "Finnair", "checkedAt": "2026-10-04T21:00:00.000Z" },
-    "WMT": { "name": null, "checkedAt": "2026-10-04T21:00:00.000Z" }
+    "FIN": { "name": "Finnair", "country": "Finland", "checkedAt": "2026-10-04T21:00:00.000Z" },
+    "WMT": { "name": null, "country": null, "checkedAt": "2026-10-04T21:00:00.000Z" }
   },
   "attempts": [1791147600000],
   "cooldownUntil": 0

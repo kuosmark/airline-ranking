@@ -50,6 +50,9 @@
                 <span aria-hidden="true">{{ airline.count | number }}</span>
               </span>
               <span class="chevron" aria-hidden="true"></span>
+              @if (expandedAirlineId() === airline.id && airline.country) {
+                <span class="airline-country"><span class="visually-hidden">Country: </span>{{ airline.country }}</span>
+              }
             </button>
             @if (expandedAirlineId() === airline.id) {
               <div class="aircraft-details" [id]="'types-' + airline.id" animate.enter="details-enter" animate.leave="details-leave">
