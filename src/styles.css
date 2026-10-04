@@ -17,19 +17,19 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 .column-headings { padding: 0 28px 14px; color: #626c76; font-size: 11px; letter-spacing: .06em; font-weight: 600; }
 .column-headings > :nth-child(4) { text-align: right; }
 ol { list-style: none; padding: 0; margin: 0; }
-li { position: relative; border-bottom: 1px solid #eef0f2; background: white; }
+li { position: relative; border-bottom: 1px solid #dce1e5; background: white; }
 li:last-child { border-bottom: 0; }
 .airline-toggle { width: 100%; min-height: 68px; padding: 0 28px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 li.is-expanded { background: #edf4ef; }
 @media (hover: hover) {
-  li:hover { background: #edf4ef; }
+  li:not(.is-expanded):hover { background: #f3f4f6; }
 }
 .airline-toggle:focus-visible { outline: 2px solid #617a70; outline-offset: -3px; }
 .rank { color: #626c76; font-size: 13px; line-height: 1.45; font-variant-numeric: tabular-nums; }
 .rank-indicator { display: flex; align-items: center; justify-content: center; }
-.rank-caret { width: 18px; height: 12px; clip-path: polygon(50% 0, 100% 100%, 50% 65%, 0 100%); }
-.rank-up { background: #176957; }
-.rank-down { background: #b44242; transform: rotate(180deg); }
+.rank-caret { width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; }
+.rank-up { border-bottom: 9px solid #176957; }
+.rank-down { border-top: 9px solid #b44242; }
 .rank-new { font-size: 10px; line-height: 1; font-weight: 650; color: #626c76; }
 .rank-unchanged { color: #626c76; font-size: 15px; }
 .airline-name { font-size: 15px; font-weight: 500; letter-spacing: -.015em; line-height: 1.45; padding: 14px 0; overflow-wrap: anywhere; }
