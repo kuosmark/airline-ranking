@@ -36,7 +36,7 @@
     }
   </section>
 
-  @if (snapshot() && (snapshot()?.stale || error())) {
+  @if (snapshot() && (snapshot()?.isStale || error())) {
     <p class="update-warning" role="status">Updates are delayed. Showing the last successful snapshot.</p>
   }
   <p class="method-note">Observed by SkyLink; coverage varies. Counts follow selected airline callsigns. Regional flights using other callsigns are excluded.</p>

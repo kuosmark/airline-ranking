@@ -41,7 +41,7 @@ export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
     throw new Error('SkyLink snapshot is not current');
   }
 
-  const observations = new Map<string, { seen: number; callsign: string; airborne: boolean }>();
+  const observations = new Map<string, { seen: number; callsign: string; isAirborne: boolean }>();
   for (const record of payload['aircraft'] as unknown[]) {
     if (!isRecord(record) || typeof record['icao24'] !== 'string' || !/^[\da-f]{6}$/i.test(record['icao24'])) {
       throw new Error('Invalid SkyLink aircraft identifier');
@@ -49,23 +49,23 @@ export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
     const seen = timestamp(record['last_seen']);
     const id = record['icao24'].toLowerCase();
     const callsign = typeof record['callsign'] === 'string' ? record['callsign'].trim().toUpperCase() : '';
-    const airborne = record['is_on_ground'] === false;
+    const isAirborne = record['is_on_ground'] === false;
     const previous = observations.get(id);
-    if (!previous || seen > previous.seen || (seen === previous.seen && !airborne)) {
-      observations.set(id, { seen, callsign, airborne });
+    if (!previous || seen > previous.seen || (seen === previous.seen && !isAirborne)) {
+      observations.set(id, { seen, callsign, isAirborne });
     }
   }
 
   const counts = new Map<string, number>();
-  for (const { seen, callsign, airborne } of observations.values()) {
-    if (!airborne || seen > snapshotTime || snapshotTime - seen > OBSERVATION_MAX_AGE_MS) { continue; }
+  for (const { seen, callsign, isAirborne } of observations.values()) {
+    if (!isAirborne || seen > snapshotTime || snapshotTime - seen > OBSERVATION_MAX_AGE_MS) { continue; }
     const prefix = /^[A-Z]{3}[A-Z\d]+$/.test(callsign) ? callsign.slice(0, 3) : '';
     counts.set(prefix, (counts.get(prefix) ?? 0) + 1);
   }
   return {
     updatedAt: new Date(snapshotTime).toISOString(),
     airlines: airlines.map(({ id, name, prefix }) => ({ id, name, count: counts.get(prefix) ?? 0 })),
-    stale: false,
+    isStale: false,
   };
 }
 

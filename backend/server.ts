@@ -4,7 +4,7 @@ import { REFRESH_INTERVAL_MS } from './skylink.ts';
 
 export function createRankingService(load: () => Promise<Snapshot>, now = Date.now) {
   let snapshot: Snapshot | null = null;
-  let failed = false;
+  let isRefreshFailed = false;
   let pending: Promise<void> | undefined;
 
   return {
@@ -12,7 +12,7 @@ export function createRankingService(load: () => Promise<Snapshot>, now = Date.n
       if (!snapshot) { return null; }
       return {
         ...snapshot,
-        stale: failed || now() - Date.parse(snapshot.updatedAt) > REFRESH_INTERVAL_MS + 30_000,
+        isStale: isRefreshFailed || now() - Date.parse(snapshot.updatedAt) > REFRESH_INTERVAL_MS + 30_000,
       };
     },
     refresh(): Promise<void> {
@@ -24,9 +24,9 @@ export function createRankingService(load: () => Promise<Snapshot>, now = Date.n
             throw new Error('Snapshot moved backwards');
           }
           snapshot = next;
-          failed = false;
+          isRefreshFailed = false;
         } catch {
-          failed = true;
+          isRefreshFailed = true;
           // Do not log provider responses or credentials.
           console.error('Ranking refresh failed; waiting for the next scheduled refresh.');
         }

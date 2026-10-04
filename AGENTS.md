@@ -7,6 +7,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Prefer the simplest implementation that meets the current requirements.
 - Reuse existing code where appropriate. Add dependencies or abstractions only when the current change has a concrete need for them.
 - Keep changes focused; avoid unrelated refactoring, duplicate logic, and configuration for hypothetical use cases.
+- Name project-owned boolean variables, parameters, and properties with an `is` prefix and a descriptive condition, such as `isAirborne` or `isStale`. Preserve names required by external APIs and libraries.
 - Keep explanations and plans concise and concrete.
 - Keep public documentation, comments, commit messages, and pull requests factual and focused on the software.
 - Include only the security measures and verification necessary for the current work.

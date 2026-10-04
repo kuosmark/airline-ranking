@@ -20,7 +20,7 @@ test('counts the ten selected callsign prefixes and normalizes whitespace and ca
   assert.equal(snapshot.airlines.length, 10);
   assert.ok(snapshot.airlines.every(airline => airline.count === 1));
   assert.equal(snapshot.updatedAt, time.replace('00Z', '00.000Z'));
-  assert.equal(snapshot.stale, false);
+  assert.equal(snapshot.isStale, false);
 });
 
 test('excludes regional callsigns, missing callsigns, and partial or malformed prefix matches', () => {
@@ -33,8 +33,8 @@ test('excludes regional callsigns, missing callsigns, and partial or malformed p
 });
 
 test('counts only an explicit airborne flag, without inferring it from altitude', () => {
-  const records = [false, true, null, undefined, 'false'].map((is_on_ground, i) => aircraft({
-    icao24: i.toString(16).padStart(6, '0'), is_on_ground, altitude: 35000,
+  const records = [false, true, null, undefined, 'false'].map((isOnGround, i) => aircraft({
+    icao24: i.toString(16).padStart(6, '0'), is_on_ground: isOnGround, altitude: 35000,
   }));
   assert.equal(count(countAircraft(payload(records), now), 'american-airlines'), 1);
 });
@@ -125,20 +125,20 @@ test('coalesces overlapping refreshes and keeps reads independent of provider ca
   assert.equal(service.read(), null);
   resolve(countAircraft(payload([aircraft()]), now));
   await first;
-  for (let i = 0; i < 10; i++) { assert.equal(service.read().stale, false); }
+  for (let i = 0; i < 10; i++) { assert.equal(service.read().isStale, false); }
   assert.equal(calls, 1);
 });
 
 test('preserves the last successful snapshot on failure and recovers on the next refresh', async t => {
   t.mock.method(console, 'error', () => {});
-  let fail = false;
+  let isUnavailable = false;
   const original = countAircraft(payload([aircraft()]), now);
-  const service = createRankingService(() => fail ? Promise.reject(new Error('unavailable')) : Promise.resolve(original), () => now);
+  const service = createRankingService(() => isUnavailable ? Promise.reject(new Error('unavailable')) : Promise.resolve(original), () => now);
   await service.refresh();
-  fail = true;
+  isUnavailable = true;
   await service.refresh();
-  assert.deepEqual(service.read(), { ...original, stale: true });
-  fail = false;
+  assert.deepEqual(service.read(), { ...original, isStale: true });
+  isUnavailable = false;
   await service.refresh();
   assert.deepEqual(service.read(), original);
 });
@@ -150,20 +150,20 @@ test('marks an expired cached snapshot stale and rejects snapshots moving backwa
   const service = createRankingService(() => Promise.resolve(value), () => clock);
   await service.refresh();
   clock += REFRESH_INTERVAL_MS + 30_001;
-  assert.equal(service.read().stale, true);
+  assert.equal(service.read().isStale, true);
   value = { ...value, updatedAt: '2026-10-04T11:59:00Z' };
   await service.refresh();
   assert.equal(service.read().updatedAt, '2026-10-04T12:00:00.000Z');
-  assert.equal(service.read().stale, true);
+  assert.equal(service.read().isStale, true);
 });
 
 test('serves cached rankings, returns 503 before success, and rejects other routes and methods', async t => {
   t.mock.method(console, 'error', () => {});
   let calls = 0;
-  let fail = true;
+  let isUnavailable = true;
   const service = createRankingService(() => {
     calls++;
-    return fail ? Promise.reject(new Error('offline')) : Promise.resolve(countAircraft(payload([aircraft()]), now));
+    return isUnavailable ? Promise.reject(new Error('offline')) : Promise.resolve(countAircraft(payload([aircraft()]), now));
   }, () => now);
   const server = createRankingServer(service);
   server.listen(0, '127.0.0.1');
@@ -173,7 +173,7 @@ test('serves cached rankings, returns 503 before success, and rejects other rout
 
   await service.refresh();
   assert.equal((await globalThis.fetch(url)).status, 503);
-  fail = false;
+  isUnavailable = false;
   await service.refresh();
   for (let i = 0; i < 3; i++) {
     const response = await globalThis.fetch(url);

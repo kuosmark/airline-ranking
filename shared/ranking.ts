@@ -7,7 +7,7 @@ export interface Airline {
 export interface Snapshot {
   updatedAt: string;
   airlines: Airline[];
-  stale: boolean;
+  isStale: boolean;
 }
 
 export function rankAirlines(airlines: Airline[]): Airline[] {
