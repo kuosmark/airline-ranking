@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import type { Snapshot } from '../shared/ranking.ts';
 import { REFRESH_INTERVAL_MS } from './skylink.ts';
 
-export function createRankingService(load: () => Promise<Snapshot>, now = Date.now) {
+export function createRankingService(load: () => Promise<Snapshot>, now = Date.now, enrich?: (snapshot: Snapshot) => Promise<Snapshot>) {
   let snapshot: Snapshot | null = null;
   let isRefreshFailed = false;
   let pending: Promise<void> | undefined;
@@ -25,6 +25,10 @@ export function createRankingService(load: () => Promise<Snapshot>, now = Date.n
           }
           snapshot = next;
           isRefreshFailed = false;
+          if (enrich) {
+            try { snapshot = await enrich(next); }
+            catch { console.error('Operator names unavailable; keeping the current ranking.'); }
+          }
         } catch {
           isRefreshFailed = true;
           // Do not log provider responses or credentials.

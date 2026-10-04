@@ -12,5 +12,5 @@ export interface Snapshot {
 }
 
 export function rankAirlines(airlines: Airline[]): Airline[] {
-  return [...airlines].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'en'));
+  return [...airlines].sort((a, b) => b.count - a.count || a.id.localeCompare(b.id, 'en'));
 }

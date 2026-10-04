@@ -52,6 +52,7 @@ export class AppComponent implements OnInit, OnDestroy {
         this.applySnapshot(snapshot);
       } else {
         this.snapshot.set(snapshot);
+        this.rows.set(rankAirlines(snapshot.airlines));
       }
     } catch {
       if (!this.abort.signal.aborted) {
@@ -73,6 +74,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     this.immediateCountIds.clear();
     const expandedId = this.expandedAirlineId();
+    if (!snapshot.airlines.some(airline => airline.id === expandedId)) { this.expandedAirlineId.set(null); }
     if (expandedId) { this.immediateCountIds.add(expandedId); }
     const previous = this.displayedCounts();
     const positions = new Map(this.rowElements.map(({ nativeElement: row }) => [row.dataset['id'], row.getBoundingClientRect().top]));

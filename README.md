@@ -1,6 +1,6 @@
 # Airline Ranking
 
-A minimalist Angular leaderboard showing observed airborne aircraft for 100 selected passenger airlines, built as a personal learning project.
+A minimalist Angular leaderboard showing observed airborne aircraft for the top 100 observed operators, built as a personal learning project.
 
 A TypeScript backend fetches a worldwide SkyLink snapshot on startup and every 15 minutes. The UI reads the cached ranking and animates changes when a new snapshot arrives.
 
@@ -38,7 +38,7 @@ Click an airline to expand its aircraft-type breakdown; only one row is expanded
 
 Aircraft types come from SkyLink's `aircraft_type` field. Common ICAO designators and a few exact model aliases are normalized using the [FAA type table](https://www.faa.gov/air_traffic/publications/atpubs/foa_html/appendix_3.html), with labels in `backend/aircraft-types.ts`. Distinct variants remain separate. Unrecognized labels retain the provider wording with normalized whitespace and capitalization; missing or invalid values become “Unknown type”. Metadata can be incomplete or incorrect, and unfamiliar aliases may remain separate. Breakdown counts always sum to the airline total.
 
-One continuously running backend makes approximately 96 provider requests per day. Every restart adds an immediate request; opening more browser tabs does not trigger more provider requests. Failed requests are retried at the next scheduled refresh.
+One continuously running backend makes approximately 96 aircraft-snapshot requests per day. Every restart adds an immediate request; opening more browser tabs does not trigger more provider requests. Failed requests are retried at the next scheduled refresh.
 
 ## Checks
 
@@ -57,16 +57,46 @@ Tests use Node's built-in test runner and synthetic data. They do not require an
 
 ## Scope
 
-The backend uses Node's built-in HTTP server and fetch API. It stores only the latest successful ranking in memory. There is no database or deployment configuration.
+The backend uses Node's built-in HTTP server and fetch API. The latest ranking lives in memory; operator names and lookup cost controls are persisted in an untracked JSON cache. There is no database or deployment configuration.
 
-Aircraft count toward an airline when their normalized callsign starts with its selected ICAO prefix, `is_on_ground` is explicitly false, and `last_seen` is within five minutes of the provider snapshot. Duplicate ICAO24 addresses use the newest observation. Malformed, incomplete, or outdated global responses are rejected. Each selected prefix is counted separately; other operators flying for the same brand are not combined. These are observed counts, not complete fleet totals, and depend on SkyLink's coverage. Selecting passenger airlines does not exclude cargo flights that use the same prefix.
+Aircraft are deduplicated by ICAO24, keeping the newest observation (ground wins equal-time conflicts). We count only explicitly airborne aircraft observed within five minutes of the snapshot. Callsigns must contain three letters followed by one to four letters or digits. Callsigns matching the aircraft registration after removing spaces and hyphens are excluded. Malformed, incomplete, or outdated global snapshots are rejected.
 
-The fixed selection in [backend/airlines.ts](backend/airlines.ts) is based on [FlightsFrom's top 100 by daily departures](https://www.flightsfrom.com/top-100-airlines), dated 1 October 2026. It is a starting selection, not a ranking by annual passengers or a comprehensive list of operators. The application ranks these airlines by observed airborne aircraft and keeps airlines with zero observations in the list.
+Every qualifying prefix is counted, including cargo and regional operators. The 100 highest counts are selected, with prefix order breaking ties; fewer qualifying operators means fewer rows. Separate prefixes are not combined under a brand. The format check is a heuristic, not proof of operator identity. These are observed counts, dependent on SkyLink coverage, not worldwide fleet totals.
 
-Names and ICAO prefixes were cross-checked against [IATA's member directory](https://www.iata.org/en/about/members/airline-list/) on 4 October 2026. It confirms 84 of the selected name/operator and prefix pairs. Fifteen selected airlines were not found in that directory; their names use airline sources and their prefixes use the [FAA designator directory](https://www.faa.gov/air_traffic/publications/atpubs/cnt_html/chap3_section_3.html). Virgin Australia is a separate exception: [IATA lists `VAU`](https://www.iata.org/en/about/members/airline-list/virgin-australia/417/), whereas the FAA lists `VOZ`. The application retains `VOZ` for callsign matching. Each entry in `backend/airlines.ts` links its sources and marks these exceptions.
+## Operator names and lookup costs
 
-Brand entries are mapped to one named operator: for example, easyJet UK (`EZY`), LATAM Airlines Chile (`LAN`), Avianca Colombia (`AVA`), and AirAsia Malaysia (`AXM`). Wizz Air Hungary (`WZZ`) and Wizz Air Malta (`WMT`) have separate rows. The selection source's “Gestair” / `G5` label is corrected to China Express Airlines (`HXA`) using [IATA's carrier record](https://www.iata.org/en/about/members/airline-list/china-express-airlines/480/).
+Names come from [SkyLink's airline lookup](https://skylinkapi.com/docs/v31/airlines/) for prefixes in the top 100 only. Matching records that agree on a name use that name; conflicting names use a single distinct active name if available, otherwise the prefix. A lone inactive record can still supply a name. Missing results (HTTP 404 or an empty array) and unresolved duplicate names are cached as `null`. Provider names can be outdated. Names do not control eligibility or tie-breaking.
 
-Display names use readable public-facing names rather than full legal company names. Where these differ from IATA's labels, the airline's own website or publication is linked alongside the IATA record; for example, “All Nippon Airways” rather than “ANA”. Legal suffixes are omitted, and operator or country qualifiers are retained where needed to clarify which prefix is counted. Changes to names or prefixes should be checked against the linked sources.
+The backend publishes the ranking before directory lookups complete. Browsers may initially display prefixes, then receive names on their next normal poll. Name-only updates keep the snapshot timestamp and do not restart count animations.
+
+`.cache/operator-names.json` is created relative to the project root and excluded from Git. For example:
+
+```json
+{
+  "names": {
+    "FIN": { "name": "Finnair", "checkedAt": "2026-10-04T21:00:00.000Z" },
+    "WMT": { "name": null, "checkedAt": "2026-10-04T21:00:00.000Z" }
+  },
+  "attempts": [1791147600000],
+  "cooldownUntil": 0
+}
+```
+
+`checkedAt` is an ISO timestamp. `attempts` and `cooldownUntil` use Unix milliseconds. Constants in `backend/operator-directory.ts` enforce:
+
+| Control | Value |
+| --- | --- |
+| Successful name refresh | 30 days |
+| Missing or ambiguous name refresh | 7 days |
+| Cooldown after any failed lookup | 24 hours |
+| Maximum lookup attempts | 1,000 per rolling 30 days |
+
+Expiry is checked only for the current top 100 during scheduled snapshot updates. There is no separate lookup timer. Requests run sequentially; overlapping refreshes share work. Every attempt, including errors, is persisted **before** contacting SkyLink. A provisional cooldown is saved too, so a crash during a request cannot immediately retry on restart. Successful responses clear it; failures stop the batch, retain previous names, and keep a 24-hour cooldown. Authentication and quota errors follow the same stop rule. Missing results are completed lookups, not failures.
+
+Writes replace the cache via a temporary file and rename. Invalid or unreadable caches disable directory calls for that process. Failed writes also disable further calls; cached names or prefixes remain available. Fix the file or filesystem problem and restart to recover. A genuinely absent cache initializes a new budget; **do not delete the file to refresh names**, because this also discards quota history. To force one name refresh, stop the backend and remove only that prefix from `names`, preserving `attempts` and `cooldownUntil`.
+
+A continuously running backend makes 2,880 snapshot calls in 30 days, plus at most 1,000 directory attempts in that rolling period. A 31-day billing period has 2,976 scheduled snapshot calls, but the rolling directory window does not align with billing dates. Startup fetches, manual tests, other instances, and other API usage are additional. This is a directory guardrail, **not an account-wide spending cap**. Monitor actual usage in the provider account.
+
+The cache requires one backend process and durable local storage. Retain it across restarts; sharing it between concurrent processes is unsupported. AWS deployment will need an appropriate persistent storage strategy. Cached provider output must remain outside the public repository and is subject to [SkyLink's terms](https://skylinkapi.com/terms/).
 
 Development follows the lightweight branch, pull request, and squash-merge workflow in [AGENTS.md](AGENTS.md).

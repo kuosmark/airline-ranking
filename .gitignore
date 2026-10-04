@@ -6,3 +6,4 @@ dist/
 .angular/
 cdk.out/
 .DS_Store
+.cache/
