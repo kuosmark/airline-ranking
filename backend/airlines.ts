@@ -106,7 +106,7 @@ export const airlines = [
   { id: 'air-new-zealand', name: 'Air New Zealand', prefix: 'ANZ' },
   // https://www.jet2.com/
   { id: 'jet2-com', name: 'Jet2.com', prefix: 'EXS' },
-  // https://booking-uat.dcloud.saudia.com/en-US/about-us/press-releases/press-release-15012026
+  // Saudia-issued release: https://rss.globenewswire.com/news-release/2026/01/08/3215556/0/en/Saudia-Continues-to-Support-Saudi-Arabia-s-Expanding-Global-Events-Calendar-in-2026.html
   { id: 'saudia', name: 'Saudia', prefix: 'SVA' },
   // https://www.voegol.com.br/en
   { id: 'gol', name: 'GOL', prefix: 'GLO' },
