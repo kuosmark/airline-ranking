@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "start": "ng serve --host 127.0.0.1",
+    "backend": "node --env-file=.env --experimental-strip-types backend/main.ts",
     "build": "ng build",
-    "lint": "eslint src tests --max-warnings=0",
+    "lint": "eslint src shared backend tests --max-warnings=0",
     "lint:fix": "npm run lint -- --fix",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
-    "check": "npm run lint && npm test && npm run build"
+    "typecheck:backend": "tsc -p backend/tsconfig.json",
+    "check": "npm run lint && npm run typecheck:backend && npm test && npm run build"
   },
   "dependencies": {
     "@angular/common": "^21.2.0",
@@ -24,6 +26,7 @@
     "@angular/cli": "^21.2.0",
     "@angular/compiler-cli": "^21.2.0",
     "@eslint/js": "10.0.1",
+    "@types/node": "^22.20.5",
     "angular-eslint": "21.4.0",
     "eslint": "10.12.0",
     "typescript": "~5.9.3",

@@ -7,18 +7,22 @@ export default defineConfig(
   { ignores: ['dist/**', '.angular/**', 'node_modules/**'] },
   { files: ['tests/**/*.mjs'], extends: [js.configs.recommended] },
   {
-    files: ['src/**/*.ts'],
-    extends: [js.configs.recommended, tseslint.configs.strictTypeChecked, angular.configs.tsRecommended],
+    files: ['src/**/*.ts', 'shared/**/*.ts', 'backend/**/*.ts'],
+    extends: [js.configs.recommended, tseslint.configs.strictTypeChecked],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
-    processor: angular.processInlineTemplates,
     rules: {
       eqeqeq: ['error', 'always'],
       curly: ['error', 'all'],
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
     },
+  },
+  {
+    files: ['src/**/*.ts'],
+    extends: [angular.configs.tsRecommended],
+    processor: angular.processInlineTemplates,
   },
   {
     files: ['src/**/*.html'],
