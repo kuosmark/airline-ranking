@@ -1,24 +1,20 @@
 <main>
   <header class="page-header">
     <div class="eyebrow">THE VIEW FROM ABOVE</div>
-    <div class="title-line">
-      <h1>Airline Ranking</h1>
-      <svg class="header-aircraft" viewBox="0 0 80 64" aria-hidden="true" focusable="false">
-        <path d="M12 28h17L48 6h10L44 28h21l8-11h5l-5 15 5 15h-5l-8-11H44l14 22H48L29 36H12Q0 32 12 28Z" />
-      </svg>
-    </div>
+    <h1>Airline Ranking</h1>
     <p class="subtitle">Observed aircraft airborne</p>
   </header>
 
+  <div class="snapshot-status">
+    @if (snapshot()) {
+      <span>Updated {{ snapshotAge() }}</span>
+    } @else {
+      <span>Every 15 minutes</span>
+    }
+  </div>
+
   <section class="leaderboard" aria-label="Airline leaderboard">
     <div class="board-header">
-      <div class="snapshot-status">
-        @if (snapshot()) {
-          <span>Updated {{ snapshotAge() }}</span>
-        } @else {
-          <span>Every 15 minutes</span>
-        }
-      </div>
       @if (snapshot() && (snapshot()?.isStale || error())) {
         <p class="update-warning" role="status">Updates delayed. Showing the last successful snapshot.</p>
       }
