@@ -8,11 +8,12 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 .subtitle { color: #626c76; margin: 0; font-size: 15px; line-height: 1.5; }
 .method-details { margin-top: 16px; color: #626c76; font-size: 13px; line-height: 1.7; }
 .method-details summary { width: fit-content; padding: 8px 0; font-weight: 500; cursor: pointer; }
-.method-details summary:focus-visible { outline: 2px solid #617a70; outline-offset: 3px; }
+.method-details summary:focus-visible, .types-toggle:focus-visible { outline: 2px solid #617a70; outline-offset: 3px; }
 .method-details p { margin: 8px 0 0; max-width: 620px; }
+.refresh-interval { display: inline-block; margin-left: 16px; font-size: 12px; font-weight: 400; white-space: nowrap; }
 .leaderboard { background: #fff; border: 1px solid #e5e8eb; border-radius: 16px; box-shadow: 0 4px 22px #18263503; }
 .board-header { position: sticky; top: 0; z-index: 1; background: #fff; border-radius: 16px 16px 0 0; border-bottom: 1px solid #e5e8eb; }
-.snapshot-status { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 12px; color: #626c76; font-size: 12px; font-weight: 500; line-height: 1.5; }
+.snapshot-status { margin-bottom: 12px; text-align: right; color: #626c76; font-size: 12px; font-weight: 500; line-height: 1.5; }
 .column-headings, .airline-toggle { display: grid; grid-template-columns: 32px 38px minmax(0, 1fr) 80px 12px; column-gap: 12px; align-items: center; }
 .column-headings { padding: 14px 28px; color: #626c76; font-size: 12px; letter-spacing: .06em; font-weight: 600; }
 .column-headings > :nth-child(4) { text-align: right; }
@@ -43,6 +44,8 @@ li.is-expanded { background: #edf4ef; }
 .aircraft-type { display: grid; grid-template-columns: minmax(0, 1fr) 4ch; align-items: start; gap: 16px; padding: 4px 0; color: #515e58; font-size: 13px; line-height: 1.5; }
 .aircraft-type dt { overflow-wrap: anywhere; }
 .aircraft-type dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: #34473d; }
+.types-toggle { display: block; margin-top: 6px; min-height: 36px; padding: 6px 0; border: 0; background: transparent; color: #34473d; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.types-toggle:hover { text-decoration: underline; text-underline-offset: 3px; }
 .no-aircraft { margin: 10px 0 0; color: #626c76; font-size: 13px; line-height: 1.5; }
 .results-note { margin: 0; padding: 16px 28px; border-top: 1px solid #e5e8eb; color: #626c76; font-size: 13px; line-height: 1.6; }
 .update-warning { font-size: 12px; line-height: 1.5; color: #755319; background: #fcf7ed; border-radius: 6px; margin: 16px 28px 0; padding: 9px 12px; }

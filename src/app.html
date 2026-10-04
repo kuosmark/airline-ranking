@@ -1,15 +1,12 @@
 <main>
   <header class="page-header">
     <h1>Airline Ranking</h1>
-    <p class="subtitle">Top 100 by observed airborne aircraft</p>
+    <p class="subtitle">Observed airborne aircraft</p>
   </header>
 
-  <div class="snapshot-status">
-    @if (snapshot()) {
-      <span>Updated {{ snapshotAge() }}</span>
-    }
-    <span>Refreshes every 15 minutes</span>
-  </div>
+  @if (snapshot()) {
+    <div class="snapshot-status">Updated {{ snapshotAge() }}</div>
+  }
 
   <section class="leaderboard" aria-label="Airline leaderboard">
     <div class="board-header">
@@ -62,14 +59,26 @@
                     @if (airline.count === 0) {
                       <p class="no-aircraft">No aircraft currently observed airborne.</p>
                     } @else {
-                      <dl aria-label="Aircraft types">
-                        @for (type of airline.aircraftTypes; track type.name) {
+                      @let visibleTypes = isShowingAllTypes() ? airline.aircraftTypes : airline.aircraftTypes.slice(0, collapsedTypeLimit);
+                      <dl aria-label="Aircraft types" [id]="'type-list-' + airline.id">
+                        @for (type of visibleTypes; track type.name) {
                           <div class="aircraft-type">
                             <dt>{{ type.name }}</dt>
                             <dd>{{ type.count | number }}</dd>
                           </div>
                         }
                       </dl>
+                      @if (airline.aircraftTypes.length > collapsedTypeLimit) {
+                        <button class="types-toggle" type="button" (click)="isShowingAllTypes.set(!isShowingAllTypes())"
+                          [attr.aria-expanded]="isShowingAllTypes()" [attr.aria-controls]="'type-list-' + airline.id">
+                          @if (isShowingAllTypes()) {
+                            Show less
+                          } @else {
+                            Show more ({{ airline.aircraftTypes.length - collapsedTypeLimit }})
+                          }
+                          <span class="visually-hidden"> aircraft types for {{ airline.name }}</span>
+                        </button>
+                      }
                     }
                   </div>
                 </div>
@@ -89,8 +98,8 @@
   </section>
 
   <details class="method-details">
-    <summary>How rankings work</summary>
-    <p>Based on SkyLink observations; coverage varies. Operators are grouped by their callsign prefix, including cargo, regional and private operators. These are observed counts, not complete worldwide totals. Equal counts are ordered by prefix.</p>
+    <summary><span>How does it work</span><span class="refresh-interval">Refreshes every 15 minutes</span></summary>
+    <p>The top 100 operators are ranked by aircraft observed airborne in SkyLink data; coverage varies. Operators are grouped by their callsign prefix, including cargo, regional and private operators. These are observed counts, not complete worldwide totals. Equal counts are ordered by prefix.</p>
     <p>Callsigns matching aircraft registrations are excluded. Unresolved operators appear as codes; callsigns do not guarantee operator identity. Aircraft types use verified labels where available; unfamiliar model labels remain separate.</p>
     <p>Arrows show how many places an operator moved since the previous successful snapshot. NEW means it was outside the previous top 100; a dash means unchanged. A blank movement cell means no previous snapshot is available. After a delay, the comparison still uses the last successful snapshot.</p>
     @if (snapshot(); as currentSnapshot) {

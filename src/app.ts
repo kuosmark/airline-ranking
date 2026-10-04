@@ -29,9 +29,12 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly rows = signal<Airline[]>([]);
   readonly announcement = signal('');
   readonly expandedAirlineId = signal<string | null>(null);
+  readonly isShowingAllTypes = signal(false);
+  readonly collapsedTypeLimit = 5;
 
   toggleAirline(airline: Airline): void {
     const isExpanded = this.expandedAirlineId() === airline.id;
+    if (!isExpanded) { this.isShowingAllTypes.set(false); }
     this.expandedAirlineId.set(isExpanded ? null : airline.id);
   }
 
