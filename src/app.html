@@ -12,7 +12,7 @@
     </div>
     @if (snapshot(); as currentSnapshot) {
       <div class="column-headings" aria-hidden="true">
-        <span>RANK</span><span>AIRLINE</span><span>AIRBORNE</span>
+        <span>RANK</span><span>OPERATOR</span><span>AIRBORNE</span>
       </div>
       <ol>
         @for (airline of rows(); track airline.id; let rank = $index) {
@@ -46,7 +46,7 @@
       </ol>
       <div class="board-footer">
         <span>Snapshot <time [attr.datetime]="currentSnapshot.updatedAt">{{ currentSnapshot.updatedAt | date: 'd MMM, HH:mm' : 'UTC' }} UTC</time></span>
-        <span>{{ currentSnapshot.airlines.length }} airlines</span>
+        <span>{{ currentSnapshot.airlines.length }} operators</span>
       </div>
     } @else if (error()) {
       <p class="empty-state" role="alert">{{ error() }}</p>
@@ -58,6 +58,6 @@
   @if (snapshot() && (snapshot()?.isStale || error())) {
     <p class="update-warning" role="status">Updates are delayed. Showing the last successful snapshot.</p>
   }
-  <p class="method-note">Observed by SkyLink; coverage varies. Each airline is counted by its selected ICAO callsign prefix. Other operators flying for the same brand are not combined.</p>
+  <p class="method-note">Observed by SkyLink; coverage varies. Top 100 by observed airborne aircraft, grouped by callsign prefix. Registration matches are excluded. Unresolved prefixes are shown as codes; operator identity is not guaranteed.</p>
   <p class="visually-hidden" role="status">{{ announcement() }}</p>
 </main>

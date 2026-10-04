@@ -3,7 +3,6 @@ import console from 'node:console';
 import { once } from 'node:events';
 import process from 'node:process';
 import { test } from 'node:test';
-import { airlines } from '../backend/airlines.ts';
 import { countAircraft, fetchSnapshot, REFRESH_INTERVAL_MS } from '../backend/skylink.ts';
 import { createRankingServer, createRankingService } from '../backend/server.ts';
 
@@ -11,81 +10,75 @@ const time = '2026-10-04T12:00:00Z';
 const now = Date.parse(time);
 const aircraft = (fields = {}) => ({ icao24: '000001', callsign: 'AAL123', is_on_ground: false, last_seen: time, ...fields });
 const payload = (records, timestamp = time) => ({ aircraft: records, total_count: records.length, timestamp });
-const count = (snapshot, id) => snapshot.airlines.find(airline => airline.id === id)?.count;
+const count = (snapshot, id) => snapshot.airlines.find(airline => airline.id === id)?.count ?? 0;
 
-test('defines 100 airlines with unique identifiers and ICAO prefixes', () => {
-  assert.equal(airlines.length, 100);
-  assert.equal(new Set(airlines.map(airline => airline.id)).size, 100);
-  assert.equal(new Set(airlines.map(airline => airline.prefix)).size, 100);
-  assert.ok(airlines.every(airline => airline.name.trim() && /^[A-Z]{3}$/.test(airline.prefix)));
-});
-
-test('retains the original ten airlines and normalizes callsign whitespace and case', () => {
-  const prefixes = ['ACA', 'KAL', 'BAW', 'IBE', 'EIN', 'CPA', 'AAL', 'DAL', 'AFR', 'KLM'];
-  const records = prefixes.map((prefix, i) => aircraft({ icao24: i.toString(16).padStart(6, '0'), callsign: ` ${prefix.toLowerCase()}12A ` }));
-  const snapshot = countAircraft(payload(records), now);
-
-  const ids = ['air-canada', 'korean-air', 'british-airways', 'iberia', 'aer-lingus', 'cathay-pacific',
-    'american-airlines', 'delta-air-lines', 'air-france', 'klm'];
-  assert.equal(snapshot.airlines.length, 100);
-  assert.ok(ids.every(id => count(snapshot, id) === 1));
-  assert.ok(snapshot.airlines.filter(airline => !ids.includes(airline.id)).every(airline => airline.count === 0));
-  assert.equal(snapshot.updatedAt, time.replace('00Z', '00.000Z'));
-  assert.equal(snapshot.isStale, false);
-});
-
-test('counts new airlines separately and does not combine other operators under the same brand', () => {
-  const callsigns = ['UAL123', 'UAL456', 'FIN789', 'WZZ123', 'WMT456', 'EZY123', 'EJU456', 'LAN123', 'TAM456', 'HXA123', 'GES456'];
+test('counts all observed operators separately, including cargo and regional operators', () => {
+  const callsigns = ['UAL123', 'UAL456', 'FDX123', 'ENY123', 'WMT456', 'ZZZ789', ' fin12a '];
   const records = callsigns.map((callsign, i) => aircraft({ icao24: i.toString(16).padStart(6, '0'), callsign }));
   const snapshot = countAircraft(payload(records), now);
-
-  assert.equal(count(snapshot, 'united-airlines'), 2);
-  assert.equal(count(snapshot, 'finnair'), 1);
-  assert.equal(count(snapshot, 'wizz-air-hungary'), 1);
-  assert.equal(count(snapshot, 'wizz-air-malta'), 1);
-  assert.equal(count(snapshot, 'easyjet-uk'), 1);
-  assert.equal(count(snapshot, 'latam-airlines-chile'), 1);
-  assert.equal(count(snapshot, 'china-express-airlines'), 1);
-  assert.equal(snapshot.airlines.reduce((total, airline) => total + airline.count, 0), 8);
+  assert.deepEqual(snapshot.airlines.map(row => row.id), ['UAL', 'ENY', 'FDX', 'FIN', 'WMT', 'ZZZ']);
+  assert.equal(count(snapshot, 'UAL'), 2);
+  assert.ok(snapshot.airlines.every(row => row.name === row.id && row.count > 0));
 });
 
-test('excludes unlisted operators, missing callsigns, and partial or malformed prefix matches', () => {
-  const callsigns = ['ENY123', null, undefined, '', 'AAL', 'XAAL123', 'AAL 123', 'N12345'];
-  const records = callsigns.map((callsign, i) => aircraft({ icao24: i.toString(16).padStart(6, '0'), callsign, airline: 'American Airlines' }));
+test('excludes registrations and invalid callsign formats', () => {
+  const records = [
+    aircraft({ callsign: 'XABAR', registration: 'xa-bar' }),
+    aircraft({ callsign: 'N12345' }),
+    aircraft({ callsign: 'FIN' }),
+    aircraft({ callsign: 'FIN 123' }),
+    aircraft({ callsign: 'FIN12345' }),
+    aircraft({ callsign: null }),
+    aircraft({ callsign: 'ABCDEF', registration: 'DIFFERENT' }),
+    aircraft({ callsign: 'FIN12AB' }),
+  ].map((record, i) => ({ ...record, icao24: i.toString(16).padStart(6, '0') }));
   const snapshot = countAircraft(payload(records), now);
+  assert.deepEqual(snapshot.airlines.map(row => row.id), ['ABC', 'FIN']);
+});
 
-  assert.equal(snapshot.airlines.length, 100);
-  assert.ok(snapshot.airlines.every(airline => airline.count === 0));
+test('selects the top 100 by count with stable prefix ties and no zero rows', () => {
+  const records = Array.from({ length: 105 }, (_, i) => aircraft({
+    icao24: i.toString(16).padStart(6, '0'),
+    callsign: `A${String.fromCharCode(65 + Math.floor(i / 26))}${String.fromCharCode(65 + i % 26)}1`,
+  }));
+  records.push(aircraft({ icao24: 'ffffff', callsign: records[104].callsign }));
+  const forward = countAircraft(payload(records), now);
+  const reverse = countAircraft(payload([...records].reverse()), now);
+  assert.deepEqual(forward, reverse);
+  assert.equal(forward.airlines.length, 100);
+  assert.equal(forward.airlines[0].id, 'AEA');
+  assert.equal(forward.airlines[0].count, 2);
+  assert.equal(forward.airlines[99].id, 'ADU');
 });
 
 test('counts only an explicit airborne flag, without inferring it from altitude', () => {
   const records = [false, true, null, undefined, 'false'].map((isOnGround, i) => aircraft({
     icao24: i.toString(16).padStart(6, '0'), is_on_ground: isOnGround, altitude: 35000,
   }));
-  assert.equal(count(countAircraft(payload(records), now), 'american-airlines'), 1);
+  assert.equal(count(countAircraft(payload(records), now), 'AAL'), 1);
 });
 
 test('includes observations up to five minutes old and excludes older or future ones', () => {
   const records = ['11:55:00Z', '11:54:59Z', '12:00:01Z'].map((suffix, i) => aircraft({
     icao24: i.toString(16).padStart(6, '0'), last_seen: `2026-10-04T${suffix}`,
   }));
-  assert.equal(count(countAircraft(payload(records), now), 'american-airlines'), 1);
+  assert.equal(count(countAircraft(payload(records), now), 'AAL'), 1);
 });
 
 test('deduplicates hex identifiers and uses the newest observation regardless of order', () => {
   const older = aircraft({ icao24: 'ABC123', last_seen: '2026-10-04T11:59:00Z' });
   const newer = aircraft({ icao24: 'abc123', is_on_ground: true });
   for (const records of [[older, newer], [newer, older]]) {
-    assert.equal(count(countAircraft(payload(records), now), 'american-airlines'), 0);
+    assert.equal(count(countAircraft(payload(records), now), 'AAL'), 0);
   }
-  assert.equal(count(countAircraft(payload([older, older]), now), 'american-airlines'), 1);
+  assert.equal(count(countAircraft(payload([older, older]), now), 'AAL'), 1);
 });
 
 test('does not count conflicting same-time ground and airborne observations', () => {
   const flying = aircraft();
   const grounded = aircraft({ is_on_ground: true });
   for (const records of [[flying, grounded], [grounded, flying]]) {
-    assert.equal(count(countAircraft(payload(records), now), 'american-airlines'), 0);
+    assert.equal(count(countAircraft(payload(records), now), 'AAL'), 0);
   }
 });
 
@@ -98,7 +91,7 @@ test('treats timezone-less provider timestamps as UTC and honors explicit offset
       aircraft({ icao24: '000002', last_seen: '2026-10-04T14:00:00+02:00' }),
     ], '2026-10-04T12:00:00.000000'), now);
     assert.equal(snapshot.updatedAt, '2026-10-04T12:00:00.000Z');
-    assert.equal(count(snapshot, 'american-airlines'), 2);
+    assert.equal(count(snapshot, 'AAL'), 2);
   } finally {
     if (originalZone === undefined) { delete process.env.TZ; }
     else { process.env.TZ = originalZone; }
@@ -111,7 +104,7 @@ test('groups verified type labels, preserves variants and unfamiliar labels, and
     null, undefined, '', '   ', 42];
   const records = types.map((aircraft_type, i) => aircraft({ icao24: i.toString(16).padStart(6, '0'), aircraft_type }));
   const snapshot = countAircraft(payload(records), now);
-  const airline = snapshot.airlines.find(item => item.id === 'american-airlines');
+  const airline = snapshot.airlines.find(item => item.id === 'AAL');
   assert.equal(airline.count, types.length);
   assert.deepEqual(airline.aircraftTypes, [
     { name: 'Unknown type', count: 5 },
@@ -140,11 +133,11 @@ test('uses only the newest eligible observation for both the type breakdown and 
   ];
   for (const records of [[older, newer], [newer, older]]) {
     const snapshot = countAircraft(payload([...records, ...excluded]), now);
-    assert.deepEqual(snapshot.airlines.find(item => item.id === 'american-airlines').aircraftTypes,
+    assert.deepEqual(snapshot.airlines.find(item => item.id === 'AAL').aircraftTypes,
       [{ name: 'Airbus A350-900', count: 1 }]);
-    assert.deepEqual(snapshot.airlines.find(item => item.id === 'finnair').aircraftTypes,
+    assert.deepEqual(snapshot.airlines.find(item => item.id === 'FIN').aircraftTypes,
       [{ name: 'Boeing 737-800', count: 1 }]);
-    assert.equal(count(snapshot, 'american-airlines'), 1);
+    assert.equal(count(snapshot, 'AAL'), 1);
   }
 });
 
@@ -172,7 +165,7 @@ test('requests one global snapshot with header authentication and a bounded time
     assert.ok(options.signal instanceof globalThis.AbortSignal);
     return new globalThis.Response(JSON.stringify(payload([aircraft({ last_seen: new Date().toISOString() })], new Date().toISOString())));
   });
-  assert.equal(count(await fetchSnapshot('test-key'), 'american-airlines'), 1);
+  assert.equal(count(await fetchSnapshot('test-key'), 'AAL'), 1);
   assert.equal(calls, 1);
 });
 
@@ -248,11 +241,19 @@ test('serves cached rankings, returns 503 before success, and rejects other rout
     const response = await globalThis.fetch(url);
     assert.equal(response.status, 200);
     assert.equal(response.headers.get('cache-control'), 'no-store');
-    assert.equal(count(await response.json(), 'american-airlines'), 1);
+    assert.equal(count(await response.json(), 'AAL'), 1);
   }
   assert.equal(calls, 2);
   assert.equal((await globalThis.fetch(url + '/unknown')).status, 404);
   const rejected = await globalThis.fetch(url, { method: 'POST' });
   assert.equal(rejected.status, 405);
   assert.equal(rejected.headers.get('allow'), 'GET');
+});
+
+test('uses the newest registration and callsign together before classifying an operator', () => {
+  const older = aircraft({ callsign: 'XABAR', registration: 'OTHER', last_seen: '2026-10-04T11:59:00Z' });
+  const newer = aircraft({ callsign: 'XABAR', registration: 'XA-BAR' });
+  for (const records of [[older, newer], [newer, older]]) {
+    assert.deepEqual(countAircraft(payload(records), now).airlines, []);
+  }
 });

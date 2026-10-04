@@ -14,10 +14,10 @@ test('ranks airlines by airborne count, highest first', () => {
   ]);
 });
 
-test('breaks count ties alphabetically, regardless of incoming order', () => {
+test('breaks count ties by stable identifier, independent of display name or incoming order', () => {
   const airlines = [
     { id: 'cathay', name: 'Cathay Pacific', count: 19 },
-    { id: 'aer-lingus', name: 'Aer Lingus', count: 19 },
+    { id: 'aer-lingus', name: 'Zulu name', count: 19 },
     { id: 'air-canada', name: 'Air Canada', count: 19 },
   ];
   const expected = ['aer-lingus', 'air-canada', 'cathay'];
