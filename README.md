@@ -4,7 +4,9 @@ A minimalist Angular leaderboard showing observed airborne aircraft for the top 
 
 A TypeScript backend fetches a worldwide SkyLink snapshot on startup and every 15 minutes. The UI reads the cached ranking and animates changes when a new snapshot arrives.
 
-![Airline leaderboard showing observed airborne counts](docs/preview.png)
+![Airline leaderboard showing rank movement](docs/preview.png)
+
+Preview uses synthetic snapshots to illustrate up, down, unchanged, and new entries.
 
 ## Run locally
 
@@ -35,6 +37,10 @@ Open http://127.0.0.1:4200. Both services listen on loopback only. Angular proxi
 The browser checks the cache every minute. Row changes and counts animate briefly; reduced-motion preferences disable animation. If an update fails, the last successful ranking and its original timestamp remain visible with a delay notice. Before the first successful snapshot, the UI shows an unavailable message and retries automatically.
 
 Click an airline to expand its aircraft-type breakdown; only one row is expanded at a time. The same cached snapshot supplies both the total and its breakdown, without extra provider requests. The expanded airline stays open when the ranking changes, and its total updates immediately with its breakdown. Other totals retain their brief count animation.
+
+Rank indicators compare each operator's position with the previous successful, distinct snapshot: a green upward caret for a higher rank, a red downward caret for a lower rank, and “New” for an operator absent from the previous top 100 (including returning operators). Unchanged ranks show nothing. Equal aircraft counts still use prefix order, so indicators reflect row position rather than count changes. Screen-reader text describes each indicator.
+
+Comparison happens in the backend, so browser reloads and different viewers receive the same indicators. Repeated timestamps, name-only updates and failed fetches do not advance the comparison. After an outage, the next successful snapshot compares with the last successful one, even if the gap exceeds 15 minutes. Comparison state is held only in memory; the first snapshot after a backend restart has no indicators. This feature adds no provider calls or persistent history.
 
 Aircraft types come from SkyLink's `aircraft_type` field. Common ICAO designators and a few exact model aliases are normalized using the [FAA type table](https://www.faa.gov/air_traffic/publications/atpubs/foa_html/appendix_3.html), with labels in `backend/aircraft-types.ts`. Distinct variants remain separate. Unrecognized labels retain the provider wording with normalized whitespace and capitalization; missing or invalid values become “Unknown type”. Metadata can be incomplete or incorrect, and unfamiliar aliases may remain separate. Breakdown counts always sum to the airline total.
 

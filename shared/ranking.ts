@@ -2,6 +2,7 @@ export interface Airline {
   id: string;
   name: string;
   count: number;
+  rankMovement?: 'up' | 'down' | 'new';
   aircraftTypes: { name: string; count: number }[];
 }
 
