@@ -14,11 +14,12 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 ## Development workflow
 
 - Agree on the scope and expected behavior before substantial implementation work.
-- Keep `main` working. Use a short-lived `codex/<description>` branch for meaningful changes; small documentation fixes can go directly to `main`.
+- Keep `main` working. Make all changes through pull requests from short-lived `codex/<description>` branches, including documentation fixes.
 - Make focused commits with concise, imperative messages describing the change.
 - Before committing, run `npm run check` and review the diff. Check UI changes in the browser too.
 - Never commit `.env`, API keys, private information, or generated build files.
 - Use `.github/pull_request_template.md` to describe the change, verification, and review outcome. Include a screenshot for visible UI changes.
+- Update relevant existing documentation when a change affects setup, commands, or behavior. Reviewers should verify that it remains accurate.
 - For meaningful code changes, delegate a review of the proposed commit to a separate agent with fresh context. Provide the requirements, base and head commits, and repository instructions. The reviewer must not edit files. Small documentation-only changes may use self-review.
 - Verify review findings, resolve blocking issues, and rerun affected checks after fixes. Request another review of significant code changes made after review.
 - Before merging, confirm CI passes for the latest revision and present the verification and review results to the repository owner.
