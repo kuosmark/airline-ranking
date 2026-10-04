@@ -1,10 +1,10 @@
 # Airline Ranking
 
-A minimalist Angular leaderboard showing observed airborne aircraft for ten airlines, built as a personal learning project.
+A minimalist Angular leaderboard showing observed airborne aircraft for 100 selected passenger airlines, built as a personal learning project.
 
 A TypeScript backend fetches a worldwide SkyLink snapshot on startup and every 15 minutes. The UI reads the cached ranking and animates changes when a new snapshot arrives.
 
-![Airline leaderboard showing ten airlines with observed airborne counts](docs/preview.png)
+![Airline leaderboard showing observed airborne counts](docs/preview.png)
 
 ## Run locally
 
@@ -55,8 +55,10 @@ Tests use Node's built-in test runner and synthetic data. They do not require an
 
 The backend uses Node's built-in HTTP server and fetch API. It stores only the latest successful ranking in memory. There is no database or deployment configuration.
 
-Aircraft count toward an airline when their normalized callsign starts with its selected ICAO prefix, `is_on_ground` is explicitly false, and `last_seen` is within five minutes of the provider snapshot. Duplicate ICAO24 addresses use the newest observation. Malformed, incomplete, or outdated global responses are rejected. Regional flights using other callsigns are excluded; these are observed counts, not complete fleet totals, and depend on SkyLink's coverage.
+Aircraft count toward an airline when their normalized callsign starts with its selected ICAO prefix, `is_on_ground` is explicitly false, and `last_seen` is within five minutes of the provider snapshot. Duplicate ICAO24 addresses use the newest observation. Malformed, incomplete, or outdated global responses are rejected. Each selected prefix is counted separately; other operators flying for the same brand are not combined. These are observed counts, not complete fleet totals, and depend on SkyLink's coverage. Selecting passenger airlines does not exclude cargo flights that use the same prefix.
 
-Selected prefixes: Air Canada (ACA), Korean Air (KAL), British Airways (BAW), Iberia (IBE), Aer Lingus (EIN), Cathay Pacific (CPA), American Airlines (AAL), Delta Air Lines (DAL), Air France (AFR), and KLM Royal Dutch Airlines (KLM).
+The fixed selection in [backend/airlines.ts](backend/airlines.ts) is based on [FlightsFrom's top 100 by daily departures](https://www.flightsfrom.com/top-100-airlines), dated 1 October 2026. It is a starting selection, not a ranking by annual passengers or a comprehensive list of operators. The application ranks these airlines by observed airborne aircraft and keeps airlines with zero observations in the list.
+
+ICAO prefixes were checked against the [FAA designator directory](https://www.faa.gov/air_traffic/publications/atpubs/cnt_html/chap3_section_3.html). Brand entries are mapped to one named operator: for example, easyJet UK (`EZY`), LATAM Airlines Chile (`LAN`), Avianca Colombia (`AVA`), and AirAsia Malaysia (`AXM`). Wizz Air Hungary (`WZZ`) and Wizz Air Malta (`WMT`) have separate rows. The source's “Gestair” / `G5` label is corrected to China Express Airlines (`HXA`) using [IATA's carrier record](https://www.iata.org/en/about/members/airline-list/china-express-airlines/480/).
 
 Development follows the lightweight branch, pull request, and squash-merge workflow in [AGENTS.md](AGENTS.md).

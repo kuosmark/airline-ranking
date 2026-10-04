@@ -1,21 +1,9 @@
 import type { Snapshot } from '../shared/ranking.ts';
+import { airlines } from './airlines.ts';
 
 export const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 const OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15_000;
-
-const airlines = [
-  { id: 'air-canada', name: 'Air Canada', prefix: 'ACA' },
-  { id: 'korean-air', name: 'Korean Air', prefix: 'KAL' },
-  { id: 'british-airways', name: 'British Airways', prefix: 'BAW' },
-  { id: 'iberia', name: 'Iberia', prefix: 'IBE' },
-  { id: 'aer-lingus', name: 'Aer Lingus', prefix: 'EIN' },
-  { id: 'cathay-pacific', name: 'Cathay Pacific', prefix: 'CPA' },
-  { id: 'american-airlines', name: 'American Airlines', prefix: 'AAL' },
-  { id: 'delta-air-lines', name: 'Delta Air Lines', prefix: 'DAL' },
-  { id: 'air-france', name: 'Air France', prefix: 'AFR' },
-  { id: 'klm', name: 'KLM Royal Dutch Airlines', prefix: 'KLM' },
-];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
