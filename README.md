@@ -1,26 +1,42 @@
 # Airline Ranking
 
-A minimalist Angular leaderboard for ten airlines, showing observed aircraft airborne.
+A minimalist Angular leaderboard for ten airlines, built as a personal learning project.
+
+The current version runs locally with **illustrative sample data**. It demonstrates ranking, animated row changes, and count transitions; it does not fetch live aircraft data.
+
+![Airline leaderboard showing ten airlines with sample airborne counts](docs/preview.jpg)
 
 ## Run locally
 
-Requires Node.js 22.12+ (22.x) or 24.x.
+Requires Node.js 22.13+ (22.x) or 24.x. GitHub Actions uses Node.js 22.
 
 ```sh
-npm install
+npm ci
 npm start
 ```
 
 Open http://127.0.0.1:4200. Use **Show sample update** to preview row movement and a 1.5-second count transition. Reduced-motion preferences disable animation.
 
-```sh
-npm run build
-```
+No API key or `.env` file is needed for this preview.
 
-Run `npm run check` before committing: it runs linting, ranking tests, and the production build, stopping on the first failure.
-Run `npm test` for the ranking tests alone. They use Node's built-in test runner with TypeScript type stripping; no additional test framework is needed.
+## Checks
 
-Check code quality with `npm run lint`, or apply safe automatic fixes with `npm run lint:fix`.
-ESLint checks TypeScript with strict type-aware rules, Angular conventions, and template accessibility. All warnings fail the check. Rule versions are pinned so upgrades are deliberate.
+Run `npm run check` before committing. GitHub Actions runs the same command on pull requests and pushes to `main`.
 
-This frontend uses two illustrative snapshots, with no API requests. Counts follow selected airline callsigns; regional flights using other callsigns are excluded. SkyLink integration and a shared 15-minute backend refresh are the next step. The existing `.env` is private and is not used by the frontend.
+| Command | Purpose |
+| --- | --- |
+| `npm run check` | Run linting, tests, and the production build |
+| `npm run lint` | Check strict TypeScript rules, Angular conventions, and template accessibility |
+| `npm run lint:fix` | Apply automatic lint fixes |
+| `npm test` | Test count ordering, alphabetical ties, zero counts, input preservation, and empty rankings |
+| `npm run build` | Build the application into `dist/airline-ranking` |
+
+Tests use Node's built-in test runner. Lint warnings fail the check.
+
+## Scope
+
+Angular and TypeScript handle the UI; browser animation APIs move the rows. The app contains two sample snapshots and has no backend or deployment yet.
+
+The intended live-data approach is to count observed aircraft by selected airline callsigns, excluding regional flights using other callsigns. That filtering is not implemented in this preview. The next step is a SkyLink backend refresh every 15 minutes; observed counts will depend on the provider's coverage.
+
+Development follows the lightweight branch, pull request, and squash-merge workflow in [AGENTS.md](AGENTS.md).
