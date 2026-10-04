@@ -3,6 +3,7 @@ import console from 'node:console';
 import { once } from 'node:events';
 import process from 'node:process';
 import { test } from 'node:test';
+import { airlines } from '../backend/airlines.ts';
 import { countAircraft, fetchSnapshot, REFRESH_INTERVAL_MS } from '../backend/skylink.ts';
 import { createRankingServer, createRankingService } from '../backend/server.ts';
 
@@ -12,23 +13,48 @@ const aircraft = (fields = {}) => ({ icao24: '000001', callsign: 'AAL123', is_on
 const payload = (records, timestamp = time) => ({ aircraft: records, total_count: records.length, timestamp });
 const count = (snapshot, id) => snapshot.airlines.find(airline => airline.id === id)?.count;
 
-test('counts the ten selected callsign prefixes and normalizes whitespace and case', () => {
+test('defines 100 airlines with unique identifiers and ICAO prefixes', () => {
+  assert.equal(airlines.length, 100);
+  assert.equal(new Set(airlines.map(airline => airline.id)).size, 100);
+  assert.equal(new Set(airlines.map(airline => airline.prefix)).size, 100);
+  assert.ok(airlines.every(airline => airline.name.trim() && /^[A-Z]{3}$/.test(airline.prefix)));
+});
+
+test('retains the original ten airlines and normalizes callsign whitespace and case', () => {
   const prefixes = ['ACA', 'KAL', 'BAW', 'IBE', 'EIN', 'CPA', 'AAL', 'DAL', 'AFR', 'KLM'];
   const records = prefixes.map((prefix, i) => aircraft({ icao24: i.toString(16).padStart(6, '0'), callsign: ` ${prefix.toLowerCase()}12A ` }));
   const snapshot = countAircraft(payload(records), now);
 
-  assert.equal(snapshot.airlines.length, 10);
-  assert.ok(snapshot.airlines.every(airline => airline.count === 1));
+  const ids = ['air-canada', 'korean-air', 'british-airways', 'iberia', 'aer-lingus', 'cathay-pacific',
+    'american-airlines', 'delta-air-lines', 'air-france', 'klm'];
+  assert.equal(snapshot.airlines.length, 100);
+  assert.ok(ids.every(id => count(snapshot, id) === 1));
+  assert.ok(snapshot.airlines.filter(airline => !ids.includes(airline.id)).every(airline => airline.count === 0));
   assert.equal(snapshot.updatedAt, time.replace('00Z', '00.000Z'));
   assert.equal(snapshot.isStale, false);
 });
 
-test('excludes regional callsigns, missing callsigns, and partial or malformed prefix matches', () => {
+test('counts new airlines separately and does not combine other operators under the same brand', () => {
+  const callsigns = ['UAL123', 'UAL456', 'FIN789', 'WZZ123', 'WMT456', 'EZY123', 'EJU456', 'LAN123', 'TAM456', 'HXA123', 'GES456'];
+  const records = callsigns.map((callsign, i) => aircraft({ icao24: i.toString(16).padStart(6, '0'), callsign }));
+  const snapshot = countAircraft(payload(records), now);
+
+  assert.equal(count(snapshot, 'united-airlines'), 2);
+  assert.equal(count(snapshot, 'finnair'), 1);
+  assert.equal(count(snapshot, 'wizz-air-hungary'), 1);
+  assert.equal(count(snapshot, 'wizz-air-malta'), 1);
+  assert.equal(count(snapshot, 'easyjet-uk'), 1);
+  assert.equal(count(snapshot, 'latam-airlines-chile'), 1);
+  assert.equal(count(snapshot, 'china-express-airlines'), 1);
+  assert.equal(snapshot.airlines.reduce((total, airline) => total + airline.count, 0), 8);
+});
+
+test('excludes unlisted operators, missing callsigns, and partial or malformed prefix matches', () => {
   const callsigns = ['ENY123', null, undefined, '', 'AAL', 'XAAL123', 'AAL 123', 'N12345'];
   const records = callsigns.map((callsign, i) => aircraft({ icao24: i.toString(16).padStart(6, '0'), callsign, airline: 'American Airlines' }));
   const snapshot = countAircraft(payload(records), now);
 
-  assert.equal(snapshot.airlines.length, 10);
+  assert.equal(snapshot.airlines.length, 100);
   assert.ok(snapshot.airlines.every(airline => airline.count === 0));
 });
 
