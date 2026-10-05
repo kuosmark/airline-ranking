@@ -10,7 +10,7 @@
 
   <section class="leaderboard" aria-label="Airline leaderboard">
     <div class="board-header">
-      @if (snapshot() && (snapshot()?.isStale || error())) {
+      @if (snapshot() && (isRankingStale() || error())) {
         <p class="update-warning" role="status">Updates delayed. Showing the last successful snapshot.</p>
       }
       @if (snapshot()) {

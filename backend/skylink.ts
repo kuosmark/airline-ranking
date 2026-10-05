@@ -1,7 +1,7 @@
 import { rankAirlines, type Snapshot } from '../shared/ranking.ts';
 import { aircraftTypeName } from './aircraft-types.ts';
 
-export const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+export { REFRESH_INTERVAL_MS } from '../shared/ranking.ts';
 const OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15_000;
 

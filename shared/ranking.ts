@@ -17,3 +17,9 @@ export interface Snapshot {
 export function rankAirlines(airlines: Airline[]): Airline[] {
   return [...airlines].sort((a, b) => b.count - a.count || a.id.localeCompare(b.id, 'en'));
 }
+
+export const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+
+export function isSnapshotStale(snapshot: Snapshot, now: number): boolean {
+  return snapshot.isStale || now - Date.parse(snapshot.updatedAt) > REFRESH_INTERVAL_MS + 30_000;
+}

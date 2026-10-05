@@ -43,11 +43,11 @@ test('persists names and refreshes exactly at the 30-day boundary', async t => {
     assert.equal(options.redirect, 'error');
     return response();
   });
-  let directory = createOperatorDirectory('test', path, () => clock);
+  let directory = await createOperatorDirectory('test', path, () => clock);
   await directory.refresh(['FIN', 'FIN']);
   assert.equal(directory.apply(snapshot).airlines[0].name, 'Finnair');
   assert.equal(directory.apply(snapshot).airlines[0].country, 'Finland');
-  directory = createOperatorDirectory('test', path, () => clock);
+  directory = await createOperatorDirectory('test', path, () => clock);
   assert.equal(directory.apply(snapshot).airlines[0].country, 'Finland');
   clock += NAME_REFRESH_MS - 1;
   await directory.refresh(['FIN']);
@@ -80,7 +80,7 @@ test('legacy caches keep their budget, cooldown and expiry without early country
   writeFileSync(path, JSON.stringify(saved));
   let calls = 0;
   t.mock.method(globalThis, 'fetch', async () => { calls++; return response(); });
-  const directory = createOperatorDirectory('test', path, () => clock);
+  const directory = await createOperatorDirectory('test', path, () => clock);
   await directory.refresh(['FIN', 'AAL']);
   assert.equal(calls, 0);
   assert.equal(directory.apply(snapshot).airlines[0].country, null);
@@ -104,7 +104,7 @@ test('missing country keeps the successful name TTL and refresh failures preserv
     if (calls === 2) return response();
     return new globalThis.Response('', { status: 500 });
   });
-  const directory = createOperatorDirectory('test', path, () => clock);
+  const directory = await createOperatorDirectory('test', path, () => clock);
   await directory.refresh(['FIN']);
   clock += MISSING_NAME_REFRESH_MS;
   await directory.refresh(['FIN']);
@@ -126,7 +126,7 @@ test('caches both 404 and empty results and retries at seven days', async t => {
     let clock = start;
     let calls = 0;
     t.mock.method(globalThis, 'fetch', async () => { calls++; return new globalThis.Response('[]', { status }); });
-    const directory = createOperatorDirectory('test', path, () => clock);
+    const directory = await createOperatorDirectory('test', path, () => clock);
     await directory.refresh(['FIN']);
     assert.equal(directory.apply(snapshot).airlines[0].name, 'FIN');
     clock += MISSING_NAME_REFRESH_MS - 1;
@@ -150,13 +150,13 @@ test('persists the attempt before fetching and enforces the rolling cap across r
     assert.equal(saved.cooldownUntil, clock + LOOKUP_COOLDOWN_MS);
     return response();
   });
-  await createOperatorDirectory('test', path, () => clock).refresh(['FIN', 'AAL']);
+  await (await createOperatorDirectory('test', path, () => clock)).refresh(['FIN', 'AAL']);
   assert.equal(calls, 1);
   clock += LOOKUP_WINDOW_MS - 1;
-  await createOperatorDirectory('test', path, () => clock).refresh(['AAL']);
+  await (await createOperatorDirectory('test', path, () => clock)).refresh(['AAL']);
   assert.equal(calls, 1);
   clock++;
-  await createOperatorDirectory('test', path, () => clock).refresh(['FIN']);
+  await (await createOperatorDirectory('test', path, () => clock)).refresh(['FIN']);
   assert.equal(calls, 2);
 });
 
@@ -167,7 +167,7 @@ test('failures consume budget, preserve names and stop the batch with persistent
     writeFileSync(path, JSON.stringify({ names: { FIN: { name: 'Finnair', checkedAt: new Date(start - NAME_REFRESH_MS).toISOString() } }, attempts: [], cooldownUntil: 0 }));
     let calls = 0;
     t.mock.method(globalThis, 'fetch', async () => { calls++; return new globalThis.Response('', { status }); });
-    const directory = createOperatorDirectory('test', path, () => clock);
+    const directory = await createOperatorDirectory('test', path, () => clock);
     await directory.refresh(['FIN', 'AAL']);
     assert.equal(calls, 1);
     assert.equal(directory.apply(snapshot).airlines[0].name, 'Finnair');
@@ -175,7 +175,7 @@ test('failures consume budget, preserve names and stop the batch with persistent
     assert.equal(saved.attempts.length, 1);
     assert.equal(saved.names.FIN.checkedAt, new Date(start - NAME_REFRESH_MS).toISOString());
     clock += LOOKUP_COOLDOWN_MS - 1;
-    const restarted = createOperatorDirectory('test', path, () => clock);
+    const restarted = await createOperatorDirectory('test', path, () => clock);
     await restarted.refresh(['FIN']);
     assert.equal(calls, 1);
     clock++;
@@ -191,7 +191,7 @@ test('network errors and malformed responses activate cooldown without negative 
       if (isNetworkFailure) throw new Error('offline');
       return new globalThis.Response('{}');
     });
-    await createOperatorDirectory('test', path, () => start).refresh(['FIN']);
+    await (await createOperatorDirectory('test', path, () => start)).refresh(['FIN']);
     const saved = JSON.parse(readFileSync(path, 'utf8'));
     assert.deepEqual(saved.names, {});
     assert.equal(saved.attempts.length, 1);
@@ -202,16 +202,16 @@ test('network errors and malformed responses activate cooldown without negative 
 test('corrupt caches and write failures disable lookups without spending quota', async t => {
   let calls = 0;
   t.mock.method(globalThis, 'fetch', async () => { calls++; return response(); });
-  for (const data of ['{', '{}', '{"names":{},"attempts":["bad"],"cooldownUntil":0}']) {
+  for (const data of ['null', '{', '{}', '{"names":{},"attempts":["bad"],"cooldownUntil":0}']) {
     const path = setup(t);
     writeFileSync(path, data);
-    const directory = createOperatorDirectory('test', path, () => start);
+    const directory = await createOperatorDirectory('test', path, () => start);
     await directory.refresh(['FIN']);
     assert.equal(directory.apply(snapshot).airlines[0].name, 'FIN');
   }
   const path = setup(t);
   mkdirSync(path + '.tmp');
-  await createOperatorDirectory('test', path, () => start).refresh(['FIN']);
+  await (await createOperatorDirectory('test', path, () => start)).refresh(['FIN']);
   assert.equal(calls, 0);
 });
 
@@ -219,15 +219,21 @@ test('overlapping refreshes share work and HTTP reads do not trigger directory r
   const path = setup(t);
   let resolve;
   let calls = 0;
-  t.mock.method(globalThis, 'fetch', () => { calls++; return new Promise(done => { resolve = done; }); });
-  const directory = createOperatorDirectory('test', path, () => start);
+  let notifyStarted;
+  const started = new Promise(done => { notifyStarted = done; });
+  t.mock.method(globalThis, 'fetch', () => {
+    calls++;
+    notifyStarted();
+    return new Promise(done => { resolve = done; });
+  });
+  const directory = await createOperatorDirectory('test', path, () => start);
   const service = createRankingService(async () => snapshot, () => start, async next => {
     await directory.refresh(next.airlines.map(row => row.id));
     return directory.apply(next);
   });
   const first = service.refresh();
   assert.strictEqual(service.refresh(), first);
-  await Promise.resolve();
+  await started;
   const directoryPending = directory.refresh(['FIN']);
   assert.strictEqual(directory.refresh(['FIN']), directoryPending);
   for (let i = 0; i < 10; i++) assert.equal(service.read().airlines[0].name, 'FIN');
@@ -243,9 +249,17 @@ test('a restart during an outstanding request respects the saved cooldown', asyn
   const path = setup(t);
   let calls = 0;
   let resolve;
-  t.mock.method(globalThis, 'fetch', () => { calls++; return new Promise(done => { resolve = done; }); });
-  const pending = createOperatorDirectory('test', path, () => start).refresh(['FIN']);
-  await createOperatorDirectory('test', path, () => start).refresh(['FIN']);
+  let notifyStarted;
+  const started = new Promise(done => { notifyStarted = done; });
+  t.mock.method(globalThis, 'fetch', () => {
+    calls++;
+    notifyStarted();
+    return new Promise(done => { resolve = done; });
+  });
+  const directory = await createOperatorDirectory('test', path, () => start);
+  const pending = directory.refresh(['FIN']);
+  await started;
+  await (await createOperatorDirectory('test', path, () => start)).refresh(['FIN']);
   assert.equal(calls, 1);
   resolve(response());
   await pending;
@@ -259,11 +273,28 @@ test('a failed result write stops the batch with the paid attempt retained on di
     mkdirSync(path + '.tmp');
     return response();
   });
-  const directory = createOperatorDirectory('test', path, () => start);
+  const directory = await createOperatorDirectory('test', path, () => start);
   await directory.refresh(['FIN', 'AAL']);
   await directory.refresh(['AAL']);
   assert.equal(calls, 1);
   const saved = JSON.parse(readFileSync(path, 'utf8'));
   assert.equal(saved.attempts.length, 1);
   assert.equal(saved.cooldownUntil, start + LOOKUP_COOLDOWN_MS);
+});
+
+
+test('a deadline stops the batch before reserving another paid lookup', async t => {
+  const path = setup(t);
+  let clock = start;
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    clock += 10_000;
+    return response();
+  });
+  const directory = await createOperatorDirectory('test', path, () => clock);
+  await directory.refresh(['FIN', 'AAL'], start + 25_000);
+  assert.equal(calls, 1);
+  assert.equal(JSON.parse(readFileSync(path, 'utf8')).attempts.length, 1);
+  assert.equal(directory.isAvailable(), true);
 });
