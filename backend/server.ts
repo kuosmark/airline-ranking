@@ -1,8 +1,7 @@
 import { createServer } from 'node:http';
-import { rankAirlines, type Airline, type Snapshot } from '../shared/ranking.ts';
-import { REFRESH_INTERVAL_MS } from './skylink.ts';
+import { rankAirlines, isSnapshotStale, type Airline, type Snapshot } from '../shared/ranking.ts';
 
-function compareRanks(next: Snapshot, previous: Snapshot | null): Snapshot {
+export function compareRanks(next: Snapshot, previous: Snapshot | null): Snapshot {
   if (!previous) { return next; }
   const previousRanks = new Map(rankAirlines(previous.airlines).map((airline, index) => [airline.id, index]));
   const airlines = rankAirlines(next.airlines).map<Airline>((airline, index) => {
@@ -23,7 +22,7 @@ export function createRankingService(load: () => Promise<Snapshot>, now = Date.n
       if (!snapshot) { return null; }
       return {
         ...snapshot,
-        isStale: isRefreshFailed || now() - Date.parse(snapshot.updatedAt) > REFRESH_INTERVAL_MS + 30_000,
+        isStale: isRefreshFailed || isSnapshotStale(snapshot, now()),
       };
     },
     refresh(): Promise<void> {

@@ -2,7 +2,7 @@ import type { ElementRef, OnDestroy, OnInit, QueryList } from '@angular/core';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ViewChildren, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import type { Airline, Snapshot } from '../shared/ranking';
-import { rankAirlines } from '../shared/ranking';
+import { rankAirlines, isSnapshotStale } from '../shared/ranking';
 import { formatSnapshotAge } from './snapshot-age';
 
 @Component({
@@ -24,6 +24,10 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly snapshotAge = computed(() => {
     const snapshot = this.snapshot();
     return snapshot ? formatSnapshotAge(snapshot.updatedAt, this.now()) : '';
+  });
+  readonly isRankingStale = computed(() => {
+    const snapshot = this.snapshot();
+    return snapshot ? isSnapshotStale(snapshot, this.now()) : false;
   });
   readonly error = signal<string | null>(null);
   readonly rows = signal<Airline[]>([]);

@@ -5,7 +5,7 @@ import { fetchSnapshot, REFRESH_INTERVAL_MS } from './skylink.ts';
 const apiKey = process.env['SKYLINK_API_KEY'];
 if (!apiKey?.trim()) { throw new Error('Set SKYLINK_API_KEY in .env before starting the backend.'); }
 
-const directory = createOperatorDirectory(apiKey, '.cache/operator-names.json');
+const directory = await createOperatorDirectory(apiKey, '.cache/operator-names.json');
 const service = createRankingService(
   async () => directory.apply(await fetchSnapshot(apiKey)),
   Date.now,

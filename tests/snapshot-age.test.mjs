@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { isSnapshotStale, REFRESH_INTERVAL_MS } from '../shared/ranking.ts';
 import { formatSnapshotAge } from '../src/snapshot-age.ts';
 
 const updatedAt = '2026-10-04T12:00:00Z';
@@ -18,4 +19,13 @@ test('ages the same snapshot through minute, hour, and day boundaries', () => {
   ]) {
     assert.equal(formatSnapshotAge(updatedAt, snapshotTime + minutes * 60_000), expected);
   }
+});
+
+
+test('an unchanged published snapshot becomes stale without a backend response change', () => {
+  const snapshot = { updatedAt, isStale: false, airlines: [] };
+  const boundary = snapshotTime + REFRESH_INTERVAL_MS + 30_000;
+  assert.equal(isSnapshotStale(snapshot, boundary), false);
+  assert.equal(isSnapshotStale(snapshot, boundary + 1), true);
+  assert.equal(isSnapshotStale({ ...snapshot, isStale: true }, snapshotTime), true);
 });

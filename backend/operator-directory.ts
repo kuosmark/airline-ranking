@@ -1,5 +1,4 @@
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { fileStore, type JsonStore } from './storage.ts';
 import type { Snapshot } from '../shared/ranking.ts';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -11,7 +10,7 @@ export const MAX_LOOKUP_ATTEMPTS = 1000;
 
 interface OperatorDetails { name: string | null; country: string | null }
 interface Entry { name: string | null; country?: string | null; checkedAt: string }
-interface Cache {
+export interface OperatorCache {
   names: Record<string, Entry | undefined>;
   attempts: number[];
   cooldownUntil: number;
@@ -25,7 +24,7 @@ function isTimestamp(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0;
 }
 
-function isCache(value: unknown): value is Cache {
+function isCache(value: unknown): value is OperatorCache {
   if (!isRecord(value) || !isRecord(value['names']) || !Array.isArray(value['attempts']) ||
       !value['attempts'].every(isTimestamp) || !isTimestamp(value['cooldownUntil'])) { return false; }
   return Object.entries(value['names']).every(([prefix, entry]) =>
@@ -56,26 +55,26 @@ export function operatorDetails(payload: unknown, prefix: string): OperatorDetai
   return { name, country: countries.size === 1 ? [...countries][0] : null };
 }
 
-export function createOperatorDirectory(apiKey: string, path: string, now = Date.now) {
-  let cache: Cache = { names: {}, attempts: [], cooldownUntil: 0 };
+export async function createOperatorDirectory(apiKey: string, storage: string | JsonStore, now = Date.now) {
+  const store = typeof storage === 'string' ? fileStore(storage) : storage;
+  let cache: OperatorCache = { names: {}, attempts: [], cooldownUntil: 0 };
   let isDisabled = false;
   let pending: Promise<void> | undefined;
   try {
-    const saved: unknown = JSON.parse(readFileSync(path, 'utf8'));
-    if (!isCache(saved)) { throw new Error('Invalid operator cache'); }
-    cache = saved;
-  } catch (error) {
-    if (!isRecord(error) || error['code'] !== 'ENOENT') {
-      isDisabled = true;
-      console.error('Operator cache could not be read; directory lookups are disabled.');
+    const saved = await store.read();
+    // Only the local file store returns null for a genuinely absent cache.
+    if (saved !== null) {
+      if (!isCache(saved)) { throw new Error('Invalid operator cache'); }
+      cache = saved;
     }
+  } catch {
+    isDisabled = true;
+    console.error('Operator cache could not be read; directory lookups are disabled.');
   }
 
-  function save(): boolean {
+  async function save(): Promise<boolean> {
     try {
-      mkdirSync(dirname(path), { recursive: true });
-      writeFileSync(`${path}.tmp`, JSON.stringify(cache, null, 2) + '\n', { mode: 0o600 });
-      renameSync(`${path}.tmp`, path);
+      await store.write(cache);
       return true;
     } catch {
       isDisabled = true;
@@ -84,10 +83,10 @@ export function createOperatorDirectory(apiKey: string, path: string, now = Date
     }
   }
 
-  async function lookupNames(prefixes: string[]): Promise<void> {
+  async function lookupNames(prefixes: string[], deadline: number): Promise<void> {
     for (const prefix of new Set(prefixes)) {
       const time = now();
-      if (isDisabled || time < cache.cooldownUntil) { return; }
+      if (isDisabled || time + 15_000 >= deadline || time < cache.cooldownUntil) { return; }
       if (!/^[A-Z]{3}$/.test(prefix)) { continue; }
       const entry = cache.names[prefix];
       const refreshAfter = entry?.name === null ? MISSING_NAME_REFRESH_MS : NAME_REFRESH_MS;
@@ -98,7 +97,7 @@ export function createOperatorDirectory(apiKey: string, path: string, now = Date
       // Reserve the attempt and a crash-safe cooldown before contacting the provider.
       cache.attempts.push(time);
       cache.cooldownUntil = time + LOOKUP_COOLDOWN_MS;
-      if (!save()) { return; }
+      if (!await save()) { return; }
       try {
         const response = await fetch(`https://data.skylinkapi.com/v3.1/airlines/search?icao=${prefix}`, {
           headers: { 'x-api-key': apiKey },
@@ -113,10 +112,10 @@ export function createOperatorDirectory(apiKey: string, path: string, now = Date
         }
         cache.names[prefix] = { ...details, checkedAt: new Date(now()).toISOString() };
         cache.cooldownUntil = 0;
-        if (!save()) { return; }
+        if (!await save()) { return; }
       } catch {
         cache.cooldownUntil = now() + LOOKUP_COOLDOWN_MS;
-        save();
+        await save();
         console.error('Directory lookup failed; keeping existing names and pausing lookups for 24 hours.');
         return;
       }
@@ -124,15 +123,16 @@ export function createOperatorDirectory(apiKey: string, path: string, now = Date
   }
 
   return {
+    isAvailable(): boolean { return !isDisabled; },
     apply(snapshot: Snapshot): Snapshot {
       return { ...snapshot, airlines: snapshot.airlines.map(airline => ({
         ...airline, name: cache.names[airline.id]?.name ?? airline.id,
         country: cache.names[airline.id]?.country ?? null,
       })) };
     },
-    refresh(prefixes: string[]): Promise<void> {
+    refresh(prefixes: string[], deadline = Infinity): Promise<void> {
       // The snapshot service also serializes updates; guard direct overlapping calls too.
-      pending ??= lookupNames(prefixes).finally(() => { pending = undefined; });
+      pending ??= lookupNames(prefixes, deadline).finally(() => { pending = undefined; });
       return pending;
     },
   };
