@@ -20,7 +20,7 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 ol { list-style: none; padding: 0; margin: 0; }
 li { position: relative; border-bottom: 1px solid #dce1e5; background: white; }
 li:last-child { border-bottom: 0; border-radius: 0 0 16px 16px; }
-.airline-toggle { width: 100%; min-height: 58px; padding: 0 28px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.airline-toggle { width: 100%; grid-template-rows: minmax(58px, auto); padding: 0 28px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 li.is-expanded { background: #edf4ef; }
 @media (hover: hover) {
   li:not(.is-expanded):hover { background: #f3f4f6; }
