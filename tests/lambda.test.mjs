@@ -26,7 +26,7 @@ function setup(t, failure) {
   let publications = 0;
   t.mock.method(S3Client.prototype, 'send', async command => {
     const { Key, Body } = command.input;
-    if (Key === 'operator-names.json' && failure === 'cache') throw new Error(secret);
+    if (Key === 'operator-names.json' && ['cache', 'recovery-cache'].includes(failure)) throw new Error(secret);
     if (Key === 'refresh-state.json' && failure === 'state') throw new Error(secret);
     if (Key === 'api/ranking') {
       publications++;
@@ -36,9 +36,13 @@ function setup(t, failure) {
       if (failure === 'after-publish' && Key === 'refresh-state.json' && publications > 0) throw new Error(secret);
       return { ETag: 'saved' };
     }
+    const savedSnapshot = { updatedAt: new Date().toISOString(), isStale: false, airlines: [] };
+    const refreshState = failure === 'recovery-cache'
+      ? { lastAttemptSlot: Math.floor(Date.now() / 900_000), snapshot: savedSnapshot }
+      : { lastAttemptSlot: null, snapshot: null };
     const value = Key === 'operator-names.json'
       ? { names: {}, attempts: [], cooldownUntil: 0 }
-      : { lastAttemptSlot: null, snapshot: null };
+      : refreshState;
     return { ETag: 'initial', Body: { transformToString: async () => JSON.stringify(value) } };
   });
   t.mock.method(globalThis, 'fetch', async () => {
@@ -79,4 +83,14 @@ test('successful Lambda refresh still completes with stage diagnostics enabled',
   const logs = setup(t);
   await handler({ scheduledAt: new Date().toISOString() }, { getRemainingTimeInMillis: () => 120_000 });
   assert.deepEqual(logs, []);
+});
+
+
+test('duplicate delivery can republish saved ranking when the operator cache is unavailable', async t => {
+  setup(t, 'recovery-cache');
+  await handler({ scheduledAt: new Date().toISOString() }, { getRemainingTimeInMillis: () => 120_000 });
+  const publications = S3Client.prototype.send.mock.calls.filter(call => call.arguments[0].input.Key === 'api/ranking');
+  assert.equal(publications.length, 1);
+  assert.deepEqual(JSON.parse(publications[0].arguments[0].input.Body).airlines, []);
+  assert.equal(globalThis.fetch.mock.callCount(), 0);
 });
