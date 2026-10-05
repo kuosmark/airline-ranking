@@ -6,7 +6,7 @@ export function s3Store(client: S3Client, bucket: string, key: string): JsonStor
   let etag: string | undefined;
   return {
     async read(): Promise<unknown> {
-      const response = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }));
+      const response = await client.send(new GetObjectCommand({ Bucket: bucket, Key: key }), { abortSignal: AbortSignal.timeout(5_000) });
       if (!response.Body) { throw new Error('State object has no body'); }
       const value: unknown = JSON.parse(await response.Body.transformToString());
       if (!response.ETag || value === null) { throw new Error('State object is invalid'); }
@@ -17,7 +17,7 @@ export function s3Store(client: S3Client, bucket: string, key: string): JsonStor
       if (!etag) { throw new Error('Read existing state before writing'); }
       const response = await client.send(new PutObjectCommand({
         Bucket: bucket, Key: key, Body: JSON.stringify(value), ContentType: 'application/json', IfMatch: etag,
-      }));
+      }), { abortSignal: AbortSignal.timeout(5_000) });
       if (!response.ETag) { throw new Error('State write was not confirmed'); }
       etag = response.ETag;
     },

@@ -19,7 +19,7 @@ export async function handler(event: { scheduledAt: string }, context: { getRema
     const deadline = Date.now() + context.getRemainingTimeInMillis() - 10_000;
     const stateBucket = setting('STATE_BUCKET');
     const websiteBucket = setting('WEBSITE_BUCKET');
-    const parameter = await ssm.send(new GetParameterCommand({ Name: setting('SKYLINK_KEY_PARAMETER'), WithDecryption: true }));
+    const parameter = await ssm.send(new GetParameterCommand({ Name: setting('SKYLINK_KEY_PARAMETER'), WithDecryption: true }), { abortSignal: AbortSignal.timeout(5_000) });
     const apiKey = parameter.Parameter?.Value;
     if (!apiKey) { throw new Error('SkyLink key is unavailable'); }
     const directory = await createOperatorDirectory(apiKey, s3Store(s3, stateBucket, 'operator-names.json'));
@@ -31,7 +31,7 @@ export async function handler(event: { scheduledAt: string }, context: { getRema
         await s3.send(new PutObjectCommand({
           Bucket: websiteBucket, Key: 'api/ranking', Body: JSON.stringify(snapshot),
           ContentType: 'application/json', CacheControl: 'public, max-age=30',
-        }));
+        }), { abortSignal: AbortSignal.timeout(5_000) });
       },
     });
   } catch {

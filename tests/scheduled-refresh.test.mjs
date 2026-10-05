@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { createServer } from 'node:http';
+import { S3Client } from '@aws-sdk/client-s3';
 import { refreshScheduledRanking } from '../backend/scheduled-refresh.ts';
 import { s3Store } from '../backend/s3-storage.ts';
 import { REFRESH_INTERVAL_MS } from '../backend/skylink.ts';
@@ -115,4 +117,26 @@ test('a conflicting S3 reservation cannot spend a snapshot request', async () =>
     return { ETag: 'v1', Body: { transformToString: async () => JSON.stringify(h.saved()) } };
   } }, 'state', 'refresh-state.json');
   await assert.rejects(refreshScheduledRanking(h.options)); assert.equal(h.calls(), 0);
+});
+
+
+test('S3 aborts a stalled response body after headers arrive', async () => {
+  const server = createServer((_request, response) => {
+    response.writeHead(200, { 'Content-Type': 'application/json', ETag: 'v1' });
+    response.write('{'); // Leave the body open to simulate a stalled connection.
+  });
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
+  const client = new S3Client({ region: 'eu-north-1', maxAttempts: 1, forcePathStyle: true,
+    endpoint: `http://127.0.0.1:${server.address().port}`,
+    credentials: { accessKeyId: 'test', secretAccessKey: 'test' } });
+  try {
+    await assert.rejects(s3Store(client, 'state', 'cache.json').read());
+  } finally {
+    client.destroy();
+    server.closeAllConnections();
+    await new Promise(resolve => server.close(resolve));
+  }
 });

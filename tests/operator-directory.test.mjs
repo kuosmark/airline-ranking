@@ -202,7 +202,7 @@ test('network errors and malformed responses activate cooldown without negative 
 test('corrupt caches and write failures disable lookups without spending quota', async t => {
   let calls = 0;
   t.mock.method(globalThis, 'fetch', async () => { calls++; return response(); });
-  for (const data of ['{', '{}', '{"names":{},"attempts":["bad"],"cooldownUntil":0}']) {
+  for (const data of ['null', '{', '{}', '{"names":{},"attempts":["bad"],"cooldownUntil":0}']) {
     const path = setup(t);
     writeFileSync(path, data);
     const directory = await createOperatorDirectory('test', path, () => start);
