@@ -4,7 +4,7 @@ import { mkdtempSync, readFileSync, writeFileSync, rmSync, mkdirSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { createOperatorDirectory, operatorName, NAME_REFRESH_MS, MISSING_NAME_REFRESH_MS,
+import { createOperatorDirectory, operatorDetails, NAME_REFRESH_MS, MISSING_NAME_REFRESH_MS,
   LOOKUP_COOLDOWN_MS, LOOKUP_WINDOW_MS, MAX_LOOKUP_ATTEMPTS } from '../backend/operator-directory.ts';
 import { createRankingService } from '../backend/server.ts';
 
@@ -18,18 +18,18 @@ function setup(t) {
   return join(dir, 'names.json');
 }
 function response(name = 'Finnair') {
-  return new globalThis.Response(JSON.stringify([{ icao: 'FIN', name, active: 'Y' }]));
+  return new globalThis.Response(JSON.stringify([{ icao: 'FIN', name, country: 'Finland', active: 'Y' }]));
 }
 
 test('resolves matching names, duplicate agreement, active preference and ambiguity', () => {
   const row = (name, active = 'Y') => ({ icao: 'FIN', name, active });
-  assert.equal(operatorName([row('Finnair'), row('Finnair', 'N')], 'FIN'), 'Finnair');
-  assert.equal(operatorName([row('Old', 'N'), row('Finnair')], 'FIN'), 'Finnair');
-  assert.equal(operatorName([row('One'), row('Two')], 'FIN'), null);
-  assert.equal(operatorName([row('Old', 'N')], 'FIN'), 'Old');
-  assert.equal(operatorName([], 'FIN'), null);
-  assert.throws(() => operatorName([{ icao: 'OTHER', name: 'Wrong' }], 'FIN'));
-  assert.throws(() => operatorName({}, 'FIN'));
+  assert.deepEqual(operatorDetails([row('Finnair'), row('Finnair', 'N')], 'FIN'), { name: 'Finnair', country: null });
+  assert.deepEqual(operatorDetails([row('Old', 'N'), row('Finnair')], 'FIN'), { name: 'Finnair', country: null });
+  assert.deepEqual(operatorDetails([row('One'), row('Two')], 'FIN'), { name: null, country: null });
+  assert.deepEqual(operatorDetails([row('Old', 'N')], 'FIN'), { name: 'Old', country: null });
+  assert.deepEqual(operatorDetails([], 'FIN'), { name: null, country: null });
+  assert.throws(() => operatorDetails([{ icao: 'OTHER', name: 'Wrong' }], 'FIN'));
+  assert.throws(() => operatorDetails({}, 'FIN'));
 });
 
 test('persists names and refreshes exactly at the 30-day boundary', async t => {
@@ -46,13 +46,78 @@ test('persists names and refreshes exactly at the 30-day boundary', async t => {
   let directory = createOperatorDirectory('test', path, () => clock);
   await directory.refresh(['FIN', 'FIN']);
   assert.equal(directory.apply(snapshot).airlines[0].name, 'Finnair');
+  assert.equal(directory.apply(snapshot).airlines[0].country, 'Finland');
   directory = createOperatorDirectory('test', path, () => clock);
+  assert.equal(directory.apply(snapshot).airlines[0].country, 'Finland');
   clock += NAME_REFRESH_MS - 1;
   await directory.refresh(['FIN']);
   assert.equal(calls, 1);
   clock++;
   await directory.refresh(['FIN']);
   assert.equal(calls, 2);
+});
+
+test('uses countries from the resolved operator and omits missing or conflicting values', () => {
+  const row = (name, country, active = 'Y') => ({ icao: 'FIN', name, country, active });
+  assert.deepEqual(operatorDetails([row('Old', 'Sweden', 'N'), row('Finnair', ' Finland ')], 'FIN'),
+    { name: 'Finnair', country: 'Finland' });
+  assert.deepEqual(operatorDetails([row('Finnair', 'Sweden', 'N'), row('Finnair', 'Finland')], 'FIN'),
+    { name: 'Finnair', country: 'Finland' });
+  assert.deepEqual(operatorDetails([row('Finnair', 'Finland'), row('Finnair', 'Sweden')], 'FIN'),
+    { name: 'Finnair', country: null });
+  assert.deepEqual(operatorDetails([row('One', 'Finland'), row('Two', 'Finland')], 'FIN'),
+    { name: null, country: null });
+  for (const country of [undefined, null, '', '   ', 123]) {
+    assert.deepEqual(operatorDetails([row('Finnair', country)], 'FIN'), { name: 'Finnair', country: null });
+  }
+});
+
+test('legacy caches keep their budget, cooldown and expiry without early country lookups', async t => {
+  const path = setup(t);
+  let clock = start;
+  const saved = { names: { FIN: { name: 'Finnair', checkedAt: new Date(start).toISOString() } },
+    attempts: [start], cooldownUntil: start + LOOKUP_COOLDOWN_MS };
+  writeFileSync(path, JSON.stringify(saved));
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => { calls++; return response(); });
+  const directory = createOperatorDirectory('test', path, () => clock);
+  await directory.refresh(['FIN', 'AAL']);
+  assert.equal(calls, 0);
+  assert.equal(directory.apply(snapshot).airlines[0].country, null);
+  clock += NAME_REFRESH_MS - 1;
+  await directory.refresh(['FIN']);
+  assert.equal(calls, 0);
+  assert.deepEqual(JSON.parse(readFileSync(path, 'utf8')), saved);
+  clock++;
+  await directory.refresh(['FIN']);
+  assert.equal(calls, 1);
+  assert.equal(directory.apply(snapshot).airlines[0].country, 'Finland');
+});
+
+test('missing country keeps the successful name TTL and refresh failures preserve country', async t => {
+  const path = setup(t);
+  let clock = start;
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    if (calls === 1) return new globalThis.Response(JSON.stringify([{ icao: 'FIN', name: 'Finnair' }]));
+    if (calls === 2) return response();
+    return new globalThis.Response('', { status: 500 });
+  });
+  const directory = createOperatorDirectory('test', path, () => clock);
+  await directory.refresh(['FIN']);
+  clock += MISSING_NAME_REFRESH_MS;
+  await directory.refresh(['FIN']);
+  assert.equal(calls, 1);
+  assert.equal(directory.apply(snapshot).airlines[0].country, null);
+  clock = start + NAME_REFRESH_MS;
+  await directory.refresh(['FIN']);
+  assert.equal(directory.apply(snapshot).airlines[0].country, 'Finland');
+  clock += NAME_REFRESH_MS;
+  await directory.refresh(['FIN']);
+  assert.equal(calls, 3);
+  assert.equal(directory.apply(snapshot).airlines[0].country, 'Finland');
+  assert.equal(JSON.parse(readFileSync(path, 'utf8')).names.FIN.country, 'Finland');
 });
 
 test('caches both 404 and empty results and retries at seven days', async t => {
@@ -170,6 +235,7 @@ test('overlapping refreshes share work and HTTP reads do not trigger directory r
   resolve(response());
   await first;
   assert.equal(service.read().airlines[0].name, 'Finnair');
+  assert.equal(service.read().airlines[0].country, 'Finland');
   assert.equal(service.read().updatedAt, snapshot.updatedAt);
 });
 

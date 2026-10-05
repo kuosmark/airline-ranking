@@ -50,14 +50,19 @@ const names = new Map<string, string>(Object.entries({
   E295: 'Embraer E195-E2',
   E75L: 'Embraer E175 (long wing)',
   F100: 'Fokker 100',
+  // Specific models observed in the payload, verified against EASA's model list:
+  // https://ad.easa.europa.eu/ad/2026-0064
+  'A319-131': 'Airbus A319-131',
+  'A321-271NX': 'Airbus A321-271NX',
+  'A321-271NY': 'Airbus A321-271NY',
 }));
+
+const canonicalNames = new Map(Array.from(names.values(), name => [name.toUpperCase(), name]));
 
 // Exact model labels observed in the payload and confirmed by the same FAA table.
 const aliases = new Map([
   ['BOEING 737-8', 'B38M'],
   ['BOEING 737-9', 'B39M'],
-  ['BOEING 737-800', 'B738'],
-  ['BOEING 787-9', 'B789'],
   ['EMBRAER ERJ 190-400', 'E295'],
 ]);
 
@@ -65,5 +70,5 @@ export function aircraftTypeName(value: unknown): string {
   if (typeof value !== 'string' || !value.trim()) { return 'Unknown type'; }
   const label = value.trim().replace(/\s+/g, ' ').toUpperCase();
   const code = aliases.get(label) ?? label.split(' ').at(-1) ?? '';
-  return names.get(code) ?? label;
+  return canonicalNames.get(label) ?? names.get(code) ?? label;
 }

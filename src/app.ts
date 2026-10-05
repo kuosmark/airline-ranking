@@ -1,8 +1,9 @@
 import type { ElementRef, OnDestroy, OnInit, QueryList } from '@angular/core';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ViewChildren, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ViewChildren, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import type { Airline, Snapshot } from '../shared/ranking';
 import { rankAirlines } from '../shared/ranking';
+import { formatSnapshotAge } from './snapshot-age';
 
 @Component({
   selector: 'app-root',
@@ -16,22 +17,25 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly abort = new AbortController();
   private pollTimer?: ReturnType<typeof setInterval>;
-  private frame = 0;
   private animations: Animation[] = [];
 
   readonly snapshot = signal<Snapshot | null>(null);
+  private readonly now = signal(Date.now());
+  readonly snapshotAge = computed(() => {
+    const snapshot = this.snapshot();
+    return snapshot ? formatSnapshotAge(snapshot.updatedAt, this.now()) : '';
+  });
   readonly error = signal<string | null>(null);
   readonly rows = signal<Airline[]>([]);
-  readonly displayedCounts = signal<Record<string, number>>({});
   readonly announcement = signal('');
   readonly expandedAirlineId = signal<string | null>(null);
-  private readonly immediateCountIds = new Set<string>();
+  readonly isShowingAllTypes = signal(false);
+  readonly collapsedTypeLimit = 5;
 
   toggleAirline(airline: Airline): void {
     const isExpanded = this.expandedAirlineId() === airline.id;
+    if (!isExpanded) { this.isShowingAllTypes.set(false); }
     this.expandedAirlineId.set(isExpanded ? null : airline.id);
-    this.immediateCountIds.add(airline.id);
-    this.displayedCounts.update(counts => ({ ...counts, [airline.id]: airline.count }));
   }
 
   ngOnInit(): void {
@@ -40,6 +44,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private async loadRanking(): Promise<void> {
+    this.now.set(Date.now());
     try {
       const response = await fetch('/api/ranking', {
         signal: AbortSignal.any([this.abort.signal, AbortSignal.timeout(10_000)]),
@@ -61,33 +66,24 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  private counts(snapshot: Snapshot): Record<string, number> {
-    return Object.fromEntries(snapshot.airlines.map(airline => [airline.id, airline.count]));
-  }
-
   private applySnapshot(snapshot: Snapshot): void {
     if (!this.snapshot()) {
       this.snapshot.set(snapshot);
       this.rows.set(rankAirlines(snapshot.airlines));
-      this.displayedCounts.set(this.counts(snapshot));
       return;
     }
-    this.immediateCountIds.clear();
     const expandedId = this.expandedAirlineId();
     if (!snapshot.airlines.some(airline => airline.id === expandedId)) { this.expandedAirlineId.set(null); }
-    if (expandedId) { this.immediateCountIds.add(expandedId); }
-    const previous = this.displayedCounts();
+    const previousCounts = new Map(this.rows().map(airline => [airline.id, airline.count]));
     const positions = new Map(this.rowElements.map(({ nativeElement: row }) => [row.dataset['id'], row.getBoundingClientRect().top]));
     this.animations.forEach(animation => { animation.cancel(); });
     this.animations = [];
-    cancelAnimationFrame(this.frame);
     this.snapshot.set(snapshot);
     this.rows.set(rankAirlines(snapshot.airlines));
     this.announcement.set('Ranking updated.');
     this.changeDetector.detectChanges();
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      this.displayedCounts.set(this.counts(snapshot));
       return;
     }
 
@@ -101,31 +97,18 @@ export class AppComponent implements OnInit, OnDestroy {
       }
       const airline = snapshot.airlines.find(item => item.id === row.dataset['id']);
       const count = row.querySelector('.count');
-      if (airline && count && previous[airline.id] !== airline.count) {
+      if (airline && count && previousCounts.get(airline.id) !== airline.count) {
         this.animations.push(count.animate([
-          { color: '#176957', backgroundColor: '#e8f3ed' },
+          { color: '#171c24', backgroundColor: '#e9edf1' },
           { color: '#171c24', backgroundColor: 'transparent' },
-        ], { duration: 1500, easing: 'ease-out' }));
+        ], { duration: 800, easing: 'ease-out' }));
       }
     });
-
-    const start = performance.now();
-    const tick = (now: number) => {
-      const progress = Math.min((now - start) / 1500, 1);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      this.displayedCounts.set(Object.fromEntries(snapshot.airlines.map(airline => {
-        const from = previous[airline.id] ?? airline.count;
-        return [airline.id, this.immediateCountIds.has(airline.id) ? airline.count : Math.round(from + (airline.count - from) * eased)];
-      })));
-      if (progress < 1) {this.frame = requestAnimationFrame(tick);}
-    };
-    this.frame = requestAnimationFrame(tick);
   }
 
   ngOnDestroy(): void {
     this.abort.abort();
     clearInterval(this.pollTimer);
-    cancelAnimationFrame(this.frame);
     this.animations.forEach(animation => { animation.cancel(); });
   }
 }

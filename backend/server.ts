@@ -5,13 +5,10 @@ import { REFRESH_INTERVAL_MS } from './skylink.ts';
 function compareRanks(next: Snapshot, previous: Snapshot | null): Snapshot {
   if (!previous) { return next; }
   const previousRanks = new Map(rankAirlines(previous.airlines).map((airline, index) => [airline.id, index]));
-  const airlines = rankAirlines(next.airlines).map((airline, index) => {
+  const airlines = rankAirlines(next.airlines).map<Airline>((airline, index) => {
     const previousRank = previousRanks.get(airline.id);
-    let rankMovement: Airline['rankMovement'];
-    if (previousRank === undefined) { rankMovement = 'new'; }
-    else if (index < previousRank) { rankMovement = 'up'; }
-    else if (index > previousRank) { rankMovement = 'down'; }
-    return { ...airline, rankMovement };
+    const rankChange = previousRank === undefined ? 'new' : previousRank - index;
+    return { ...airline, rankChange };
   });
   return { ...next, airlines };
 }
