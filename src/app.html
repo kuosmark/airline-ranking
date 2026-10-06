@@ -50,14 +50,14 @@
                 <span aria-hidden="true">{{ airline.count | number }}</span>
               </span>
               <span class="chevron" aria-hidden="true"></span>
-              @if (expandedAirlineId() === airline.id && airline.country) {
-                <span class="airline-country"><span class="visually-hidden">Country: </span>{{ airline.country }}</span>
-              }
             </button>
             @if (expandedAirlineId() === airline.id) {
               <div class="aircraft-details" [id]="'types-' + airline.id" animate.enter="details-enter" animate.leave="details-leave">
                 <div class="details-content">
                   <div class="details-panel">
+                    @if (airline.country) {
+                      <p class="airline-country"><span class="visually-hidden">Country: </span>{{ airline.country }}</p>
+                    }
                     <h2>Aircraft types</h2>
                     @if (airline.count === 0) {
                       <p class="no-aircraft">No aircraft currently observed airborne.</p>
