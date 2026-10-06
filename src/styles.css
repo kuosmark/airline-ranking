@@ -67,7 +67,7 @@ li.is-expanded { background: #edf4ef; }
   .column-headings, .airline-toggle { grid-template-columns: 32px 26px minmax(0, 1fr) 56px 10px; column-gap: 6px; }
   .airline-name { font-size: 14px; }
   .count { font-size: 19px; }
-  .details-panel { padding: 4px 28px 22px 28px; }
+  .details-panel { padding: 4px 28px 22px 50px; }
   .update-warning { margin-left: 14px; margin-right: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
