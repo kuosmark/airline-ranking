@@ -187,7 +187,7 @@ GitHub Actions checks pull requests and `main` using `npm run check`. `infra/dep
 
 `infra/release.ts` bundles the backend with esbuild and creates a ZIP using Python 3's standard library, included in the CodeBuild image. It verifies the existing Lambda's Node.js 22 runtime, ARM64 architecture and handler, updates code with an optimistic revision guard, waits for completion, and verifies the deployed package hash before publishing the frontend. It never invokes Lambda or calls SkyLink. A failure stops the release; backend and frontend updates are sequential, not an atomic transaction. If frontend publication fails, the updated backend remains deployed.
 
-Create a GitHub CodeConnections connection in Stockholm and authorize the AWS GitHub App for **only this repository** in the console. Connections created through an API remain pending until this authorization is completed. No GitHub personal access token or permanent AWS key is needed.
+Create a GitHub CodeConnections connection in Stockholm. Install AWS Connector for GitHub with access to **only this repository**, then select that installation in the connection's **App Installation** field. Authorizing the app as a GitHub user is a separate step and does not replace repository installation. Connections created through an API remain pending until setup is completed in the console. See [AWS's GitHub connection setup](https://docs.aws.amazon.com/codepipeline/latest/userguide/connections-github.html). No GitHub personal access token or permanent AWS key is needed.
 
 After the application stack exists and the release code has been merged into `main`, review and deploy the pipeline:
 
@@ -196,7 +196,7 @@ npm run infra:diff -- AirlineRankingDeployment --exclusively --profile personal
 npm run infra:deploy -- AirlineRankingDeployment --exclusively --profile personal --parameters ConnectionArn=YOUR_CONNECTION_ARN
 ```
 
-The pipeline can start immediately after creation. Automatic releases preserve the deployed schedule, concurrency, environment and IAM permissions. Polling is controlled only by reviewed manual deployments of the application stack with an explicit `-c isPollingEnabled` value. A synthesized template in CI is validation, not an infrastructure deployment.
+The pipeline can start immediately after creation. Verify automatic change detection after the next approved merge to `main`: the execution history must show a repository event trigger and the merged commit ID. A successful manually started release does not verify this trigger. Automatic releases preserve the deployed schedule, concurrency, environment and IAM permissions. Polling is controlled only by reviewed manual deployments of the application stack with an explicit `-c isPollingEnabled` value. A synthesized template in CI is validation, not an infrastructure deployment.
 
 Infrastructure remains defined in CDK. Changes to either stack require a reviewed manual deployment; the pipeline cannot assume CDK bootstrap roles, deploy CloudFormation, manage IAM, change scheduling or upgrade the AWS plan. Its application permissions cover code updates and configuration reads for the existing refresh Lambda, frontend HTML/JavaScript/CSS uploads, and invalidation of the existing distribution. Artifact and log access is limited to its own resources. Connection policies constrain repository and branch requests to this repository's `main` branch.
 
