@@ -13,7 +13,7 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 .author-credit { margin-top: 24px; color: #626c76; font-size: 12px; line-height: 1.5; }
 .refresh-interval { display: inline-block; margin-left: 16px; font-size: 12px; font-weight: 400; white-space: nowrap; }
 .leaderboard { background: #fff; border: 1px solid #e5e8eb; border-radius: 16px; box-shadow: 0 4px 22px #18263503; }
-.board-header { position: sticky; top: 0; z-index: 1; background: #fff; border-radius: 16px 16px 0 0; border-bottom: 1px solid #e5e8eb; }
+.board-header { display: flow-root; position: sticky; top: 0; z-index: 1; background: #fff; border-radius: 16px 16px 0 0; border-bottom: 1px solid #e5e8eb; }
 .snapshot-status { margin-bottom: 12px; text-align: right; color: #626c76; font-size: 12px; font-weight: 500; line-height: 1.5; }
 .column-headings, .airline-toggle { display: grid; grid-template-columns: 32px 38px minmax(0, 1fr) 80px 12px; column-gap: 12px; align-items: center; }
 .column-headings { padding: 14px 28px; color: #626c76; font-size: 12px; letter-spacing: .06em; font-weight: 600; }
