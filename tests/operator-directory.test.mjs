@@ -9,6 +9,7 @@ import { createOperatorDirectory, operatorDetails, NAME_REFRESH_MS, MISSING_NAME
 import { createRankingService } from '../backend/server.ts';
 
 const start = Date.parse('2026-10-04T12:00:00Z');
+const day = 24 * 60 * 60 * 1000;
 const snapshot = { updatedAt: new Date(start).toISOString(), isStale: false,
   airlines: [{ id: 'FIN', name: 'FIN', count: 1, aircraftTypes: [{ name: 'A320', count: 1 }] }] };
 function setup(t) {
@@ -20,6 +21,34 @@ function setup(t) {
 function response(name = 'Finnair') {
   return new globalThis.Response(JSON.stringify([{ icao: 'FIN', name, country: 'Finland', active: 'Y' }]));
 }
+
+test('directory budget leaves at least 1,274 requests of billing headroom for one scheduled poller', () => {
+  assert.equal(MAX_LOOKUP_ATTEMPTS, 750);
+  assert.equal(LOOKUP_WINDOW_MS, 32 * day);
+  const longestBillingPeriodDays = 31;
+  const scheduledSnapshots = longestBillingPeriodDays * 24 * 4;
+  assert.equal(5000 - scheduledSnapshots - MAX_LOOKUP_ATTEMPTS, 1274);
+  assert.ok(LOOKUP_WINDOW_MS > longestBillingPeriodDays * day);
+});
+
+test('existing attempts older than 30 days still exhaust the 32-day budget across a restart', async t => {
+  const path = setup(t);
+  const attempts = Array(1000).fill(start);
+  const saved = { names: { FIN: { name: 'Finnair', country: 'Finland', checkedAt: new Date(start).toISOString() } },
+    attempts, cooldownUntil: 0 };
+  writeFileSync(path, JSON.stringify(saved));
+  let clock = start + 31 * day;
+  const fetch = t.mock.method(globalThis, 'fetch', async () => response());
+  const directory = await createOperatorDirectory('test', path, () => clock);
+  await directory.refresh(['FIN']);
+  assert.equal(fetch.mock.callCount(), 0);
+  assert.deepEqual(JSON.parse(readFileSync(path, 'utf8')), saved);
+  assert.equal(directory.apply(snapshot).airlines[0].name, 'Finnair');
+  clock = start + LOOKUP_WINDOW_MS;
+  await directory.refresh(['FIN']);
+  assert.equal(fetch.mock.callCount(), 1);
+  assert.deepEqual(JSON.parse(readFileSync(path, 'utf8')).attempts, [clock]);
+});
 
 test('resolves matching names, duplicate agreement, active preference and ambiguity', () => {
   const row = (name, active = 'Y') => ({ icao: 'FIN', name, active });

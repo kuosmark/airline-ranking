@@ -8,10 +8,12 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import type { IDistribution } from 'aws-cdk-lib/aws-cloudfront';
+import type { IFunction } from 'aws-cdk-lib/aws-lambda';
 
 interface DeploymentProps extends StackProps {
   website: s3.IBucket;
   distribution: IDistribution;
+  refresh: IFunction;
 }
 
 export class DeploymentStack extends Stack {
@@ -22,14 +24,6 @@ export class DeploymentStack extends Stack {
       type: 'String', description: 'Authorized GitHub CodeConnections connection in Stockholm.',
       allowedPattern: 'arn:aws:codeconnections:eu-north-1:[0-9]{12}:connection/[a-zA-Z0-9-]+',
     });
-    const alertEmail = new CfnParameter(this, 'AlertEmail', {
-      type: 'String', description: 'Email passed to the application refresh-failure alarm.',
-      allowedPattern: '[^\\s@]+@[^\\s@]+\\.[^\\s@]+',
-    });
-    const isPollingEnabled = new CfnParameter(this, 'IsPollingEnabled', {
-      type: 'String', default: 'false', allowedValues: ['true', 'false'],
-      description: 'Enable only after migrating state and storing the API key.',
-    });
     const artifacts = new s3.Bucket(this, 'Artifacts', {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL, enforceSSL: true,
       encryption: s3.BucketEncryption.S3_MANAGED, removalPolicy: RemovalPolicy.RETAIN,
@@ -38,13 +32,23 @@ export class DeploymentStack extends Stack {
     const buildLogs = new logs.LogGroup(this, 'BuildLogs', {
       retention: logs.RetentionDays.ONE_WEEK, removalPolicy: RemovalPolicy.DESTROY,
     });
+    const projectName = 'airline-ranking-release';
+    const buildRole = new iam.Role(this, 'ReleaseRole', {
+      assumedBy: new iam.ServicePrincipal('codebuild.amazonaws.com', { conditions: {
+        StringEquals: { 'aws:SourceAccount': this.account },
+        ArnEquals: { 'aws:SourceArn': this.formatArn({ service: 'codebuild', resource: 'project',
+          resourceName: projectName, arnFormat: ArnFormat.SLASH_RESOURCE_NAME }) },
+      } }),
+    });
     const build = new codebuild.PipelineProject(this, 'Deploy', {
+      projectName, role: buildRole, grantReportGroupPermissions: false,
       environment: { buildImage: codebuild.LinuxBuildImage.STANDARD_7_0, computeType: codebuild.ComputeType.SMALL },
       timeout: Duration.minutes(30), concurrentBuildLimit: 1,
       logging: { cloudWatch: { logGroup: buildLogs } },
       environmentVariables: {
-        ALERT_EMAIL: { value: alertEmail.valueAsString },
-        IS_POLLING_ENABLED: { value: isPollingEnabled.valueAsString },
+        WEBSITE_BUCKET: { value: props.website.bucketName },
+        DISTRIBUTION_ID: { value: props.distribution.distributionId },
+        REFRESH_FUNCTION: { value: props.refresh.functionArn },
       },
       buildSpec: codebuild.BuildSpec.fromObject({
         version: '0.2',
@@ -55,20 +59,15 @@ export class DeploymentStack extends Stack {
           ] },
           build: { commands: [
             'npm run check',
-            'npm run infra:diff -- AirlineRanking -c isPollingEnabled="$IS_POLLING_ENABLED"',
-            'npm run infra:deploy -- AirlineRanking -c isPollingEnabled="$IS_POLLING_ENABLED" --parameters AlertEmail="$ALERT_EMAIL" --require-approval never --outputs-file cdk.out/outputs.json',
-            'npm run infra:publish -- cdk.out/outputs.json',
+            'npm run infra:release -- "$WEBSITE_BUCKET" "$DISTRIBUTION_ID" "$REFRESH_FUNCTION"',
           ] },
         },
       }),
     });
     build.addToRolePolicy(new iam.PolicyStatement({ actions: ['freetier:GetAccountPlanState'], resources: ['*'] }));
-    // CDK uses these existing bootstrap roles to publish assets and deploy CloudFormation.
-    const bootstrapRoles = ['deploy', 'file-publishing'].map(role => this.formatArn({
-      service: 'iam', region: '', resource: 'role', arnFormat: ArnFormat.SLASH_RESOURCE_NAME,
-      resourceName: `cdk-hnb659fds-${role}-role-${this.account}-${this.region}`,
+    build.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['lambda:GetFunctionConfiguration', 'lambda:UpdateFunctionCode'], resources: [props.refresh.functionArn],
     }));
-    build.addToRolePolicy(new iam.PolicyStatement({ actions: ['sts:AssumeRole'], resources: bootstrapRoles }));
     build.addToRolePolicy(new iam.PolicyStatement({
       actions: ['s3:PutObject'], resources: ['*.html', '*.js', '*.css'].map(key => props.website.arnForObjects(key)),
     }));

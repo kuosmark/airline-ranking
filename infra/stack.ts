@@ -20,6 +20,7 @@ import { fileURLToPath } from 'node:url';
 export class AirlineRankingStack extends Stack {
   readonly website: s3.Bucket;
   readonly distribution: cloudfront.Distribution;
+  readonly refresh: nodejs.NodejsFunction;
   constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
     if (props.env?.region !== 'eu-north-1') { throw new Error('Deploy only in eu-north-1'); }
@@ -69,6 +70,7 @@ export class AirlineRankingStack extends Stack {
       environment: { STATE_BUCKET: state.bucketName, WEBSITE_BUCKET: website.bucketName,
         SKYLINK_KEY_PARAMETER: '/airline-ranking/skylink-api-key' },
     });
+    this.refresh = refresh;
     // Only these objects may be read/written; the poller cannot delete cache history or website files.
     refresh.addToRolePolicy(new iam.PolicyStatement({
       actions: ['s3:GetObject', 's3:PutObject'],

@@ -11,4 +11,5 @@ new DeploymentStack(app, 'AirlineRankingDeployment', {
   env: application.env,
   website: application.website,
   distribution: application.distribution,
+  refresh: application.refresh,
 });

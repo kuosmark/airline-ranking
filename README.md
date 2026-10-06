@@ -10,7 +10,7 @@ Preview uses synthetic data to illustrate rank indicators, operator country and 
 
 ## Run locally
 
-Requires Node.js 22.13+ (22.x) or 24.x. GitHub Actions uses Node.js 22.
+Requires Node.js 22.13+ (22.x) or 24.x. Checks and backend release packaging also require Python 3. GitHub Actions uses Node.js 22 and its runner includes Python 3.
 
 ```sh
 npm ci
@@ -63,6 +63,7 @@ Run `npm run check` before committing. GitHub Actions runs the same command on p
 | `npm run infra:diff` | Compare the stack with deployed resources |
 | `npm run infra:deploy` | Deploy the stack after reviewing its diff |
 | `npm run infra:publish -- cdk.out/outputs.json` | Upload the frontend and wait for CloudFront cache invalidation |
+| `npm run infra:release -- BUCKET DISTRIBUTION FUNCTION_ARN` | Update the existing Lambda code and publish the frontend; requires Python 3 for ZIP packaging |
 
 Tests use Node's built-in test runner and synthetic data. They do not require an API key or contact SkyLink. Lint warnings fail the check.
 
@@ -102,13 +103,13 @@ The backend publishes the ranking before directory lookups complete. Browsers ma
 | Successful name refresh | 30 days |
 | Missing or ambiguous name refresh | 7 days |
 | Cooldown after any failed lookup | 24 hours |
-| Maximum lookup attempts | 1,000 per rolling 30 days |
+| Maximum lookup attempts | 750 per rolling 32 days |
 
 Expiry is checked only for the current top 100 during scheduled snapshot updates. There is no separate lookup timer. Requests run sequentially; overlapping refreshes share work. Every attempt, including errors, is persisted **before** contacting SkyLink. A provisional cooldown is saved too, so a crash during a request cannot immediately retry on restart. Successful responses clear it; failures stop the batch, retain previous names, and keep a 24-hour cooldown. Authentication and quota errors follow the same stop rule. Missing results are completed lookups, not failures.
 
 Local writes replace the cache via a temporary file and rename. Invalid or unreadable caches disable directory calls for that process. Failed writes also disable further calls; cached names or prefixes remain available. Fix the file or filesystem problem and restart to recover. A genuinely absent cache initializes a new budget; **do not delete the file to refresh names**, because this also discards quota history. To force one name refresh, stop the backend and remove only that prefix from `names`, preserving `attempts` and `cooldownUntil`.
 
-A continuously running backend makes 2,880 snapshot calls in 30 days, plus at most 1,000 directory attempts in that rolling period. A 31-day billing period has 2,976 scheduled snapshot calls, but the rolling directory window does not align with billing dates. Startup fetches, manual tests, other instances, and other API usage are additional. This is a directory guardrail, **not an account-wide spending cap**. Monitor actual usage in the provider account.
+A single continuously running poller makes 2,976 scheduled snapshot calls in a 31-day billing period. The 32-day rolling directory window prevents two full lookup budgets from falling within that period: at most 750 directory attempts bring the total to 3,726, leaving 1,274 requests of a 5,000-request allowance. The longer window also applies to existing attempt history; deployments do not reset it. When the directory cap is reached, snapshot polling continues using cached names or prefix labels until attempts expire. Startup fetches, manual tests, other instances, and other API usage are additional. This is a directory guardrail, **not an account-wide spending cap**. SkyLink's direct-subscription terms allow billed overage; monitor provider usage and confirm any provider-side spending control before enabling polling.
 
 The local cache requires one backend process and durable local storage. Retain it across restarts; sharing it between concurrent processes is unsupported. The Lambda handler uses conditional S3 writes instead. Cached provider output must remain outside the public repository and is subject to [SkyLink's terms](https://skylinkapi.com/terms/).
 
@@ -182,24 +183,30 @@ Local synthesis and tests need no AWS credentials and make no provider calls. Be
 
 ### Automatic deployment from main
 
-GitHub Actions checks pull requests and `main` using `npm run check`. `infra/deployment-stack.ts` defines a separate `AirlineRankingDeployment` stack: CodePipeline V2 fetches `main` through CodeConnections and runs one CodeBuild job. The job checks that the project is still on the Free Plan, installs dependencies, runs the checks, deploys `AirlineRanking`, publishes the frontend, and waits for CloudFront invalidation. A failed step stops deployment. Executions queue, with one build at a time and a 30-minute build timeout.
+GitHub Actions checks pull requests and `main` using `npm run check`. `infra/deployment-stack.ts` defines a separate `AirlineRankingDeployment` stack: CodePipeline V2 fetches `main` through CodeConnections and runs one CodeBuild job. The job checks that the project is still on the Free Plan, installs dependencies, runs the checks, and releases application code. Executions queue, with one build at a time and a 30-minute build timeout.
+
+`infra/release.ts` bundles the backend with esbuild and creates a ZIP using Python 3's standard library, included in the CodeBuild image. It verifies the existing Lambda's Node.js 22 runtime, ARM64 architecture and handler, updates code with an optimistic revision guard, waits for completion, and verifies the deployed package hash before publishing the frontend. It never invokes Lambda or calls SkyLink. A failure stops the release; backend and frontend updates are sequential, not an atomic transaction. If frontend publication fails, the updated backend remains deployed.
 
 Create a GitHub CodeConnections connection in Stockholm and authorize the AWS GitHub App for **only this repository** in the console. Connections created through an API remain pending until this authorization is completed. No GitHub personal access token or permanent AWS key is needed.
 
-After the application stack exists, deploy the pipeline:
+After the application stack exists and the release code has been merged into `main`, review and deploy the pipeline:
 
 ```sh
 npm run infra:diff -- AirlineRankingDeployment --exclusively --profile personal
-npm run infra:deploy -- AirlineRankingDeployment --exclusively --profile personal --parameters ConnectionArn=YOUR_CONNECTION_ARN --parameters AlertEmail=YOUR_EMAIL --parameters IsPollingEnabled=false
+npm run infra:deploy -- AirlineRankingDeployment --exclusively --profile personal --parameters ConnectionArn=YOUR_CONNECTION_ARN
 ```
 
-The pipeline can start immediately after creation. Keep `IsPollingEnabled=false` until the API key and state are ready. After enabling the cloud poller, update the pipeline parameter to `true` too; otherwise its next deployment will disable polling. The application stack's `-c isPollingEnabled` context and the pipeline's `IsPollingEnabled` parameter are explicit controls, not inferred from existing resources.
+The pipeline can start immediately after creation. Automatic releases preserve the deployed schedule, concurrency, environment and IAM permissions. Polling is controlled only by reviewed manual deployments of the application stack with an explicit `-c isPollingEnabled` value. A synthesized template in CI is validation, not an infrastructure deployment.
 
-The pipeline deploys the application, not its own stack. Changes to pipeline configuration require a reviewed manual deployment of `AirlineRankingDeployment`. Both stacks use the standard `hnb659fds` CDK bootstrap. The build role can assume the project's deploy and file-publishing roles; the default bootstrap CloudFormation execution role has administrative infrastructure permissions. Treat code merged into `main` as trusted deployment code. Direct frontend upload permissions cover HTML, JavaScript and CSS; the publisher does not touch backend state or `api/ranking`. Connection policies constrain repository and branch requests to this repository's `main` branch.
+Infrastructure remains defined in CDK. Changes to either stack require a reviewed manual deployment; the pipeline cannot assume CDK bootstrap roles, deploy CloudFormation, manage IAM, change scheduling or upgrade the AWS plan. Its application permissions cover code updates and configuration reads for the existing refresh Lambda, frontend HTML/JavaScript/CSS uploads, and invalidation of the existing distribution. Artifact and log access is limited to its own resources. Connection policies constrain repository and branch requests to this repository's `main` branch.
+
+Direct Lambda code releases do not update CloudFormation's recorded code asset. Before a manual infrastructure deployment, check out the latest approved `main`, run the checks and review `cdk diff`; CDK bundles that revision's backend and may update Lambda code again. Do not deploy an older checkout unless intentionally rolling back. Keep polling context explicit. Bootstrap administrator permissions remain available for manual infrastructure administration, but are not reachable through pipeline roles.
+
+Code merged into `main` is still trusted application code: replacement Lambda code can use the existing runtime role to access the SkyLink key and state. Restricting deployment authority does not protect provider quota from malicious backend code; protect repository access and retain provider-side controls. The build has no direct permission to read that key or write polling state or `api/ranking`.
 
 Build logs and source artifacts expire after seven days. The artifact bucket survives stack removal. CodeBuild, pipeline executions and artifact storage consume credits even when checks fail or infrastructure is unchanged; the build timeout bounds one run, not monthly usage. No deployment step upgrades the plan. If the project is later upgraded, the pipeline's Free Plan check deliberately fails until this policy is explicitly changed.
 
-To pause deployment, disable the pipeline's inbound transition to its Deploy stage in AWS. To recover a failed application release, revert the relevant change through a PR; CloudFormation rolls back failed infrastructure updates, while frontend publication failures may require rerunning the pipeline. Verify the website and snapshot freshness after a release.
+To pause deployment, disable the pipeline's inbound transition to its Deploy stage in AWS. To recover an application release, revert the relevant change through a PR and release again; automatic releases do not use CloudFormation rollback. Manual infrastructure updates retain CloudFormation's normal rollback behavior. Verify the website and snapshot freshness after a release.
 
 ### Retiring the application
 
