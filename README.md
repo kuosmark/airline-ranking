@@ -174,4 +174,15 @@ Local synthesis and tests need no AWS credentials and make no provider calls. De
 
 GitHub Actions currently validates the stack as part of `npm run check`. It does not deploy; OIDC deployment from `main` is the next separate change.
 
+### Retiring the application
+
+Disabling polling stops scheduled provider requests, but leaves the website and AWS resources running. To retire the application completely:
+
+1. Disable the schedule and stop any local backend using the same API key. Preserve any state needed for recovery; keep exported caches outside Git.
+2. Disable termination protection and delete the `AirlineRanking` stack. Both S3 buckets are retained and continue to incur storage charges.
+3. After confirming their data is no longer needed, empty and delete the retained buckets. The versioned state bucket must also have all object versions and delete markers removed. Its seven-day lifecycle rule removes superseded versions, not current objects.
+4. Delete the separately created `/airline-ranking/skylink-api-key` parameter if it is no longer needed. Review any separately configured billing alerts or deployment access.
+5. Review the `CDKToolkit` bootstrap stack and its assets separately. Bootstrap resources support CDK deployments in the AWS project and Region and may be shared by other applications; remove them only when no remaining deployment needs them.
+6. Check billing after usage records have updated and confirm no unwanted resources remain. Retiring AWS resources does not cancel the SkyLink subscription; review that separately.
+
 Development follows the lightweight branch, pull request, and squash-merge workflow in [AGENTS.md](AGENTS.md).
