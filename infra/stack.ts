@@ -18,6 +18,8 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { fileURLToPath } from 'node:url';
 
 export class AirlineRankingStack extends Stack {
+  readonly website: s3.Bucket;
+  readonly distribution: cloudfront.Distribution;
   constructor(scope: Construct, id: string, props: StackProps) {
     super(scope, id, props);
     if (props.env?.region !== 'eu-north-1') { throw new Error('Deploy only in eu-north-1'); }
@@ -53,6 +55,8 @@ export class AirlineRankingStack extends Stack {
       },
       errorResponses: [403, 404].map(httpStatus => ({ httpStatus, ttl: Duration.seconds(0) })),
     });
+    this.website = website;
+    this.distribution = distribution;
     const logGroup = new logs.LogGroup(this, 'RefreshLogs', {
       retention: logs.RetentionDays.ONE_WEEK, removalPolicy: RemovalPolicy.DESTROY,
     });

@@ -1,8 +1,14 @@
 import { App } from 'aws-cdk-lib';
 import { AirlineRankingStack } from './stack.ts';
+import { DeploymentStack } from './deployment-stack.ts';
 
 const app = new App();
-new AirlineRankingStack(app, 'AirlineRanking', {
+const application = new AirlineRankingStack(app, 'AirlineRanking', {
   env: { account: process.env['CDK_DEFAULT_ACCOUNT'], region: 'eu-north-1' },
   terminationProtection: true,
+});
+new DeploymentStack(app, 'AirlineRankingDeployment', {
+  env: application.env,
+  website: application.website,
+  distribution: application.distribution,
 });
