@@ -5,8 +5,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const NAME_REFRESH_MS = 30 * DAY_MS;
 export const MISSING_NAME_REFRESH_MS = 7 * DAY_MS;
 export const LOOKUP_COOLDOWN_MS = DAY_MS;
-export const LOOKUP_WINDOW_MS = 30 * DAY_MS;
-export const MAX_LOOKUP_ATTEMPTS = 1000;
+export const LOOKUP_WINDOW_MS = 32 * DAY_MS;
+export const MAX_LOOKUP_ATTEMPTS = 750;
 
 interface OperatorDetails { name: string | null; country: string | null }
 interface Entry { name: string | null; country?: string | null; checkedAt: string }

@@ -1,0 +1,96 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { after, test } from 'node:test';
+import { App } from 'aws-cdk-lib';
+import { Match, Template } from 'aws-cdk-lib/assertions';
+import { AirlineRankingStack } from '../infra/stack.ts';
+import { DeploymentStack } from '../infra/deployment-stack.ts';
+
+const output = mkdtempSync(join(tmpdir(), 'airline-deployment-'));
+after(() => rmSync(output, { recursive: true, force: true }));
+const app = new App({ outdir: output, context: { '@aws-cdk/core:defaultCrossStackReferences': 'strong' } });
+const env = { region: 'eu-north-1' };
+const application = new AirlineRankingStack(app, 'Application', { env });
+const deployment = new DeploymentStack(app, 'Deployment', {
+  env, website: application.website, distribution: application.distribution, refresh: application.refresh,
+});
+const template = Template.fromStack(deployment);
+
+test('deployments queue and use only main from the project repository', () => {
+  template.hasResourceProperties('AWS::CodePipeline::Pipeline', {
+    PipelineType: 'V2', ExecutionMode: 'QUEUED',
+    Stages: [Match.objectLike({ Name: 'Source', Actions: [Match.objectLike({
+      Configuration: Match.objectLike({ FullRepositoryId: 'kuosmark/airline-ranking', BranchName: 'main' }),
+    })] }), Match.objectLike({ Name: 'Deploy' })],
+  });
+});
+
+test('builds verify Free before installing and release application code without deploying infrastructure', () => {
+  const [project] = Object.values(template.findResources('AWS::CodeBuild::Project'));
+  assert.equal(project.Properties.TimeoutInMinutes, 30);
+  assert.equal(project.Properties.ConcurrentBuildLimit, 1);
+  const spec = JSON.parse(project.Properties.Source.BuildSpec);
+  assert.equal(spec.phases.install.commands[0], 'test "$(aws freetier get-account-plan-state --query accountPlanType --output text)" = FREE');
+  assert.equal(spec.phases.install['runtime-versions'].nodejs, 22);
+  const commands = spec.phases.build.commands;
+  assert.equal(commands[0], 'npm run check');
+  assert.deepEqual(commands, ['npm run check', 'npm run infra:release -- "$WEBSITE_BUCKET" "$DISTRIBUTION_ID" "$REFRESH_FUNCTION"']);
+  assert.deepEqual(Object.keys(template.toJSON().Parameters).sort(), ['BootstrapVersion', 'ConnectionArn']);
+  assert.deepEqual(project.Properties.Environment.EnvironmentVariables.map(variable => variable.Name).sort(),
+    ['DISTRIBUTION_ID', 'REFRESH_FUNCTION', 'WEBSITE_BUCKET']);
+});
+
+test('artifacts and build logs expire after seven days without public bucket access', () => {
+  template.hasResourceProperties('AWS::S3::Bucket', {
+    PublicAccessBlockConfiguration: { BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true },
+    LifecycleConfiguration: { Rules: [Match.objectLike({ ExpirationInDays: 7 })] },
+  });
+  template.hasResourceProperties('AWS::Logs::LogGroup', { RetentionInDays: 7 });
+});
+
+test('only this CodeBuild project may assume the release role', () => {
+  template.hasResourceProperties('AWS::IAM::Role', {
+    AssumeRolePolicyDocument: { Statement: [Match.objectLike({
+      Principal: { Service: 'codebuild.amazonaws.com' },
+      Condition: {
+        StringEquals: { 'aws:SourceAccount': { Ref: 'AWS::AccountId' } },
+        ArnEquals: { 'aws:SourceArn': Match.anyValue() },
+      },
+    })], Version: '2012-10-17' },
+  });
+  template.hasResourceProperties('AWS::CodeBuild::Project', { Name: 'airline-ranking-release' });
+});
+
+test('deployment roles do not read secrets and direct website writes exclude backend objects', () => {
+  const policies = Object.values(template.findResources('AWS::IAM::Policy'));
+  const statements = policies.flatMap(policy => policy.Properties.PolicyDocument.Statement);
+  assert.equal(JSON.stringify(statements).includes('ssm:GetParameter'), false);
+  const allowedActions = statements.filter(statement => statement.Effect === 'Allow')
+    .flatMap(statement => Array.isArray(statement.Action) ? statement.Action : [statement.Action]);
+  for (const action of allowedActions) {
+    assert.equal(/^(sts:|iam:|cloudformation:|ssm:|scheduler:)/.test(action), false, action);
+    assert.equal(action === '*' || action.endsWith(':*'), false, action);
+  }
+  assert.equal(allowedActions.includes('freetier:UpgradeAccountPlan'), false);
+  const lambda = statements.find(statement => [].concat(statement.Action).includes('lambda:UpdateFunctionCode'));
+  assert.ok(lambda);
+  assert.deepEqual([].concat(lambda.Action).sort(), ['lambda:GetFunctionConfiguration', 'lambda:UpdateFunctionCode']);
+  assert.deepEqual(lambda.Resource, deployment.resolve(application.refresh.functionArn));
+  for (const statement of statements.filter(statement => statement.Effect === 'Allow')) {
+    if ([].concat(statement.Action).includes('freetier:GetAccountPlanState')) { continue; }
+    assert.equal([].concat(statement.Resource).includes('*'), false);
+  }
+  const upload = statements.find(statement => statement.Action === 's3:PutObject');
+  assert.ok(upload);
+  assert.equal(upload.Resource.length, 3);
+  for (const extension of ['html', 'js', 'css']) assert.match(JSON.stringify(upload.Resource), new RegExp(`/\\*\\.${extension}`));
+  for (const prefix of ['codeconnections', 'codestar-connections']) {
+    for (const [key, value] of [['FullRepositoryId', 'kuosmark/airline-ranking'], ['BranchName', 'main']]) {
+      const restriction = statements.find(statement => statement.Effect === 'Deny' && statement.Action === `${prefix}:UseConnection` && statement.Condition.StringNotEquals[`${prefix}:${key}`] === value);
+      assert.ok(restriction);
+      assert.equal(restriction.Condition.Null[`${prefix}:${key}`], 'false');
+    }
+  }
+});
