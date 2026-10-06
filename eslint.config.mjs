@@ -7,7 +7,7 @@ export default defineConfig(
   { ignores: ['dist/**', '.angular/**', 'node_modules/**'] },
   { files: ['tests/**/*.mjs'], extends: [js.configs.recommended] },
   {
-    files: ['src/**/*.ts', 'shared/**/*.ts', 'backend/**/*.ts'],
+    files: ['src/**/*.ts', 'shared/**/*.ts', 'backend/**/*.ts', 'infra/**/*.ts'],
     extends: [js.configs.recommended, tseslint.configs.strictTypeChecked],
     languageOptions: {
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },

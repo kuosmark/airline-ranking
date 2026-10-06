@@ -7,11 +7,15 @@
     "start": "ng serve --host 127.0.0.1",
     "backend": "node --env-file=.env --experimental-strip-types backend/main.ts",
     "build": "ng build",
-    "lint": "eslint src shared backend tests --max-warnings=0",
+    "lint": "eslint src shared backend infra tests --max-warnings=0",
     "lint:fix": "npm run lint -- --fix",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "typecheck:backend": "tsc -p backend/tsconfig.json",
-    "check": "npm run lint && npm run typecheck:backend && npm test && npm run build"
+    "check": "npm run lint && npm run typecheck:backend && npm run typecheck:infra && npm test && npm run build && npm run infra:synth",
+    "typecheck:infra": "tsc -p infra/tsconfig.json",
+    "infra:synth": "cdk synth --strict --no-lookups",
+    "infra:diff": "cdk diff",
+    "infra:deploy": "cdk deploy"
   },
   "dependencies": {
     "@angular/common": "^21.2.0",
@@ -30,6 +34,10 @@
     "@eslint/js": "10.0.1",
     "@types/node": "^22.20.5",
     "angular-eslint": "21.4.0",
+    "aws-cdk": "^2.1144.0",
+    "aws-cdk-lib": "^2.272.0",
+    "constructs": "^10.8.1",
+    "esbuild": "^0.28.2",
     "eslint": "10.12.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "8.71.0"
