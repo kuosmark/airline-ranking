@@ -43,7 +43,7 @@ li.is-expanded { background: #edf4ef; }
 .details-panel { padding: 4px 52px 24px 122px; }
 .details-panel h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
 .aircraft-details dl { margin: 0; }
-.aircraft-type { display: grid; grid-template-columns: minmax(0, 1fr) 4ch; align-items: start; gap: 16px; padding: 4px 0; color: #515e58; font-size: 13px; line-height: 1.5; }
+.aircraft-type { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 16px; padding: 4px 0; color: #515e58; font-size: 13px; line-height: 1.5; }
 .aircraft-type dt { overflow-wrap: anywhere; }
 .aircraft-type dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: #34473d; }
 .types-toggle { display: block; margin-top: 6px; min-height: 36px; padding: 6px 0; border: 0; background: transparent; color: #34473d; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
@@ -64,10 +64,10 @@ li.is-expanded { background: #edf4ef; }
   .results-note { padding: 14px; }
   .column-headings { padding: 12px; font-size: 11px; letter-spacing: .02em; }
   .airline-toggle { padding: 0 12px; }
-  .column-headings, .airline-toggle { grid-template-columns: 32px 26px minmax(0, 1fr) 56px 10px; column-gap: 6px; }
+  .column-headings, .airline-toggle { grid-template-columns: 32px 26px minmax(0, 1fr) 56px 18px; column-gap: 6px; }
   .airline-name { font-size: 14px; }
   .count { font-size: 19px; }
-  .details-panel { padding: 4px 28px 22px 50px; }
+  .details-panel { padding: 4px 36px 22px 50px; }
   .update-warning { margin-left: 14px; margin-right: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
