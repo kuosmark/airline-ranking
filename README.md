@@ -189,8 +189,8 @@ Create a GitHub CodeConnections connection in Stockholm and authorize the AWS Gi
 After the application stack exists, deploy the pipeline:
 
 ```sh
-npm run infra:diff -- AirlineRankingDeployment --profile personal
-npm run infra:deploy -- AirlineRankingDeployment --profile personal --parameters ConnectionArn=YOUR_CONNECTION_ARN --parameters AlertEmail=YOUR_EMAIL --parameters IsPollingEnabled=false
+npm run infra:diff -- AirlineRankingDeployment --exclusively --profile personal
+npm run infra:deploy -- AirlineRankingDeployment --exclusively --profile personal --parameters ConnectionArn=YOUR_CONNECTION_ARN --parameters AlertEmail=YOUR_EMAIL --parameters IsPollingEnabled=false
 ```
 
 The pipeline can start immediately after creation. Keep `IsPollingEnabled=false` until the API key and state are ready. After enabling the cloud poller, update the pipeline parameter to `true` too; otherwise its next deployment will disable polling. The application stack's `-c isPollingEnabled` context and the pipeline's `IsPollingEnabled` parameter are explicit controls, not inferred from existing resources.
