@@ -52,18 +52,22 @@ Run `npm run check` before committing. GitHub Actions runs the same command on p
 
 | Command | Purpose |
 | --- | --- |
-| `npm run check` | Run linting, backend type checking, tests, and the production build |
+| `npm run check` | Run linting, backend/infra type checking, tests, the production build, and strict CDK synthesis |
 | `npm run lint` | Check strict TypeScript rules, Angular conventions, and template accessibility |
 | `npm run lint:fix` | Apply automatic lint fixes |
 | `npm run typecheck:backend` | Type-check the backend and shared ranking types |
 | `npm test` | Test counting, ordering, snapshot ages, response validation, caching, and HTTP failure behavior |
-| `npm run build` | Build the frontend into `dist/airline-ranking` |
+| `npm run build` | Build the frontend into `dist/airline-ranking/browser` |
+| `npm run typecheck:infra` | Type-check the CDK application |
+| `npm run infra:synth` | Bundle Lambda and validate the generated CloudFormation template without AWS lookups |
+| `npm run infra:diff` | Compare the stack with deployed resources |
+| `npm run infra:deploy` | Deploy the stack after reviewing its diff |
 
 Tests use Node's built-in test runner and synthetic data. They do not require an API key or contact SkyLink. Lint warnings fail the check.
 
 ## Scope
 
-The backend uses Node's built-in HTTP server and fetch API. The latest ranking lives in memory; operator names, countries and lookup cost controls are persisted in an untracked JSON cache. A scheduled Lambda entry point is also available; infrastructure and deployment automation are not yet provisioned.
+The backend uses Node's built-in HTTP server and fetch API. The latest ranking lives in memory; operator names, countries and lookup cost controls are persisted in an untracked JSON cache. A scheduled Lambda entry point is also available; CDK infrastructure is defined in `infra/`; deployment automation is a separate step.
 
 Aircraft are deduplicated by ICAO24, keeping the newest observation (ground wins equal-time conflicts). We count only explicitly airborne aircraft observed within five minutes of the snapshot. Callsigns must contain three letters followed by one to four letters or digits. Callsigns matching the aircraft registration after removing spaces and hyphens are excluded. Malformed, incomplete, or outdated global snapshots are rejected.
 
@@ -111,7 +115,7 @@ The local cache requires one backend process and durable local storage. Retain i
 
 `backend/lambda.ts` runs one refresh per invocation and publishes the ranking as `api/ranking` in a private website bucket. The frontend can read this object through CloudFront without a separate HTTP backend. The browser derives staleness from the original snapshot timestamp (15 minutes plus 30 seconds), so a stopped job still produces a delay notice.
 
-The handler prepares the application for scheduled execution. CDK resources, packaging, permissions, scheduling and deployment automation are a separate step. All Regional resources must use the selected AWS Region, `eu-north-1`.
+The CDK stack packages the handler and defines its permissions and schedule. All Regional resources use the selected AWS Region, `eu-north-1`.
 
 The handler requires:
 
@@ -130,5 +134,55 @@ The latest snapshot and its rank changes survive restarts. The ranking is publis
 Lambda errors identify a fixed failure stage: configuration, API key retrieval, operator cache loading, snapshot fetching, ranking publication, or the remaining refresh processing. Raw error messages, provider responses and credentials are not included.
 
 Use one active poller per API key. Stop the local backend when enabling the cloud schedule: local and S3 budgets are separate and cannot enforce an account-wide cap. Do not delete or replace cloud state as a refresh mechanism. Confirm AWS plan and spending protection before deployment; application request controls do not cap AWS charges.
+
+## AWS infrastructure
+
+`infra/stack.ts` defines one stack: two private S3 buckets, CloudFront with Origin Access Control, an ARM64 Node.js 22 Lambda, a 15-minute EventBridge Scheduler schedule, and an email alarm for Lambda errors. The frontend and `api/ranking` share one CloudFront origin; browser traffic does not invoke Lambda or SkyLink. No API Gateway, VPC, NAT gateway or custom domain is required.
+
+Polling is **disabled by default**. Lambda has one reserved concurrent execution, a two-minute timeout and no automatic retries; Scheduler retries are also disabled. Logs expire after seven days. The state bucket retains its current objects and seven days of superseded versions. Both buckets survive stack removal, and termination protection is enabled. Retained resources continue to incur storage charges; review them explicitly when retiring the application. Version history is for recovery, not for resetting the lookup budget.
+
+CloudFront honors each object's cache headers, with a 30-second default and no minimum TTL. The ranking expires after 30 seconds; missing objects return an error instead of the Angular page. Only `/` is an application route. The alarm covers Lambda execution errors, not every possible scheduling or delivery failure; also check snapshot freshness after enabling polling.
+
+### First deployment
+
+Local synthesis and tests need no AWS credentials and make no provider calls. Deployment has not been validated against a live AWS project. Before deploying:
+
+1. Confirm the selected Region (`eu-north-1`), plan and project spend limit in AWS Settings. Set up the billing alert separately in Billing and Cost Management: the budget CloudFormation resource is unavailable in this Region. Budget notifications are delayed alerts, not a hard spending cap. Confirm the project spend limit separately.
+2. Confirm the Lambda concurrency quota permits reserving one execution while maintaining AWS's required unreserved capacity. Do not remove the concurrency limit to work around a quota error.
+3. Authenticate the named `personal` AWS profile. Bootstrap CDK in this project and Region if necessary, then synthesize and review the diff:
+
+   ```sh
+   npx cdk bootstrap aws://PROJECT_ACCOUNT_ID/eu-north-1 --profile personal
+   npm run infra:synth
+   npm run infra:diff -- --profile personal
+   npm run infra:deploy -- --profile personal --parameters AlertEmail=YOUR_EMAIL
+   ```
+
+   Replace the placeholders locally; keep credentials and deployment outputs out of Git. Review resource and IAM changes before approving deployment. Confirm the SNS subscription email to receive refresh failure alerts. This first deployment leaves polling disabled.
+4. Create the standard-tier SSM **SecureString** `/airline-ranking/skylink-api-key` in Stockholm, using the default AWS-managed SSM key. Enter the API key directly in the AWS console. The stack references this parameter without storing its value in CloudFormation or the frontend.
+5. Stop the local backend. Upload its existing `.cache/operator-names.json` to `operator-names.json` in the stack's private `StateBucket`, preserving `attempts` and `cooldownUntil`. Initialize `refresh-state.json` there with `{"lastAttemptSlot":null,"snapshot":null}` only on the first deployment. Never overwrite existing cloud state during a redeployment.
+6. Run `npm run build` and upload `dist/airline-ranking/browser/` to `WebsiteBucket`. Use `Cache-Control: no-cache` for `index.html` and a long cache lifetime only for content-hashed assets. Do not delete or overwrite `api/ranking` when publishing the frontend. The next PR will automate publishing and CloudFront invalidation.
+7. Once state, key, spending protection and frontend are ready, review and deploy with `-c isPollingEnabled=true`:
+
+   ```sh
+   npm run infra:diff -- --profile personal -c isPollingEnabled=true
+   npm run infra:deploy -- --profile personal -c isPollingEnabled=true --parameters AlertEmail=YOUR_EMAIL
+   ```
+
+   Keep this context value explicit on subsequent deployments; omitting it disables polling. To pause polling, deploy with `-c isPollingEnabled=false`. Pausing does not stop CloudFront or storage charges. Keep the local backend stopped while the cloud poller is active.
+8. Open the output `WebsiteUrl` and verify a fresh ranking after the next scheduled invocation. Check the Lambda logs and confirm the state objects advance without losing quota history. An empty site before the first successful refresh is expected.
+
+GitHub Actions currently validates the stack as part of `npm run check`. It does not deploy; OIDC deployment from `main` is the next separate change.
+
+### Retiring the application
+
+Disabling polling stops scheduled provider requests, but leaves the website and AWS resources running. To retire the application completely:
+
+1. Disable the schedule and stop any local backend using the same API key. Preserve any state needed for recovery; keep exported caches outside Git.
+2. Disable termination protection and delete the `AirlineRanking` stack. Both S3 buckets are retained and continue to incur storage charges.
+3. After confirming their data is no longer needed, empty and delete the retained buckets. The versioned state bucket must also have all object versions and delete markers removed. Its seven-day lifecycle rule removes superseded versions, not current objects.
+4. Delete the separately created `/airline-ranking/skylink-api-key` parameter if it is no longer needed. Review any separately configured billing alerts or deployment access.
+5. Review the `CDKToolkit` bootstrap stack and its assets separately. Bootstrap resources support CDK deployments in the AWS project and Region and may be shared by other applications; remove them only when no remaining deployment needs them.
+6. Check billing after usage records have updated and confirm no unwanted resources remain. Retiring AWS resources does not cancel the SkyLink subscription; review that separately.
 
 Development follows the lightweight branch, pull request, and squash-merge workflow in [AGENTS.md](AGENTS.md).
