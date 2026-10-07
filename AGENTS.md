@@ -26,6 +26,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - For meaningful code changes, delegate a review of the proposed commit to a separate agent with fresh context. Provide the requirements, base and head commits, and repository instructions. The reviewer must not edit files. Small documentation-only changes may use self-review.
 - Verify review findings, resolve blocking issues, and rerun affected checks after fixes. Request another review of significant code changes made after review.
 - Before merging, confirm CI passes for the latest revision and present the verification and review results to the repository owner.
+- When reviewing substantial new functionality, suggest a milestone release to the repository owner. Create a release only after explicit owner approval and successful deployment verification; do not suggest a release for every PR.
 - Merge a pull request only after the repository owner explicitly approves merging the current revision. Approval to implement work or open a PR is not merge approval. New commits require renewed merge approval.
 - Squash-merge with a descriptive title, delete the feature branch, and update local `main` afterward.
 - For owner-approved releases, follow the release procedure in `README.md`: tag the exact verified deployed commit, publish concise GitHub release notes, and never move a published tag.
