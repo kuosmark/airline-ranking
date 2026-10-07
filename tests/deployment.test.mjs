@@ -27,12 +27,12 @@ test('deployments queue and use only main from the project repository', () => {
   });
 });
 
-test('builds verify Free before installing and release application code without deploying infrastructure', () => {
+test('builds check and release application code without deploying infrastructure', () => {
   const [project] = Object.values(template.findResources('AWS::CodeBuild::Project'));
   assert.equal(project.Properties.TimeoutInMinutes, 30);
   assert.equal(project.Properties.ConcurrentBuildLimit, 1);
   const spec = JSON.parse(project.Properties.Source.BuildSpec);
-  assert.equal(spec.phases.install.commands[0], 'test "$(aws freetier get-account-plan-state --query accountPlanType --output text)" = FREE');
+  assert.deepEqual(spec.phases.install.commands, ['npm ci']);
   assert.equal(spec.phases.install['runtime-versions'].nodejs, 22);
   const commands = spec.phases.build.commands;
   assert.equal(commands[0], 'npm run check');
@@ -70,7 +70,7 @@ test('deployment roles do not read secrets and direct website writes exclude bac
   const allowedActions = statements.filter(statement => statement.Effect === 'Allow')
     .flatMap(statement => Array.isArray(statement.Action) ? statement.Action : [statement.Action]);
   for (const action of allowedActions) {
-    assert.equal(/^(sts:|iam:|cloudformation:|ssm:|scheduler:)/.test(action), false, action);
+    assert.equal(/^(sts:|iam:|cloudformation:|ssm:|scheduler:|freetier:)/.test(action), false, action);
     assert.equal(action === '*' || action.endsWith(':*'), false, action);
   }
   assert.equal(allowedActions.includes('freetier:UpgradeAccountPlan'), false);
@@ -79,7 +79,6 @@ test('deployment roles do not read secrets and direct website writes exclude bac
   assert.deepEqual([].concat(lambda.Action).sort(), ['lambda:GetFunctionConfiguration', 'lambda:UpdateFunctionCode']);
   assert.deepEqual(lambda.Resource, deployment.resolve(application.refresh.functionArn));
   for (const statement of statements.filter(statement => statement.Effect === 'Allow')) {
-    if ([].concat(statement.Action).includes('freetier:GetAccountPlanState')) { continue; }
     assert.equal([].concat(statement.Resource).includes('*'), false);
   }
   const upload = statements.find(statement => statement.Action === 's3:PutObject');

@@ -2,6 +2,7 @@ import { CfnOutput, CfnParameter, Duration, RemovalPolicy, Stack } from 'aws-cdk
 import type { StackProps } from 'aws-cdk-lib';
 import type { Construct } from 'constructs';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as actions from 'aws-cdk-lib/aws-cloudwatch-actions';
@@ -10,6 +11,8 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as dnsTargets from 'aws-cdk-lib/aws-route53-targets';
 import * as scheduler from 'aws-cdk-lib/aws-scheduler';
 import * as targets from 'aws-cdk-lib/aws-scheduler-targets';
 import * as sns from 'aws-cdk-lib/aws-sns';
@@ -33,6 +36,19 @@ export class AirlineRankingStack extends Stack {
       type: 'String', description: 'Email for refresh failure alerts; requires SNS confirmation.',
       allowedPattern: '[^\\s@]+@[^\\s@]+\\.[^\\s@]+',
     });
+    const certificateArn = new CfnParameter(this, 'CertificateArn', {
+      type: 'String', description: 'Issued, non-exportable ACM certificate for airlines.markuskuosmanen.com in us-east-1.',
+      allowedPattern: 'arn:aws:acm:us-east-1:[0-9]{12}:certificate/[a-f0-9-]+',
+    });
+    const hostedZoneId = new CfnParameter(this, 'HostedZoneId', {
+      type: 'String', description: 'Existing public Route 53 zone for markuskuosmanen.com.',
+      allowedPattern: 'Z[A-Z0-9]+',
+    });
+    const domainName = 'airlines.markuskuosmanen.com';
+    const certificate = acm.Certificate.fromCertificateArn(this, 'Certificate', certificateArn.valueAsString);
+    const zone = route53.HostedZone.fromHostedZoneAttributes(this, 'DomainZone', {
+      hostedZoneId: hostedZoneId.valueAsString, zoneName: 'markuskuosmanen.com',
+    });
     const website = new s3.Bucket(this, 'Website', {
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL, enforceSSL: true,
       encryption: s3.BucketEncryption.S3_MANAGED, removalPolicy: RemovalPolicy.RETAIN,
@@ -48,6 +64,8 @@ export class AirlineRankingStack extends Stack {
       enableAcceptEncodingGzip: true, enableAcceptEncodingBrotli: true,
     });
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
+      domainNames: [domainName], certificate,
+      minimumProtocolVersion: cloudfront.SecurityPolicyProtocol.TLS_V1_2_2021,
       defaultRootObject: 'index.html', priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
       defaultBehavior: {
         origin, cachePolicy, viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
@@ -55,6 +73,10 @@ export class AirlineRankingStack extends Stack {
         responseHeadersPolicy: cloudfront.ResponseHeadersPolicy.SECURITY_HEADERS,
       },
       errorResponses: [403, 404].map(httpStatus => ({ httpStatus, ttl: Duration.seconds(0) })),
+    });
+    new route53.ARecord(this, 'WebsiteAlias', {
+      zone, recordName: domainName,
+      target: route53.RecordTarget.fromAlias(new dnsTargets.CloudFrontTarget(distribution)),
     });
     this.website = website;
     this.distribution = distribution;
@@ -98,6 +120,7 @@ export class AirlineRankingStack extends Stack {
     });
     failures.addAlarmAction(new actions.SnsAction(alerts));
     new CfnOutput(this, 'WebsiteUrl', { value: `https://${distribution.distributionDomainName}` });
+    new CfnOutput(this, 'CustomDomainUrl', { value: `https://${domainName}` });
     new CfnOutput(this, 'WebsiteBucket', { value: website.bucketName });
     new CfnOutput(this, 'StateBucket', { value: state.bucketName });
     new CfnOutput(this, 'DistributionId', { value: distribution.distributionId });

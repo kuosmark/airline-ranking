@@ -54,7 +54,6 @@ export class DeploymentStack extends Stack {
         version: '0.2',
         phases: {
           install: { 'runtime-versions': { nodejs: 22 }, commands: [
-            'test "$(aws freetier get-account-plan-state --query accountPlanType --output text)" = FREE',
             'npm ci',
           ] },
           build: { commands: [
@@ -64,7 +63,6 @@ export class DeploymentStack extends Stack {
         },
       }),
     });
-    build.addToRolePolicy(new iam.PolicyStatement({ actions: ['freetier:GetAccountPlanState'], resources: ['*'] }));
     build.addToRolePolicy(new iam.PolicyStatement({
       actions: ['lambda:GetFunctionConfiguration', 'lambda:UpdateFunctionCode'], resources: [props.refresh.functionArn],
     }));

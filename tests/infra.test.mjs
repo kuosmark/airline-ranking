@@ -65,6 +65,25 @@ test('CloudFront uses authenticated S3 access and honors freshness headers witho
   });
 });
 
+test('custom domain reuses the existing zone and certificate with a CloudFront alias and SNI HTTPS', () => {
+  template.resourceCountIs('AWS::Route53::HostedZone', 0);
+  template.resourceCountIs('AWS::CertificateManager::Certificate', 0);
+  template.resourceCountIs('AWS::Route53::RecordSet', 1);
+  template.hasResourceProperties('AWS::Route53::RecordSet', {
+    HostedZoneId: { Ref: 'HostedZoneId' }, Name: 'airlines.markuskuosmanen.com.', Type: 'A',
+    AliasTarget: Match.objectLike({ DNSName: { 'Fn::GetAtt': [Match.stringLikeRegexp('^Distribution'), 'DomainName'] } }),
+  });
+  assert.match(JSON.stringify(template.toJSON().Mappings), /Z2FDTNDATAQYW2/);
+  template.hasResourceProperties('AWS::CloudFront::Distribution', {
+    DistributionConfig: Match.objectLike({
+      Aliases: ['airlines.markuskuosmanen.com'],
+      ViewerCertificate: {
+        AcmCertificateArn: { Ref: 'CertificateArn' }, MinimumProtocolVersion: 'TLSv1.2_2021', SslSupportMethod: 'sni-only',
+      },
+    }),
+  });
+});
+
 test('the refresh role can access only its state objects, published ranking and API-key parameter', () => {
   const policies = Object.values(template.findResources('AWS::IAM::Policy'));
   const policy = policies.find(resource => resource.Properties.PolicyDocument.Statement.some(statement =>
