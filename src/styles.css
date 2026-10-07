@@ -15,6 +15,10 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 .leaderboard { background: #fff; border: 1px solid #e5e8eb; border-radius: 16px; box-shadow: 0 4px 22px #18263503; }
 .board-header { display: flow-root; position: sticky; top: 0; z-index: 1; background: #fff; border-radius: 16px 16px 0 0; border-bottom: 1px solid #e5e8eb; }
 .snapshot-status { margin-bottom: 12px; text-align: right; color: #626c76; font-size: 12px; font-weight: 500; line-height: 1.5; }
+.search-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.search-toolbar input { width: 285px; min-width: 0; padding: 11px 14px; border: 1px solid #e5e8eb; border-radius: 10px; background: #fff; color: inherit; font: inherit; font-size: 14px; }
+.search-toolbar input:focus-visible { outline: 2px solid #617a70; outline-offset: 2px; }
+.search-results { color: #626c76; font-size: 12px; white-space: nowrap; }
 .column-headings, .airline-toggle { display: grid; grid-template-columns: 54px 38px minmax(0, 1fr) 80px 12px; column-gap: 12px; align-items: center; }
 .column-headings { padding: 14px 28px; color: #626c76; font-size: 11px; letter-spacing: .06em; font-weight: 600; text-transform: uppercase; }
 .column-headings > :nth-child(4) { text-align: right; }
@@ -71,6 +75,8 @@ li.is-expanded { background: #edf4ef; }
   main { padding: 28px 12px; }
   .page-header { margin-bottom: 18px; padding: 0 4px; }
   .results-note { padding: 14px; }
+  .search-toolbar input { flex: 1; width: auto; font-size: 16px; }
+  .search-results { font-size: 11px; }
   .column-headings { padding: 12px; font-size: 9px; letter-spacing: .02em; }
   .airline-toggle { padding: 0 12px; }
   .column-headings, .airline-toggle { grid-template-columns: 40px 26px minmax(0, 1fr) 56px 18px; column-gap: 6px; }

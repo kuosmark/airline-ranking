@@ -6,6 +6,17 @@
 
   @if (snapshot()) {
     <div class="snapshot-status">Updated {{ snapshotAge() }}</div>
+    <div class="search-toolbar">
+      <input #operatorSearch type="search" aria-label="Search operators by name or prefix" placeholder="Search name or prefix"
+        [value]="searchQuery()" (input)="searchQuery.set(operatorSearch.value)">
+      <span class="search-results" role="status">
+        @if (searchQuery().trim()) {
+          {{ visibleRows().length }} of {{ rows().length }} operators
+        } @else {
+          {{ rows().length }} operators
+        }
+      </span>
+    </div>
   }
 
   <section class="leaderboard" aria-label="Airline leaderboard">
@@ -27,7 +38,8 @@
     </div>
     @if (snapshot(); as currentSnapshot) {
       <ol>
-        @for (airline of rows(); track airline.id; let rank = $index) {
+        @for (rankedOperator of visibleRows(); track rankedOperator.airline.id) {
+          @let airline = rankedOperator.airline;
           <li #row [attr.data-id]="airline.id" [class.is-expanded]="expandedAirlineId() === airline.id">
             <button class="airline-toggle" type="button" (click)="toggleAirline(airline)"
               [attr.aria-expanded]="expandedAirlineId() === airline.id"
@@ -50,7 +62,7 @@
                   <span class="visually-hidden">Down {{ -change }} {{ change === -1 ? 'place' : 'places' }} since the previous snapshot.</span>
                 }
               </span>
-              <span class="rank"><span class="visually-hidden">Rank </span>{{ rank + 1 | number: '2.0-0' }}</span>
+              <span class="rank"><span class="visually-hidden">Rank </span>{{ rankedOperator.rank | number: '2.0-0' }}</span>
               <span class="airline-name">{{ airline.name }}
                 @if (airline.name === airline.id) {
                   <span class="name-unavailable">Name unavailable</span>
@@ -104,6 +116,9 @@
           </li>
         }
       </ol>
+      @if (visibleRows().length === 0) {
+        <p class="empty-state">No operators match your search.</p>
+      }
       @if (currentSnapshot.airlines.length < 100) {
         <p class="results-note">Showing {{ currentSnapshot.airlines.length }} of up to 100 operators.</p>
       }
