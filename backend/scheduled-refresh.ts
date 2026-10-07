@@ -22,7 +22,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 function isSnapshot(value: unknown): value is Snapshot {
   if (!isRecord(value) || typeof value['updatedAt'] !== 'string' || !Number.isFinite(Date.parse(value['updatedAt'])) ||
-      typeof value['isStale'] !== 'boolean' || !Array.isArray(value['airlines']) || value['airlines'].length > 100) { return false; }
+      typeof value['isStale'] !== 'boolean' || !Array.isArray(value['airlines'])) { return false; }
   return value['airlines'].every((airline: unknown) => {
     if (!isRecord(airline)) { return false; }
     const count = airline['count'];

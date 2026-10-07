@@ -61,7 +61,6 @@ li.is-expanded { background: #edf4ef; }
 .types-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px 16px; margin-top: 12px; border-top: 1px solid #d6e1d8; padding-top: 8px; color: #626c76; font-size: 12px; }
 .types-footer .types-toggle { margin-top: 0; font-size: 12px; font-weight: 500; }
 .no-aircraft { margin: 10px 0 0; color: #626c76; font-size: 13px; line-height: 1.5; }
-.results-note { margin: 0; padding: 16px 28px; border-top: 1px solid #e5e8eb; color: #626c76; font-size: 13px; line-height: 1.6; }
 .update-warning { font-size: 12px; line-height: 1.5; color: #755319; background: #fcf7ed; border-radius: 6px; margin: 16px 28px 0; padding: 9px 12px; }
 .empty-state { padding: 50px 28px; font-size: 14px; color: #626c76; text-align: center; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -73,7 +72,6 @@ li.is-expanded { background: #edf4ef; }
   html { scroll-padding-top: 230px; }
   main { padding: 28px 12px; }
   .page-header { margin-bottom: 18px; padding: 0 4px; }
-  .results-note { padding: 14px; }
   .search-toolbar { align-items: stretch; flex-direction: column; gap: 8px; }
   .search-toolbar input { width: 100%; font-size: 16px; }
   .column-headings { padding: 12px; font-size: 9px; letter-spacing: .02em; }

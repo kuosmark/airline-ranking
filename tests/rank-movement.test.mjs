@@ -81,16 +81,16 @@ test('failures and older snapshots keep movement; recovery compares with the las
   assert.deepEqual(changes(service), { AAA: 1, BBB: -1 });
 });
 
-test('reports exact movement across the full top-100 ranking', async () => {
-  const entries = Array.from({ length: 100 }, (_, index) => [`OP${index}`, 100 - index]);
+test('reports exact movement beyond the former top-100 boundary', async () => {
+  const entries = Array.from({ length: 150 }, (_, index) => [`OP${index}`, 150 - index]);
   let data = makeSnapshot(0, entries);
   const service = createRankingService(async () => data, () => start);
   await service.refresh();
   data = makeSnapshot(15, entries.map(([id], index) => [id, index + 1]));
   await service.refresh();
   const result = changes(service);
-  assert.equal(result.OP99, 99);
-  assert.equal(result.OP0, -99);
-  assert.equal(result.OP51, 3);
-  assert.equal(result.OP48, -3);
+  assert.equal(result.OP149, 149);
+  assert.equal(result.OP0, -149);
+  assert.equal(result.OP76, 3);
+  assert.equal(result.OP73, -3);
 });
