@@ -4,6 +4,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import type { Airline, Snapshot } from '../shared/ranking';
 import { rankAirlines, isSnapshotStale } from '../shared/ranking';
 import { formatSnapshotAge } from './snapshot-age';
+import { filterOperators } from './operator-search';
 
 @Component({
   selector: 'app-root',
@@ -31,10 +32,11 @@ export class AppComponent implements OnInit, OnDestroy {
   });
   readonly error = signal<string | null>(null);
   readonly rows = signal<Airline[]>([]);
+  readonly searchQuery = signal('');
+  readonly visibleRows = computed(() => filterOperators(this.rows(), this.searchQuery()));
   readonly announcement = signal('');
   readonly expandedAirlineId = signal<string | null>(null);
   readonly isShowingAllTypes = signal(false);
-  readonly isMovementExplanationOpen = signal(false);
   readonly collapsedTypeLimit = 5;
 
   toggleAirline(airline: Airline): void {

@@ -14,13 +14,16 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 .refresh-interval { display: inline-block; margin-left: 16px; font-size: 12px; font-weight: 400; white-space: nowrap; }
 .leaderboard { background: #fff; border: 1px solid #e5e8eb; border-radius: 16px; box-shadow: 0 4px 22px #18263503; }
 .board-header { display: flow-root; position: sticky; top: 0; z-index: 1; background: #fff; border-radius: 16px 16px 0 0; border-bottom: 1px solid #e5e8eb; }
-.snapshot-status { margin-bottom: 12px; text-align: right; color: #626c76; font-size: 12px; font-weight: 500; line-height: 1.5; }
+.snapshot-status { color: #626c76; font-size: 12px; line-height: 1.5; white-space: nowrap; }
+.ranking-status { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: #626c76; }
+.search-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.search-toolbar input { width: 285px; min-width: 0; padding: 11px 14px; border: 1px solid #e5e8eb; border-radius: 10px; background: #fff; color: inherit; font: inherit; font-size: 14px; }
+.search-toolbar input:focus-visible { outline: 2px solid #617a70; outline-offset: 2px; }
+.search-results { color: #515e58; font-size: 12px; white-space: nowrap; }
 .column-headings, .airline-toggle { display: grid; grid-template-columns: 54px 38px minmax(0, 1fr) 80px 12px; column-gap: 12px; align-items: center; }
 .column-headings { padding: 14px 28px; color: #626c76; font-size: 11px; letter-spacing: .06em; font-weight: 600; text-transform: uppercase; }
 .column-headings > :nth-child(4) { text-align: right; }
-.movement-help { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; white-space: nowrap; cursor: pointer; }
-.movement-help:focus-visible { outline: 2px solid #617a70; outline-offset: 3px; }
-.movement-explanation { margin: 0; padding: 0 28px 14px; color: #626c76; font-size: 12px; line-height: 1.6; }
+.column-headings > :first-child { text-align: center; }
 ol { list-style: none; padding: 0; margin: 0; }
 li { position: relative; border-bottom: 1px solid #dce1e5; background: white; }
 li:last-child { border-bottom: 0; border-radius: 0 0 16px 16px; }
@@ -30,11 +33,11 @@ li.is-expanded { background: #edf4ef; }
   li:not(.is-expanded):hover { background: #f3f4f6; }
 }
 .airline-toggle:focus-visible { outline: 2px solid #617a70; outline-offset: -3px; }
-.rank { color: #626c76; font-size: 13px; line-height: 1.45; font-variant-numeric: tabular-nums; }
-.rank-indicator { display: flex; align-items: center; justify-content: center; min-height: 20px; font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rank { color: #515e58; font-size: 14px; font-weight: 500; line-height: 1.45; font-variant-numeric: tabular-nums; }
+.rank-indicator { display: flex; align-items: center; justify-content: center; min-height: 20px; font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rank-up { color: #176957; }
 .rank-down { color: #b44242; }
-.rank-new { font-size: 11px; line-height: 1; font-weight: 650; color: #626c76; }
+.rank-new { font-size: 11px; line-height: 1; font-weight: 400; color: #626c76; }
 .rank-unchanged { color: #626c76; font-size: 15px; }
 .airline-name { font-size: 15px; font-weight: 500; letter-spacing: -.015em; line-height: 1.45; padding: 12px 0; overflow-wrap: anywhere; }
 .name-unavailable { display: block; color: #626c76; font-size: 11px; font-weight: 400; letter-spacing: normal; }
@@ -71,13 +74,14 @@ li.is-expanded { background: #edf4ef; }
   main { padding: 28px 12px; }
   .page-header { margin-bottom: 18px; padding: 0 4px; }
   .results-note { padding: 14px; }
+  .search-toolbar { align-items: stretch; flex-direction: column; gap: 8px; }
+  .search-toolbar input { width: 100%; font-size: 16px; }
   .column-headings { padding: 12px; font-size: 9px; letter-spacing: .02em; }
   .airline-toggle { padding: 0 12px; }
   .column-headings, .airline-toggle { grid-template-columns: 40px 26px minmax(0, 1fr) 56px 18px; column-gap: 6px; }
   .airline-name { font-size: 14px; }
   .count { font-size: 19px; }
   .details-panel { padding: 4px 36px 22px 58px; }
-  .movement-explanation { padding: 0 12px 12px; }
   .update-warning { margin-left: 14px; margin-right: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
