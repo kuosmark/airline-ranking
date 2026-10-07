@@ -5,6 +5,7 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { refreshScheduledRanking } from '../backend/scheduled-refresh.ts';
 import { s3Store } from '../backend/s3-storage.ts';
 import { REFRESH_INTERVAL_MS } from '../backend/skylink.ts';
+import { createOperatorDirectory } from '../backend/operator-directory.ts';
 
 const start = Date.parse('2026-10-05T12:00:00Z');
 const snapshot = (time, entries) => ({ updatedAt: new Date(time).toISOString(), isStale: false,
@@ -60,7 +61,26 @@ test('failed fetch consumes the slot and leaves the previous ranking intact', as
   h.options.fetchSnapshot = async () => { throw new Error('Provider failure'); };
   await assert.rejects(refreshScheduledRanking(h.options));
   assert.deepEqual(h.saved().snapshot, before);
+  assert.deepEqual(h.saved().snapshotAttempts, [start, start + REFRESH_INTERVAL_MS]);
   await refreshScheduledRanking(h.options); // Would throw if the duplicate contacted the provider.
+  assert.equal(h.saved().snapshotAttempts.length, 2);
+});
+
+test('duplicate recovery replaces legacy metadata without any provider request', async t => {
+  const h = setup();
+  const old = snapshot(start, [['AAA', 10]]);
+  Object.assign(old.airlines[0], { name: 'Old SkyLink name', country: 'Old country' });
+  await h.store.write({ lastAttemptSlot: Math.floor(start / REFRESH_INTERVAL_MS), snapshot: old });
+  const legacy = { names: {}, attempts: [start], cooldownUntil: 0 };
+  const directoryStore = { read: async () => legacy, write: async () => {} };
+  h.options.directory = await createOperatorDirectory(directoryStore, () => start);
+  const fetch = t.mock.method(globalThis, 'fetch', async () => { throw new Error('Unexpected request'); });
+  await refreshScheduledRanking(h.options);
+  assert.equal(h.calls(), 0);
+  assert.equal(fetch.mock.callCount(), 0);
+  const row = h.published[0].airlines[0];
+  assert.equal(row.name, 'AAA');
+  for (const field of ['country', 'iata', 'icao']) assert.equal(row[field], null);
 });
 
 test('publication failure recovers from saved state without another provider call', async () => {
@@ -138,5 +158,44 @@ test('S3 aborts a stalled response body after headers arrive', async () => {
     client.destroy();
     server.closeAllConnections();
     await new Promise(resolve => server.close(resolve));
+  }
+});
+
+test('paid snapshot requests have a separate rolling cap with reservations surviving failures and restarts', async () => {
+  const { MAX_SNAPSHOT_ATTEMPTS, SNAPSHOT_WINDOW_MS } = await import('../backend/scheduled-refresh.ts');
+  assert.equal(MAX_SNAPSHOT_ATTEMPTS, 3100);
+  assert.equal(SNAPSHOT_WINDOW_MS, 32 * 24 * 60 * 60 * 1000);
+  assert.equal(SNAPSHOT_WINDOW_MS / REFRESH_INTERVAL_MS, 3072);
+  const h = setup();
+  const oldest = start - SNAPSHOT_WINDOW_MS + 1;
+  await h.store.write({ lastAttemptSlot: null, snapshot: null, snapshotAttempts: Array(MAX_SNAPSHOT_ATTEMPTS).fill(oldest) });
+  await assert.rejects(refreshScheduledRanking(h.options), /request limit/);
+  assert.equal(h.calls(), 0);
+  h.advance([['AAA', 10]]);
+  await refreshScheduledRanking({ ...h.options });
+  assert.equal(h.calls(), 1);
+  assert.equal(h.saved().snapshotAttempts.length, 1);
+  await refreshScheduledRanking({ ...h.options });
+  assert.equal(h.calls(), 1);
+});
+
+test('legacy snapshot state conservatively accounts for all prior slots and does not reset on restart', async () => {
+  const h = setup();
+  const slot = Math.floor(start / REFRESH_INTERVAL_MS) - 1;
+  await h.store.write({ lastAttemptSlot: slot, snapshot: null });
+  await refreshScheduledRanking(h.options);
+  assert.equal(h.saved().snapshotAttempts.length, 3072);
+  const saved = globalThis.structuredClone(h.saved().snapshotAttempts);
+  await refreshScheduledRanking({ ...h.options });
+  assert.deepEqual(h.saved().snapshotAttempts, saved);
+  assert.equal(h.calls(), 1);
+});
+
+test('malformed snapshot request history blocks paid requests', async () => {
+  for (const snapshotAttempts of [null, 'wrong', [-1], ['bad'], [NaN]]) {
+    const h = setup();
+    await h.store.write({ lastAttemptSlot: null, snapshot: null, snapshotAttempts });
+    await assert.rejects(refreshScheduledRanking(h.options), /history/);
+    assert.equal(h.calls(), 0);
   }
 });

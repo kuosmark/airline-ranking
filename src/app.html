@@ -76,7 +76,8 @@
                   <div class="details-panel">
                     <dl class="operator-details" aria-label="Operator details">
                       <div><dt>Country</dt><dd>{{ airline.country || 'Unavailable' }}</dd></div>
-                      <div><dt>Prefix</dt><dd>{{ airline.id }}</dd></div>
+                      <div><dt>IATA</dt><dd>{{ airline.iata || 'Unavailable' }}</dd></div>
+                      <div><dt>ICAO</dt><dd>{{ airline.icao || 'Unavailable' }}</dd></div>
                     </dl>
                     <h2>Airborne aircraft by type</h2>
                     @if (airline.count === 0) {

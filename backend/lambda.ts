@@ -26,7 +26,7 @@ export async function handler(event: { scheduledAt: string }, context: { getRema
     const apiKey = parameter.Parameter?.Value;
     if (!apiKey) { throw new Error('SkyLink key is unavailable'); }
     stage = 'Loading operator cache';
-    const directory = await createOperatorDirectory(apiKey, s3Store(s3, stateBucket, 'operator-names.json'));
+    const directory = await createOperatorDirectory(s3Store(s3, stateBucket, 'operator-names.json'));
     stage = directory.isAvailable() ? 'Refreshing ranking' : 'Loading operator cache';
     await refreshScheduledRanking({
       state: s3Store(s3, stateBucket, 'refresh-state.json'), directory,
