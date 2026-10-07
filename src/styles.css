@@ -23,6 +23,7 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 .column-headings, .airline-toggle { display: grid; grid-template-columns: 54px 38px minmax(0, 1fr) 80px 12px; column-gap: 12px; align-items: center; }
 .column-headings { padding: 14px 28px; color: #626c76; font-size: 11px; letter-spacing: .06em; font-weight: 600; text-transform: uppercase; }
 .column-headings > :nth-child(4) { text-align: right; }
+.column-headings > :first-child { text-align: center; }
 ol { list-style: none; padding: 0; margin: 0; }
 li { position: relative; border-bottom: 1px solid #dce1e5; background: white; }
 li:last-child { border-bottom: 0; border-radius: 0 0 16px 16px; }
