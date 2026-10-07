@@ -77,7 +77,6 @@ li.is-expanded { background: #edf4ef; }
   .airline-name { font-size: 14px; }
   .count { font-size: 19px; }
   .details-panel { padding: 4px 36px 22px 58px; }
-  .aircraft-details .operator-details { margin-left: 32px; }
   .movement-explanation { padding: 0 12px 12px; }
   .update-warning { margin-left: 14px; margin-right: 14px; }
 }
