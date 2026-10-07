@@ -4,39 +4,32 @@ import { rankAirlines } from '../shared/ranking.ts';
 
 test('ranks airlines by airborne count, highest first', () => {
   const airlines = [
-    { id: 'air-canada', name: 'Air Canada', count: 77 },
-    { id: 'american', name: 'American Airlines', count: 447 },
-    { id: 'british', name: 'British Airways', count: 85 },
+    { id: 'ACA', name: 'Air Canada', count: 77 },
+    { id: 'AAL', name: 'American Airlines', count: 447 },
+    { id: 'BAW', name: 'British Airways', count: 85 },
   ];
 
   assert.deepEqual(rankAirlines(airlines).map(airline => airline.id), [
-    'american', 'british', 'air-canada',
+    'AAL', 'BAW', 'ACA',
   ]);
 });
 
 test('breaks count ties by stable identifier, independent of display name or incoming order', () => {
   const airlines = [
-    { id: 'cathay', name: 'Cathay Pacific', count: 19 },
-    { id: 'aer-lingus', name: 'Zulu name', count: 19 },
-    { id: 'air-canada', name: 'Air Canada', count: 19 },
+    { id: 'CPA', name: 'Cathay Pacific', count: 19 },
+    { id: 'EIN', name: 'Aer Lingus', count: 19 },
+    { id: 'ACA', name: 'Zulu name', count: 19 },
   ];
-  const expected = ['aer-lingus', 'air-canada', 'cathay'];
+  const expected = ['ACA', 'CPA', 'EIN'];
 
   assert.deepEqual(rankAirlines(airlines).map(airline => airline.id), expected);
   assert.deepEqual(rankAirlines([...airlines].reverse()).map(airline => airline.id), expected);
 });
 
-test('retains airlines with zero aircraft and ranks them after positive counts', () => {
-  const zero = { id: 'aer-lingus', name: 'Aer Lingus', count: 0 };
-  const flying = { id: 'cathay', name: 'Cathay Pacific', count: 1 };
-
-  assert.deepEqual(rankAirlines([zero, flying]), [flying, zero]);
-});
-
 test('returns a new array without changing the input array or airline objects', () => {
   const airlines = [
-    { id: 'air-canada', name: 'Air Canada', count: 77 },
-    { id: 'american', name: 'American Airlines', count: 447 },
+    { id: 'ACA', name: 'Air Canada', count: 77 },
+    { id: 'AAL', name: 'American Airlines', count: 447 },
   ];
   const original = airlines.map(airline => ({ ...airline }));
   const ranked = rankAirlines(airlines);

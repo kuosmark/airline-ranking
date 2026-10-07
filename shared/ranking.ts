@@ -2,6 +2,8 @@ export interface Airline {
   id: string;
   name: string;
   country?: string | null;
+  iata?: string | null;
+  icao?: string | null;
   count: number;
   // Positive values move up; zero is unchanged. Omitted before the first comparison.
   rankChange?: number | 'new';

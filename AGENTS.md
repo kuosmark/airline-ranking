@@ -21,7 +21,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Make focused commits with concise, imperative messages describing the change.
 - Before committing, run `npm run check` and review the diff. Check UI changes in the browser too.
 - Never commit `.env`, API keys, private information, or generated build files.
-- Use `.github/pull_request_template.md` to describe the change, verification, and review outcome. Include a screenshot for visible UI changes.
+- Use `.github/pull_request_template.md` to describe the change, verification, and review outcome. Include a clear screenshot of the final UI for visible changes, with readable text, complete framing, and no prototype labels or accidental focus indicators.
 - Update relevant existing documentation when a change affects setup, commands, or behavior. Reviewers should verify that it remains accurate.
 - For meaningful code changes, delegate a review of the proposed commit to a separate agent with fresh context. Provide the requirements, base and head commits, and repository instructions. The reviewer must not edit files. Small documentation-only changes may use self-review.
 - Verify review findings, resolve blocking issues, and rerun affected checks after fixes. Request another review of significant code changes made after review.

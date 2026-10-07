@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { LambdaClient, GetFunctionConfigurationCommand, UpdateFunctionCodeCommand } from '@aws-sdk/client-lambda';
 import { test } from 'node:test';
 import { packageBackend, releaseBackend, validateFunctionArn } from '../infra/release.ts';
@@ -14,12 +18,17 @@ const configuration = { Runtime: 'nodejs22.x', Handler: 'index.handler', Archite
 test('backend package contains a bundled index.handler without invoking the provider', async t => {
   const fetch = t.mock.method(globalThis, 'fetch', () => { throw new Error('No provider calls during packaging'); });
   const archive = await packageBackend();
-  const contents = execFileSync('python3', ['-c',
-    'import io, sys, zipfile; z = zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())); print(z.namelist()); print(z.read("index.js").decode())'],
-  { input: archive, maxBuffer: 10 * 1024 * 1024 }).toString();
-  assert.ok(contents.startsWith("['index.js']"));
-  assert.match(contents, /handler/);
-  assert.match(contents, /GetParameterCommand/);
+  const directory = await mkdtemp(join(tmpdir(), 'airline-package-test-'));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const index = join(directory, 'index.js');
+  const files = execFileSync('python3', ['-c',
+    'import io, sys, zipfile; z = zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())); print(z.namelist()); z.extract("index.js", sys.argv[1])',
+    directory], { input: archive }).toString().trim();
+  assert.equal(files, "['index.js']");
+  // Load the exact extracted bundle; matching source text cannot verify its exports.
+  const require = createRequire(import.meta.url);
+  const packaged = require(index);
+  assert.equal(typeof packaged.handler, 'function');
   assert.equal(fetch.mock.callCount(), 0);
 });
 
