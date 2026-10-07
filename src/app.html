@@ -5,17 +5,20 @@
   </header>
 
   @if (snapshot()) {
-    <div class="snapshot-status">Updated {{ snapshotAge() }}</div>
     <div class="search-toolbar">
       <input #operatorSearch type="search" aria-label="Search operators by name or prefix" placeholder="Search name or prefix"
         [value]="searchQuery()" (input)="searchQuery.set(operatorSearch.value)">
-      <span class="search-results" role="status">
-        @if (searchQuery().trim()) {
-          {{ visibleRows().length }} of {{ rows().length }} operators
-        } @else {
-          {{ rows().length }} operators
-        }
-      </span>
+      <div class="ranking-status">
+        <span class="search-results" role="status">
+          @if (searchQuery().trim()) {
+            {{ visibleRows().length }} of {{ rows().length }} operators
+          } @else {
+            {{ rows().length }} operators
+          }
+        </span>
+        <span aria-hidden="true">·</span>
+        <span class="snapshot-status">Updated {{ snapshotAge() }}</span>
+      </div>
     </div>
   }
 

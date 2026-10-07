@@ -40,7 +40,7 @@ Open http://127.0.0.1:4200. Both services listen on loopback only. Angular proxi
 
 ## Ranking behavior
 
-Search filters the current top 100 by operator name or callsign prefix, ignoring case and surrounding spaces. Results keep their original leaderboard ranks and update with the cached snapshot. Searching makes no additional requests and does not search operators outside the published top 100.
+Search filters the current top 100 by operator name or callsign prefix, ignoring case and surrounding spaces. Results keep their original leaderboard ranks and update with the cached snapshot. Searching makes no additional requests and does not search operators outside the published top 100. The result count and snapshot age share a compact line beside search on desktop and below the full-width search field on mobile.
 
 The browser checks the cache every minute. The snapshot age sits above the table and updates on each browser check. The 15-minute refresh interval sits beside “How does it work” below the table; that disclosure contains the exact UTC timestamp and grouping rules. Column labels and any delay notice stay visible in the sticky table header while scrolling. Rows animate to their new positions; counts update immediately with a brief neutral highlight. Reduced-motion preferences disable these effects. If an update fails, the last successful ranking and its original timestamp remain visible with a delay notice. Before the first successful snapshot, the UI shows an unavailable message and retries automatically.
 
