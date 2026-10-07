@@ -43,6 +43,6 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 ## AWS deployment
 
 - Use `eu-north-1` for Regional resources. Do not introduce cross-Region resources or Lambda@Edge; CloudFront remains global.
-- Check the AWS plan before deployment. Do not upgrade to Paid or activate advanced features without explicit owner approval.
+- Confirm the monthly project spend limit in AWS Settings before infrastructure deployment. The project is on Paid; do not activate advanced features without explicit owner approval.
 - Use the relevant AWS skill for infrastructure work and review resource and IAM changes before deployment.
 - Preserve the restricted deployment roles, polling controls and provider quota history. Follow the deployment and retirement procedures in `README.md`.
