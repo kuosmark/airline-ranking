@@ -15,9 +15,12 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 .leaderboard { background: #fff; border: 1px solid #e5e8eb; border-radius: 16px; box-shadow: 0 4px 22px #18263503; }
 .board-header { display: flow-root; position: sticky; top: 0; z-index: 1; background: #fff; border-radius: 16px 16px 0 0; border-bottom: 1px solid #e5e8eb; }
 .snapshot-status { margin-bottom: 12px; text-align: right; color: #626c76; font-size: 12px; font-weight: 500; line-height: 1.5; }
-.column-headings, .airline-toggle { display: grid; grid-template-columns: 32px 38px minmax(0, 1fr) 80px 12px; column-gap: 12px; align-items: center; }
-.column-headings { padding: 14px 28px; color: #626c76; font-size: 12px; letter-spacing: .06em; font-weight: 600; }
+.column-headings, .airline-toggle { display: grid; grid-template-columns: 54px 38px minmax(0, 1fr) 80px 12px; column-gap: 12px; align-items: center; }
+.column-headings { padding: 14px 28px; color: #626c76; font-size: 11px; letter-spacing: .06em; font-weight: 600; text-transform: uppercase; }
 .column-headings > :nth-child(4) { text-align: right; }
+.movement-help { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; white-space: nowrap; cursor: pointer; }
+.movement-help:focus-visible { outline: 2px solid #617a70; outline-offset: 3px; }
+.movement-explanation { margin: 0; padding: 0 28px 14px; color: #626c76; font-size: 12px; line-height: 1.6; }
 ol { list-style: none; padding: 0; margin: 0; }
 li { position: relative; border-bottom: 1px solid #dce1e5; background: white; }
 li:last-child { border-bottom: 0; border-radius: 0 0 16px 16px; }
@@ -34,13 +37,17 @@ li.is-expanded { background: #edf4ef; }
 .rank-new { font-size: 11px; line-height: 1; font-weight: 650; color: #626c76; }
 .rank-unchanged { color: #626c76; font-size: 15px; }
 .airline-name { font-size: 15px; font-weight: 500; letter-spacing: -.015em; line-height: 1.45; padding: 12px 0; overflow-wrap: anywhere; }
-.airline-country { margin: 0 0 12px; color: #626c76; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.name-unavailable { display: block; color: #626c76; font-size: 11px; font-weight: 400; letter-spacing: normal; }
+.operator-details { display: flex; flex-wrap: wrap; gap: 8px 20px; color: #626c76; font-size: 12px; line-height: 1.5; padding-bottom: 16px; }
+.operator-details > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.operator-details dt, .operator-details dd { margin: 0; overflow-wrap: anywhere; }
+.operator-details dd { color: #171c24; }
 .count { justify-self: end; font-size: 21px; line-height: 1.5; font-weight: 550; letter-spacing: -.025em; font-variant-numeric: tabular-nums; padding: 2px 4px; margin-right: -4px; border-radius: 5px; }
 .chevron { justify-self: center; width: 7px; height: 7px; border-right: 2px solid #626c76; border-bottom: 2px solid #626c76; transform: rotate(45deg); transition: transform 180ms ease; }
 [aria-expanded="true"] .chevron { transform: rotate(225deg); }
 .aircraft-details { display: grid; grid-template-rows: 1fr; }
 .details-content { min-height: 0; overflow: hidden; }
-.details-panel { padding: 4px 52px 24px 122px; }
+.details-panel { padding: 4px 52px 24px 144px; }
 .details-panel h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
 .aircraft-details dl { margin: 0; }
 .aircraft-type { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 24px; padding: 4px 0; color: #515e58; font-size: 13px; line-height: 1.5; }
@@ -48,6 +55,8 @@ li.is-expanded { background: #edf4ef; }
 .aircraft-type dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: #34473d; }
 .types-toggle { display: block; margin-top: 6px; min-height: 36px; padding: 6px 0; border: 0; background: transparent; color: #34473d; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .types-toggle:hover { text-decoration: underline; text-underline-offset: 3px; }
+.types-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px 16px; margin-top: 12px; border-top: 1px solid #d6e1d8; padding-top: 8px; color: #626c76; font-size: 12px; }
+.types-footer .types-toggle { margin-top: 0; font-size: 12px; font-weight: 500; }
 .no-aircraft { margin: 10px 0 0; color: #626c76; font-size: 13px; line-height: 1.5; }
 .results-note { margin: 0; padding: 16px 28px; border-top: 1px solid #e5e8eb; color: #626c76; font-size: 13px; line-height: 1.6; }
 .update-warning { font-size: 12px; line-height: 1.5; color: #755319; background: #fcf7ed; border-radius: 6px; margin: 16px 28px 0; padding: 9px 12px; }
@@ -62,12 +71,13 @@ li.is-expanded { background: #edf4ef; }
   main { padding: 28px 12px; }
   .page-header { margin-bottom: 18px; padding: 0 4px; }
   .results-note { padding: 14px; }
-  .column-headings { padding: 12px; font-size: 11px; letter-spacing: .02em; }
+  .column-headings { padding: 12px; font-size: 9px; letter-spacing: .02em; }
   .airline-toggle { padding: 0 12px; }
-  .column-headings, .airline-toggle { grid-template-columns: 32px 26px minmax(0, 1fr) 56px 18px; column-gap: 6px; }
+  .column-headings, .airline-toggle { grid-template-columns: 40px 26px minmax(0, 1fr) 56px 18px; column-gap: 6px; }
   .airline-name { font-size: 14px; }
   .count { font-size: 19px; }
-  .details-panel { padding: 4px 36px 22px 50px; }
+  .details-panel { padding: 4px 36px 22px 58px; }
+  .movement-explanation { padding: 0 12px 12px; }
   .update-warning { margin-left: 14px; margin-right: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
