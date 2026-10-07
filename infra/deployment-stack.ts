@@ -54,7 +54,7 @@ export class DeploymentStack extends Stack {
         version: '0.2',
         phases: {
           install: { 'runtime-versions': { nodejs: 22 }, commands: [
-            'test "$(aws freetier get-account-plan-state --query accountPlanType --output text)" = FREE',
+            'test "$(aws freetier get-account-plan-state --query accountPlanType --output text)" = PAID',
             'npm ci',
           ] },
           build: { commands: [

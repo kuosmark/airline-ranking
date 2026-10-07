@@ -27,12 +27,12 @@ test('deployments queue and use only main from the project repository', () => {
   });
 });
 
-test('builds verify Free before installing and release application code without deploying infrastructure', () => {
+test('builds verify Paid before installing and release application code without deploying infrastructure', () => {
   const [project] = Object.values(template.findResources('AWS::CodeBuild::Project'));
   assert.equal(project.Properties.TimeoutInMinutes, 30);
   assert.equal(project.Properties.ConcurrentBuildLimit, 1);
   const spec = JSON.parse(project.Properties.Source.BuildSpec);
-  assert.equal(spec.phases.install.commands[0], 'test "$(aws freetier get-account-plan-state --query accountPlanType --output text)" = FREE');
+  assert.equal(spec.phases.install.commands[0], 'test "$(aws freetier get-account-plan-state --query accountPlanType --output text)" = PAID');
   assert.equal(spec.phases.install['runtime-versions'].nodejs, 22);
   const commands = spec.phases.build.commands;
   assert.equal(commands[0], 'npm run check');
