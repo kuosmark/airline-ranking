@@ -28,15 +28,9 @@
         <p class="update-warning" role="status">Updates delayed. Showing the last successful snapshot.</p>
       }
       @if (snapshot()) {
-        <div class="column-headings">
-          <button class="movement-help" type="button" (click)="isMovementExplanationOpen.set(!isMovementExplanationOpen())"
-            [attr.aria-expanded]="isMovementExplanationOpen()" aria-controls="movement-explanation"
-            aria-label="Explain rank change">Change <span aria-hidden="true">ⓘ</span></button>
-          <span></span><span>Operator</span><span>Airborne</span><span></span>
+        <div class="column-headings" aria-hidden="true">
+          <span>Change</span><span></span><span>Operator</span><span>Airborne</span><span></span>
         </div>
-        @if (isMovementExplanationOpen()) {
-          <p class="movement-explanation" id="movement-explanation">↑ Places gained · ↓ Places lost · — Unchanged · NEW Entered the top 100. Compared with the previous successful snapshot; a blank means no comparison is available.</p>
-        }
       }
     </div>
     @if (snapshot(); as currentSnapshot) {

@@ -23,9 +23,6 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 .column-headings, .airline-toggle { display: grid; grid-template-columns: 54px 38px minmax(0, 1fr) 80px 12px; column-gap: 12px; align-items: center; }
 .column-headings { padding: 14px 28px; color: #626c76; font-size: 11px; letter-spacing: .06em; font-weight: 600; text-transform: uppercase; }
 .column-headings > :nth-child(4) { text-align: right; }
-.movement-help { padding: 0; border: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; white-space: nowrap; cursor: pointer; }
-.movement-help:focus-visible { outline: 2px solid #617a70; outline-offset: 3px; }
-.movement-explanation { margin: 0; padding: 0 28px 14px; color: #626c76; font-size: 12px; line-height: 1.6; }
 ol { list-style: none; padding: 0; margin: 0; }
 li { position: relative; border-bottom: 1px solid #dce1e5; background: white; }
 li:last-child { border-bottom: 0; border-radius: 0 0 16px 16px; }
@@ -84,7 +81,6 @@ li.is-expanded { background: #edf4ef; }
   .airline-name { font-size: 14px; }
   .count { font-size: 19px; }
   .details-panel { padding: 4px 36px 22px 58px; }
-  .movement-explanation { padding: 0 12px 12px; }
   .update-warning { margin-left: 14px; margin-right: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
