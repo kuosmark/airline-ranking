@@ -1,8 +1,10 @@
 # Airline Ranking
 
-A minimalist Angular leaderboard showing observed airborne aircraft for the top 100 observed operators, built as a personal learning project.
+An Angular leaderboard ranking the top 100 operators by observed airborne aircraft, built as a personal learning project.
 
-The local TypeScript backend fetches a worldwide SkyLink snapshot on startup and every 15 minutes. The UI reads the cached ranking and animates changes when a new snapshot arrives.
+Live app: [airlines.markuskuosmanen.com](https://airlines.markuskuosmanen.com/).
+
+A TypeScript Lambda fetches a worldwide SkyLink snapshot every 15 minutes and publishes the ranking to S3. CloudFront serves the Angular app and cached ranking; rows animate when positions change. A Node.js backend provides the same ranking API for local development.
 
 ![Airline leaderboard showing rank movement](docs/preview.png)
 
@@ -22,6 +24,8 @@ Create an untracked `.env` file in the project root:
 SKYLINK_API_KEY=your-api-key
 ```
 
+The local backend makes an immediate provider request on startup and polls every 15 minutes. Use one active poller per API key; stop the cloud schedule before starting a local backend with the same key.
+
 Start the backend and frontend in separate terminals:
 
 ```sh
@@ -34,6 +38,8 @@ npm start
 
 Open http://127.0.0.1:4200. Both services listen on loopback only. Angular proxies `/api/ranking` to the backend on port 3000; the API key stays on the backend.
 
+## Ranking behavior
+
 The browser checks the cache every minute. The snapshot age sits above the table and updates on each browser check. The 15-minute refresh interval sits beside “How does it work” below the table; that disclosure contains the exact UTC timestamp and grouping rules. Column labels and any delay notice stay visible in the sticky table header while scrolling. Rows animate to their new positions; counts update immediately with a brief neutral highlight. Reduced-motion preferences disable these effects. If an update fails, the last successful ranking and its original timestamp remain visible with a delay notice. Before the first successful snapshot, the UI shows an unavailable message and retries automatically.
 
 Click an airline to expand its aircraft-type breakdown; only one row is expanded at a time. When available, the operator’s country appears at the top of the drawer and closes with it. This is the country supplied by the airline directory, not the aircraft’s current location. Expanded rows use a pale green background; hovering a closed row uses neutral gray. The same cached snapshot supplies both the total and its breakdown, without extra provider requests. The expanded airline stays open when the ranking changes, and its total updates immediately with its breakdown. The breakdown initially shows the five most common types, with “Show more” revealing the remaining types and “Show less” returning to five. Opening an operator starts with five again; the current choice persists across snapshot updates while that operator stays open.
@@ -44,7 +50,7 @@ Comparison happens in the backend, so browser reloads and different viewers rece
 
 Aircraft types come from SkyLink's `aircraft_type` field. Common ICAO designators and a few exact model aliases are normalized using the [FAA type table](https://www.faa.gov/air_traffic/publications/atpubs/foa_html/appendix_3.html), with labels in `backend/aircraft-types.ts`. Exact canonical names match regardless of casing or whitespace. Specific Airbus model labels observed in the payload are checked against the [EASA model list](https://ad.easa.europa.eu/ad/2026-0064) and retain their model suffixes; they are not merged into broader types. Distinct variants remain separate. Unrecognized labels retain the provider wording with normalized whitespace and capitalization; missing or invalid values become “Unknown type”. Metadata can be incomplete or incorrect, and unfamiliar aliases may remain separate. Breakdown counts always sum to the airline total.
 
-One continuously running backend makes approximately 96 aircraft-snapshot requests per day. Every restart adds an immediate request; opening more browser tabs does not trigger more provider requests. Failed requests are retried at the next scheduled refresh.
+One continuously running local backend makes approximately 96 aircraft-snapshot requests per day. Every local backend restart adds an immediate request; opening more browser tabs does not trigger more provider requests. Failed requests are retried at the next scheduled refresh.
 
 ## Checks
 
@@ -56,7 +62,7 @@ Run `npm run check` before committing. GitHub Actions runs the same command on p
 | `npm run lint` | Check strict TypeScript rules, Angular conventions, and template accessibility |
 | `npm run lint:fix` | Apply automatic lint fixes |
 | `npm run typecheck:backend` | Type-check the backend and shared ranking types |
-| `npm test` | Test counting, ordering, snapshot ages, response validation, caching, and HTTP failure behavior |
+| `npm test` | Test ranking, caching, provider cost controls, HTTP behavior, scheduled refreshes, infrastructure and release safeguards |
 | `npm run build` | Build the frontend into `dist/airline-ranking/browser` |
 | `npm run typecheck:infra` | Type-check the CDK application |
 | `npm run infra:synth` | Bundle Lambda and validate the generated CloudFormation template without AWS lookups |
@@ -69,7 +75,7 @@ Tests use Node's built-in test runner and synthetic data. They do not require an
 
 ## Scope
 
-The backend uses Node's built-in HTTP server and fetch API. The latest ranking lives in memory; operator names, countries and lookup cost controls are persisted in an untracked JSON cache. A scheduled Lambda entry point is also available; CDK infrastructure is defined in `infra/`; an AWS-native pipeline deploys application changes from `main`.
+The local backend uses Node's built-in HTTP server and fetch API, holding the latest ranking in memory and persisting operator details and lookup cost controls in an untracked JSON cache. In AWS, Lambda persists these in S3. CDK defines the infrastructure in `infra/`; an AWS-native pipeline deploys application changes from `main`.
 
 Aircraft are deduplicated by ICAO24, keeping the newest observation (ground wins equal-time conflicts). We count only explicitly airborne aircraft observed within five minutes of the snapshot. Callsigns must contain three letters followed by one to four letters or digits. Callsigns matching the aircraft registration after removing spaces and hyphens are excluded. Malformed, incomplete, or outdated global snapshots are rejected.
 
@@ -135,7 +141,7 @@ The latest snapshot and its rank changes survive restarts. The ranking is publis
 
 Lambda errors identify a fixed failure stage: configuration, API key retrieval, operator cache loading, snapshot fetching, ranking publication, or the remaining refresh processing. Raw error messages, provider responses and credentials are not included.
 
-Use one active poller per API key. Stop the local backend when enabling the cloud schedule: local and S3 budgets are separate and cannot enforce an account-wide cap. Do not delete or replace cloud state as a refresh mechanism. Confirm AWS plan and spending protection before deployment; application request controls do not cap AWS charges.
+Use one active poller per API key. Stop the local backend when enabling the cloud schedule: local and S3 budgets are separate and cannot enforce an account-wide cap. Do not delete or replace cloud state as a refresh mechanism. Confirm AWS spending protection before deployment; application request controls do not cap AWS charges.
 
 ## AWS infrastructure
 
@@ -183,7 +189,7 @@ Local synthesis and tests need no AWS credentials and make no provider calls. Be
    ```
 
    Keep this context value explicit on subsequent deployments; omitting it disables polling. To pause polling, deploy with `-c isPollingEnabled=false`. Pausing does not stop CloudFront or storage charges. Keep the local backend stopped while the cloud poller is active.
-8. Open the output `WebsiteUrl` and verify a fresh ranking after the next scheduled invocation. Check the Lambda logs and confirm the state objects advance without losing quota history. An empty site before the first successful refresh is expected.
+8. Open the output `CustomDomainUrl` and verify a fresh ranking after the next scheduled invocation. `WebsiteUrl` provides the original CloudFront address. Check the Lambda logs and confirm the state objects advance without losing quota history. An empty site before the first successful refresh is expected.
 
 ### Automatic deployment from main
 
@@ -211,6 +217,14 @@ Code merged into `main` is still trusted application code: replacement Lambda co
 Build logs and source artifacts expire after seven days. The artifact bucket survives stack removal. CodeBuild, pipeline executions and artifact storage incur usage even when checks fail or infrastructure is unchanged; the build timeout bounds one run, not monthly usage. No deployment step upgrades the plan or changes the spend limit.
 
 To pause deployment, disable the pipeline's inbound transition to its Deploy stage in AWS. To recover an application release, revert the relevant change through a PR and release again; automatic releases do not use CloudFormation rollback. Manual infrastructure updates retain CloudFormation's normal rollback behavior. Verify the website and snapshot freshness after a release.
+
+### Releases
+
+Deployments continue from `main`. Releases mark meaningful milestones rather than every merged PR. After the owner approves a release, confirm the deployment of its exact commit succeeded and verify the live website and ranking endpoint. If the release includes infrastructure changes, complete and verify their manual deployment too.
+
+Create an annotated Git tag such as `v0.1.0` on that verified commit and publish a GitHub release with concise notes describing the changes and any known limitations. Never move or reuse a published tag. While the application is in the `0.x` stage, increment the patch number for fixes (`v0.1.1`) and the minor number for substantial features (`v0.2.0`). Match `package.json` to the planned release version through a PR before deploying and tagging it.
+
+Tags do not trigger deployments or restore infrastructure, cached data or provider quota history. Recover application changes through the revert-and-release procedure above. No release branch or separate changelog is required.
 
 ### Retiring the application
 

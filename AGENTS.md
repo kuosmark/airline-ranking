@@ -28,6 +28,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Before merging, confirm CI passes for the latest revision and present the verification and review results to the repository owner.
 - Merge a pull request only after the repository owner explicitly approves merging the current revision. Approval to implement work or open a PR is not merge approval. New commits require renewed merge approval.
 - Squash-merge with a descriptive title, delete the feature branch, and update local `main` afterward.
+- For owner-approved releases, follow the release procedure in `README.md`: tag the exact verified deployed commit, publish concise GitHub release notes, and never move a published tag.
 
 ## Code review
 
@@ -42,6 +43,6 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 ## AWS deployment
 
 - Use `eu-north-1` for Regional resources. Do not introduce cross-Region resources or Lambda@Edge; CloudFront remains global.
-- Check the AWS plan before deployment. Do not upgrade to Paid or activate advanced features without explicit owner approval.
+- Confirm the monthly project spend limit in AWS Settings before infrastructure deployment. The project is on Paid; do not activate advanced features without explicit owner approval.
 - Use the relevant AWS skill for infrastructure work and review resource and IAM changes before deployment.
 - Preserve the restricted deployment roles, polling controls and provider quota history. Follow the deployment and retirement procedures in `README.md`.
