@@ -14,9 +14,15 @@
         <p class="update-warning" role="status">Updates delayed. Showing the last successful snapshot.</p>
       }
       @if (snapshot()) {
-        <div class="column-headings" aria-hidden="true">
-          <span></span><span></span><span>OPERATOR</span><span>AIRBORNE</span><span></span>
+        <div class="column-headings">
+          <button class="movement-help" type="button" (click)="isMovementExplanationOpen.set(!isMovementExplanationOpen())"
+            [attr.aria-expanded]="isMovementExplanationOpen()" aria-controls="movement-explanation"
+            aria-label="Explain rank change">Change <span aria-hidden="true">ⓘ</span></button>
+          <span></span><span>Operator</span><span>Airborne</span><span></span>
         </div>
+        @if (isMovementExplanationOpen()) {
+          <p class="movement-explanation" id="movement-explanation">↑ Places gained · ↓ Places lost · — Unchanged · NEW Entered the top 100. Compared with the previous successful snapshot; a blank means no comparison is available.</p>
+        }
       }
     </div>
     @if (snapshot(); as currentSnapshot) {
@@ -45,7 +51,11 @@
                 }
               </span>
               <span class="rank"><span class="visually-hidden">Rank </span>{{ rank + 1 | number: '2.0-0' }}</span>
-              <span class="airline-name">{{ airline.name }}</span>
+              <span class="airline-name">{{ airline.name }}
+                @if (airline.name === airline.id) {
+                  <span class="name-unavailable">Name unavailable</span>
+                }
+              </span>
               <span class="count" [attr.aria-label]="airline.count + ' aircraft airborne'">
                 <span aria-hidden="true">{{ airline.count | number }}</span>
               </span>
@@ -55,10 +65,11 @@
               <div class="aircraft-details" [id]="'types-' + airline.id" animate.enter="details-enter" animate.leave="details-leave">
                 <div class="details-content">
                   <div class="details-panel">
-                    @if (airline.country) {
-                      <p class="airline-country"><span class="visually-hidden">Country: </span>{{ airline.country }}</p>
-                    }
-                    <h2>Aircraft types</h2>
+                    <dl class="operator-details" aria-label="Operator details">
+                      <div><dt>Country</dt><dd>{{ airline.country || 'Unavailable' }}</dd></div>
+                      <div><dt>Prefix</dt><dd>{{ airline.id }}</dd></div>
+                    </dl>
+                    <h2>Airborne aircraft by type</h2>
                     @if (airline.count === 0) {
                       <p class="no-aircraft">No aircraft currently observed airborne.</p>
                     } @else {
@@ -71,17 +82,20 @@
                           </div>
                         }
                       </dl>
-                      @if (airline.aircraftTypes.length > collapsedTypeLimit) {
-                        <button class="types-toggle" type="button" (click)="isShowingAllTypes.set(!isShowingAllTypes())"
-                          [attr.aria-expanded]="isShowingAllTypes()" [attr.aria-controls]="'type-list-' + airline.id">
-                          @if (isShowingAllTypes()) {
-                            Show less
-                          } @else {
-                            Show more ({{ airline.aircraftTypes.length - collapsedTypeLimit }})
-                          }
-                          <span class="visually-hidden"> aircraft types for {{ airline.name }}</span>
-                        </button>
-                      }
+                      <div class="types-footer">
+                        <span>{{ visibleTypes.length }} of {{ airline.aircraftTypes.length }} types</span>
+                        @if (airline.aircraftTypes.length > collapsedTypeLimit) {
+                          <button class="types-toggle" type="button" (click)="isShowingAllTypes.set(!isShowingAllTypes())"
+                            [attr.aria-expanded]="isShowingAllTypes()" [attr.aria-controls]="'type-list-' + airline.id">
+                            @if (isShowingAllTypes()) {
+                              Show fewer
+                            } @else {
+                              Show {{ airline.aircraftTypes.length - collapsedTypeLimit }} more
+                            }
+                            <span class="visually-hidden"> aircraft types for {{ airline.name }}</span>
+                          </button>
+                        }
+                      </div>
                     }
                   </div>
                 </div>
