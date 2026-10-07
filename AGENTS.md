@@ -28,6 +28,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Before merging, confirm CI passes for the latest revision and present the verification and review results to the repository owner.
 - Merge a pull request only after the repository owner explicitly approves merging the current revision. Approval to implement work or open a PR is not merge approval. New commits require renewed merge approval.
 - Squash-merge with a descriptive title, delete the feature branch, and update local `main` afterward.
+- For owner-approved releases, follow the release procedure in `README.md`: tag the exact verified deployed commit, publish concise GitHub release notes, and never move a published tag.
 
 ## Code review
 
