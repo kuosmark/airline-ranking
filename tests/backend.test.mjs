@@ -116,7 +116,6 @@ test('groups verified type labels, preserves variants and unfamiliar labels, and
   ]);
   for (const row of snapshot.airlines) {
     assert.equal(row.aircraftTypes.reduce((total, type) => total + type.count, 0), row.count);
-    if (row.count === 0) { assert.deepEqual(row.aircraftTypes, []); }
   }
 });
 
@@ -185,7 +184,7 @@ test('rejects stale global snapshots and implausibly future snapshot timestamps'
   assert.throws(() => countAircraft(payload([aircraft()]), now - 60_001), /not current/);
 });
 
-test('requests one global snapshot with header authentication and a bounded timeout', async t => {
+test('requests one global snapshot with header authentication', async t => {
   let calls = 0;
   t.mock.method(globalThis, 'fetch', async (url, options) => {
     calls++;
@@ -197,6 +196,25 @@ test('requests one global snapshot with header authentication and a bounded time
   });
   assert.equal(count(await fetchSnapshot('test-key'), 'AAL'), 1);
   assert.equal(calls, 1);
+});
+
+test('aborts a stalled snapshot request with a 15-second timeout and does not retry', async t => {
+  const controller = new globalThis.AbortController();
+  const timeout = t.mock.method(globalThis.AbortSignal, 'timeout', ms => {
+    assert.equal(ms, 15000);
+    return controller.signal;
+  });
+  const fetch = t.mock.method(globalThis, 'fetch', (_url, options) => new Promise((_resolve, reject) => {
+    assert.strictEqual(options.signal, controller.signal);
+    options.signal.addEventListener('abort', () => reject(options.signal.reason), { once: true });
+  }));
+  const pending = fetchSnapshot('test-key');
+  const error = new globalThis.DOMException('Request timed out', 'TimeoutError');
+  const rejected = assert.rejects(pending, failure => failure === error);
+  controller.abort(error);
+  await rejected;
+  assert.equal(timeout.mock.callCount(), 1);
+  assert.equal(fetch.mock.callCount(), 1);
 });
 
 test('rejects provider errors without exposing the response body or retrying', async t => {

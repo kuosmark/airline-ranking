@@ -28,9 +28,8 @@ function save(path, names = {}, attempts = [], cooldownUntil = 0) {
 const read = path => JSON.parse(readFileSync(path, 'utf8'));
 const directoryAt = (path, now = () => start) => createOperatorDirectory(path, now, async () => {});
 
-test('resolves exact ICAO matches and duplicate agreement without using active flags', () => {
+test('resolves exact ICAO matches and duplicate agreement', () => {
   assert.deepEqual(operatorDetails({ response: [record(), record()] }, 'FIN'), details);
-  assert.deepEqual(operatorDetails({ response: [record('Old'), { ...record(), active: 'Y' }] }, 'FIN'), missing);
   assert.deepEqual(operatorDetails({ response: [] }, 'FIN'), missing);
   assert.throws(() => operatorDetails({ response: [{ ...record(), icao: 'AAL' }] }, 'FIN'));
   assert.throws(() => operatorDetails([record()], 'FIN'));

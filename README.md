@@ -6,7 +6,7 @@ Live app: [airlines.markuskuosmanen.com](https://airlines.markuskuosmanen.com/).
 
 A TypeScript Lambda fetches a worldwide SkyLink snapshot every 15 minutes and publishes the ranking to S3. CloudFront serves the Angular app and cached ranking; rows animate when positions change. A Node.js backend provides the same ranking API for local development.
 
-![Airline leaderboard showing rank movement](docs/preview.png)
+![Airline leaderboard showing operator details and rank movement](docs/preview.jpg)
 
 Preview uses synthetic data to illustrate rank indicators, operator metadata and the aircraft-type breakdown.
 
@@ -73,7 +73,7 @@ Run `npm run check` before committing. GitHub Actions runs the same command on p
 | `npm run infra:publish -- cdk.out/outputs.json` | Upload the frontend and wait for CloudFront cache invalidation |
 | `npm run infra:release -- BUCKET DISTRIBUTION FUNCTION_ARN` | Update the existing Lambda code and publish the frontend; requires Python 3 for ZIP packaging |
 
-Tests use Node's built-in test runner and synthetic data. They do not require an API key or contact either provider. Lint warnings fail the check.
+Tests use Node's built-in test runner and synthetic data. They do not require an API key or contact either provider. Lint warnings fail the check. Drawer layout, responsive spacing and animations are checked manually in the browser; the unit tests do not verify their appearance.
 
 ## Scope
 
@@ -97,7 +97,7 @@ The backend publishes the ranking before directory lookups complete. Unresolved 
   "names": {
     "FIN": { "name": "Finnair", "country": "Finland", "iata": "AY", "icao": "FIN", "checkedAt": "2026-10-07T12:00:00.000Z" }
   },
-  "attempts": [],
+  "attempts": [1791374400000],
   "cooldownUntil": 0
 }
 ```

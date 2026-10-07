@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, test } from 'node:test';
-import { App } from 'aws-cdk-lib';
+import { App, ArnFormat } from 'aws-cdk-lib';
 import { Match, Template } from 'aws-cdk-lib/assertions';
 import { AirlineRankingStack } from '../infra/stack.ts';
 import { DeploymentStack } from '../infra/deployment-stack.ts';
@@ -51,12 +51,15 @@ test('artifacts and build logs expire after seven days without public bucket acc
 });
 
 test('only this CodeBuild project may assume the release role', () => {
+  const [project] = Object.values(template.findResources('AWS::CodeBuild::Project'));
+  const projectArn = deployment.resolve(deployment.formatArn({ service: 'codebuild', resource: 'project',
+    resourceName: project.Properties.Name, arnFormat: ArnFormat.SLASH_RESOURCE_NAME }));
   template.hasResourceProperties('AWS::IAM::Role', {
     AssumeRolePolicyDocument: { Statement: [Match.objectLike({
       Principal: { Service: 'codebuild.amazonaws.com' },
       Condition: {
         StringEquals: { 'aws:SourceAccount': { Ref: 'AWS::AccountId' } },
-        ArnEquals: { 'aws:SourceArn': Match.anyValue() },
+        ArnEquals: { 'aws:SourceArn': projectArn },
       },
     })], Version: '2012-10-17' },
   });
@@ -73,7 +76,6 @@ test('deployment roles do not read secrets and direct website writes exclude bac
     assert.equal(/^(sts:|iam:|cloudformation:|ssm:|scheduler:|freetier:)/.test(action), false, action);
     assert.equal(action === '*' || action.endsWith(':*'), false, action);
   }
-  assert.equal(allowedActions.includes('freetier:UpgradeAccountPlan'), false);
   const lambda = statements.find(statement => [].concat(statement.Action).includes('lambda:UpdateFunctionCode'));
   assert.ok(lambda);
   assert.deepEqual([].concat(lambda.Action).sort(), ['lambda:GetFunctionConfiguration', 'lambda:UpdateFunctionCode']);
