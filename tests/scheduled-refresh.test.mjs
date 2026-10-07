@@ -40,6 +40,23 @@ test('reserves before fetching, skips duplicate slots and compares persisted sna
   assert.equal(h.calls(), 2);
 });
 
+test('publishes and restores snapshots containing more than 100 operators', async () => {
+  const h = setup();
+  const entries = Array.from({ length: 150 }, (_, index) => [
+    `A${String.fromCharCode(65 + Math.floor(index / 26))}${String.fromCharCode(65 + index % 26)}`, 150 - index,
+  ]);
+  h.advance(entries);
+  await refreshScheduledRanking(h.options);
+  assert.equal(h.saved().snapshot.airlines.length, 150);
+  assert.equal(h.published.at(-1).airlines.length, 150);
+  await refreshScheduledRanking({ ...h.options });
+  assert.equal(h.calls(), 1);
+  assert.deepEqual(h.published.at(-1), h.saved().snapshot);
+  h.advance([...entries].reverse().map(([id], index) => [id, 150 - index]));
+  await refreshScheduledRanking(h.options);
+  assert.equal(h.saved().snapshot.airlines[0].rankChange, 149);
+});
+
 test('missing, corrupt or unreadable state and failed reservations prevent provider calls', async () => {
   for (const state of [null, {}, { lastAttemptSlot: 'wrong', snapshot: null },
     { lastAttemptSlot: 1, snapshot: { airlines: [] } }]) {

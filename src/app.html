@@ -7,11 +7,11 @@
   @if (snapshot()) {
     <div class="search-toolbar">
       <input #operatorSearch type="search" aria-label="Search operators by name or prefix" placeholder="Search name or prefix"
-        [value]="searchQuery()" (input)="searchQuery.set(operatorSearch.value)">
+        [value]="searchQuery()" (input)="updateSearch(operatorSearch.value)">
       <div class="ranking-status">
         <span class="search-results" role="status">
           @if (searchQuery().trim()) {
-            {{ visibleRows().length }} of {{ rows().length }} operators
+            {{ matchingRows().length }} of {{ rows().length }} operators
           } @else {
             {{ rows().length }} operators
           }
@@ -33,7 +33,7 @@
         </div>
       }
     </div>
-    @if (snapshot(); as currentSnapshot) {
+    @if (snapshot()) {
       <ol>
         @for (rankedOperator of visibleRows(); track rankedOperator.airline.id) {
           @let airline = rankedOperator.airline;
@@ -45,7 +45,7 @@
               <span class="rank-indicator" [title]="change === undefined ? 'No previous snapshot to compare' : 'Rank change since the previous snapshot'">
                 @if (change === 'new') {
                   <span class="rank-new" aria-hidden="true">NEW</span>
-                  <span class="visually-hidden">New to the top 100 since the previous snapshot.</span>
+                  <span class="visually-hidden">Not observed in the previous snapshot.</span>
                 } @else if (change === undefined) {
                   <span class="visually-hidden">No previous snapshot to compare.</span>
                 } @else if (change === 0) {
@@ -114,11 +114,15 @@
           </li>
         }
       </ol>
+      @if (nextBatchSize() > 0) {
+        <div class="operators-more">
+          <button type="button" (click)="visibleLimit.set(visibleLimit() + rowBatchSize)">
+            Show {{ nextBatchSize() }} more <span class="page-progress">· {{ visibleRows().length }} of {{ matchingRows().length }} shown</span>
+          </button>
+        </div>
+      }
       @if (visibleRows().length === 0) {
         <p class="empty-state">No operators match your search.</p>
-      }
-      @if (currentSnapshot.airlines.length < 100) {
-        <p class="results-note">Showing {{ currentSnapshot.airlines.length }} of up to 100 operators.</p>
       }
     } @else if (error()) {
       <p class="empty-state" role="alert">{{ error() }}</p>
@@ -129,9 +133,9 @@
 
   <details class="method-details">
     <summary><span>How does it work</span><span class="refresh-interval">Refreshes every 15 minutes</span></summary>
-    <p>The top 100 operators are ranked by aircraft observed airborne in SkyLink data; coverage varies. Operators are grouped by their callsign prefix, including cargo, regional and private operators. These are observed counts, not complete worldwide totals. Equal counts are ordered by prefix.</p>
+    <p>All qualifying operators are ranked by aircraft observed airborne in SkyLink data; coverage varies. Operators are grouped by their callsign prefix, including cargo, regional and private operators. These are observed counts, not complete worldwide totals. Equal counts are ordered by prefix.</p>
     <p>Callsigns matching aircraft registrations are excluded. Unresolved operators appear as codes; callsigns do not guarantee operator identity. Aircraft types use verified labels where available; unfamiliar model labels remain separate.</p>
-    <p>Arrows show how many places an operator moved since the previous successful snapshot. NEW means it was outside the previous top 100; a dash means unchanged. A blank movement cell means no previous snapshot is available. After a delay, the comparison still uses the last successful snapshot.</p>
+    <p>Arrows show how many places an operator moved since the previous successful snapshot. NEW means it was not observed in the previous snapshot; a dash means unchanged. A blank movement cell means no previous snapshot is available. After a delay, the comparison still uses the last successful snapshot.</p>
     @if (snapshot(); as currentSnapshot) {
       <p>Snapshot <time [attr.datetime]="currentSnapshot.updatedAt">{{ currentSnapshot.updatedAt | date: 'd MMM, HH:mm' : 'UTC' }} UTC</time></p>
     }

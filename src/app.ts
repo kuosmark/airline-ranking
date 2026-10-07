@@ -33,11 +33,20 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
   readonly rows = signal<Airline[]>([]);
   readonly searchQuery = signal('');
-  readonly visibleRows = computed(() => filterOperators(this.rows(), this.searchQuery()));
+  readonly rowBatchSize = 100;
+  readonly visibleLimit = signal(this.rowBatchSize);
+  readonly matchingRows = computed(() => filterOperators(this.rows(), this.searchQuery()));
+  readonly visibleRows = computed(() => this.matchingRows().slice(0, this.visibleLimit()));
+  readonly nextBatchSize = computed(() => Math.min(this.rowBatchSize, this.matchingRows().length - this.visibleRows().length));
   readonly announcement = signal('');
   readonly expandedAirlineId = signal<string | null>(null);
   readonly isShowingAllTypes = signal(false);
   readonly collapsedTypeLimit = 5;
+
+  updateSearch(query: string): void {
+    this.searchQuery.set(query);
+    this.visibleLimit.set(this.rowBatchSize);
+  }
 
   toggleAirline(airline: Airline): void {
     const isExpanded = this.expandedAirlineId() === airline.id;

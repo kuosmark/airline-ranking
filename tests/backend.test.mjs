@@ -36,7 +36,7 @@ test('excludes registrations and invalid callsign formats', () => {
   assert.deepEqual(snapshot.airlines.map(row => row.id), ['ABC', 'FIN']);
 });
 
-test('selects the top 100 by count with stable prefix ties and no zero rows', () => {
+test('keeps all operators beyond 100 with stable prefix ties', () => {
   const records = Array.from({ length: 105 }, (_, i) => aircraft({
     icao24: i.toString(16).padStart(6, '0'),
     callsign: `A${String.fromCharCode(65 + Math.floor(i / 26))}${String.fromCharCode(65 + i % 26)}1`,
@@ -45,10 +45,11 @@ test('selects the top 100 by count with stable prefix ties and no zero rows', ()
   const forward = countAircraft(payload(records), now);
   const reverse = countAircraft(payload([...records].reverse()), now);
   assert.deepEqual(forward, reverse);
-  assert.equal(forward.airlines.length, 100);
+  assert.equal(forward.airlines.length, 105);
   assert.equal(forward.airlines[0].id, 'AEA');
   assert.equal(forward.airlines[0].count, 2);
-  assert.equal(forward.airlines[99].id, 'ADU');
+  assert.equal(forward.airlines[104].id, 'ADZ');
+  assert.equal(forward.airlines.reduce((total, row) => total + row.count, 0), records.length);
 });
 
 test('counts only an explicit airborne flag, without inferring it from altitude', () => {

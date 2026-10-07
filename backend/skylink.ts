@@ -65,7 +65,7 @@ export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
       const aircraftTypes = Array.from(types, ([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'en'));
       return { id: prefix, name: prefix, count: aircraftTypes.reduce((total, type) => total + type.count, 0), aircraftTypes };
-    })).slice(0, 100),
+    })),
     isStale: false,
   };
 }
