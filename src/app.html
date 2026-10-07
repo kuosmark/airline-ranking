@@ -7,11 +7,11 @@
   @if (snapshot()) {
     <div class="search-toolbar">
       <input #operatorSearch type="search" aria-label="Search operators by name or prefix" placeholder="Search name or prefix"
-        [value]="searchQuery()" (input)="searchQuery.set(operatorSearch.value)">
+        [value]="searchQuery()" (input)="updateSearch(operatorSearch.value)">
       <div class="ranking-status">
         <span class="search-results" role="status">
           @if (searchQuery().trim()) {
-            {{ visibleRows().length }} of {{ rows().length }} operators
+            {{ matchingRows().length }} of {{ rows().length }} operators
           } @else {
             {{ rows().length }} operators
           }
@@ -114,6 +114,13 @@
           </li>
         }
       </ol>
+      @if (nextBatchSize() > 0) {
+        <div class="operators-more">
+          <button type="button" (click)="visibleLimit.set(visibleLimit() + rowBatchSize)">
+            Show {{ nextBatchSize() }} more <span class="page-progress">· {{ visibleRows().length }} of {{ matchingRows().length }} shown</span>
+          </button>
+        </div>
+      }
       @if (visibleRows().length === 0) {
         <p class="empty-state">No operators match your search.</p>
       }

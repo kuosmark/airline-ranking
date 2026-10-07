@@ -62,6 +62,11 @@ li.is-expanded { background: #edf4ef; }
 .types-footer .types-toggle { margin-top: 0; font-size: 12px; font-weight: 500; }
 .no-aircraft { margin: 10px 0 0; color: #626c76; font-size: 13px; line-height: 1.5; }
 .update-warning { font-size: 12px; line-height: 1.5; color: #755319; background: #fcf7ed; border-radius: 6px; margin: 16px 28px 0; padding: 9px 12px; }
+.operators-more { padding: 12px; border-top: 1px solid #e5e8eb; text-align: center; }
+.operators-more button { min-height: 44px; padding: 10px 16px; border: 0; border-radius: 8px; background: transparent; color: #34473d; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.operators-more button:hover { background: #f3f5f4; }
+.operators-more button:focus-visible { outline: 2px solid #617a70; outline-offset: 2px; }
+.page-progress { color: #626c76; font-weight: 400; }
 .empty-state { padding: 50px 28px; font-size: 14px; color: #626c76; text-align: center; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .details-enter { animation: reveal-details 200ms ease-out; }

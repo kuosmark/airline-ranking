@@ -26,3 +26,10 @@ test('returns no rows for an unmatched query or an empty ranking', () => {
   assert.deepEqual(filterOperators(airlines, 'missing'), []);
   assert.deepEqual(filterOperators([], ''), []);
 });
+
+test('search finds operators beyond the initially displayed 100 and preserves their ranks', () => {
+  const fullRanking = Array.from({ length: 150 }, (_, index) => ({
+    id: `OP${index}`, name: `Operator ${index}`, count: 150 - index, aircraftTypes: [],
+  }));
+  assert.deepEqual(filterOperators(fullRanking, 'OP149'), [{ airline: fullRanking[149], rank: 150 }]);
+});
