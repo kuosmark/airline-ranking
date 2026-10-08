@@ -11,7 +11,7 @@ export const MAX_LOOKUP_ATTEMPTS = 5_000;
 export const MAX_LOOKUPS_PER_REFRESH = 100;
 export const LOOKUP_SPACING_MS = 1_000;
 
-interface OperatorDetails { name: string | null; country: string | null; iata: string | null; icao: string | null }
+interface OperatorDetails { name: string | null; country: string | null; countryIso?: string | null; iata: string | null; icao: string | null }
 interface Entry extends OperatorDetails { checkedAt: string }
 interface RequestHistory { attempts: number[]; cooldownUntil: number }
 export interface OperatorCache extends RequestHistory {
@@ -19,7 +19,7 @@ export interface OperatorCache extends RequestHistory {
   names: Record<string, Entry | undefined>;
   legacySkylink?: RequestHistory;
 }
-const emptyDetails: OperatorDetails = { name: null, country: null, iata: null, icao: null };
+const emptyDetails: OperatorDetails = { name: null, country: null, countryIso: null, iata: null, icao: null };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -38,6 +38,8 @@ function isCache(value: unknown): value is OperatorCache {
     /^[A-Z]{3}$/.test(prefix) && isRecord(entry) &&
     (entry['name'] === null || (typeof entry['name'] === 'string' && entry['name'].trim().length > 0)) &&
     (entry['country'] === null || typeof entry['country'] === 'string') &&
+    (entry['countryIso'] === undefined || entry['countryIso'] === null ||
+      (typeof entry['countryIso'] === 'string' && /^[A-Z]{2}$/.test(entry['countryIso']))) &&
     (entry['iata'] === null || (typeof entry['iata'] === 'string' && /^[A-Z\d]{2}$/.test(entry['iata']))) &&
     (entry['icao'] === null || entry['icao'] === prefix) &&
     typeof entry['checkedAt'] === 'string' && Number.isFinite(Date.parse(entry['checkedAt'])));
@@ -55,9 +57,12 @@ export function operatorDetails(payload: unknown, prefix: string): OperatorDetai
   const countries = new Set(matches.map(entry => entry['country'])
     .filter((country): country is string => typeof country === 'string' && country.trim().length > 0)
     .map(country => country.trim()));
+  const countryCodes = new Set(matches.map(entry => entry['country_iso'])
+    .filter((code): code is string => typeof code === 'string' && /^[A-Z]{2}$/.test(code)));
   const codes = new Set(matches.map(entry => entry['iata'])
     .filter((code): code is string => typeof code === 'string' && /^[A-Z\d]{2}$/.test(code)));
   return { name, country: countries.size === 1 ? [...countries][0] : null,
+    countryIso: countries.size === 1 && countryCodes.size === 1 ? [...countryCodes][0] : null,
     iata: codes.size === 1 ? [...codes][0] : null, icao: prefix };
 }
 
@@ -101,7 +106,7 @@ export async function createOperatorDirectory(storage: string | JsonStore, now =
       if (!/^[A-Z]{3}$/.test(prefix)) { continue; }
       const entry = cache.names[prefix];
       const refreshAfter = entry?.name === null ? MISSING_NAME_REFRESH_MS : NAME_REFRESH_MS;
-      if (entry && time - Date.parse(entry.checkedAt) < refreshAfter) { continue; }
+      if (entry && entry.countryIso !== undefined && time - Date.parse(entry.checkedAt) < refreshAfter) { continue; }
       cache.attempts = cache.attempts.filter(attempt => time - attempt < LOOKUP_WINDOW_MS);
       if (cache.attempts.length >= MAX_LOOKUP_ATTEMPTS) { return; }
       const nextAttemptAt = cache.attempts.length > 0 ? Math.max(...cache.attempts) + LOOKUP_SPACING_MS : time;
@@ -146,6 +151,7 @@ export async function createOperatorDirectory(storage: string | JsonStore, now =
       return { ...snapshot, airlines: snapshot.airlines.map(airline => ({
         ...airline, name: cache.names[airline.id]?.name ?? airline.id,
         country: cache.names[airline.id]?.country ?? null,
+        countryIso: cache.names[airline.id]?.countryIso ?? null,
         iata: cache.names[airline.id]?.iata ?? null,
         icao: cache.names[airline.id]?.icao ?? null,
       })) };

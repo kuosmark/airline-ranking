@@ -4,6 +4,7 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import type { Airline, Snapshot } from '../shared/ranking';
 import { rankAirlines, isSnapshotStale } from '../shared/ranking';
 import { formatSnapshotAge } from './snapshot-age';
+import { countryFlag } from './country-flag';
 import { filterOperators } from './operator-search';
 
 @Component({
@@ -20,6 +21,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private pollTimer?: ReturnType<typeof setInterval>;
   private animations: Animation[] = [];
 
+  readonly countryFlag = countryFlag;
   readonly snapshot = signal<Snapshot | null>(null);
   private readonly now = signal(Date.now());
   readonly snapshotAge = computed(() => {

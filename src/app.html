@@ -75,7 +75,12 @@
                 <div class="details-content">
                   <div class="details-panel">
                     <dl class="operator-details" aria-label="Operator details">
-                      <div><dt>Country</dt><dd>{{ airline.country || 'Unavailable' }}</dd></div>
+                      <div><dt>Country</dt><dd>
+                        @if (airline.country && countryFlag(airline.countryIso); as flag) {
+                          <span class="country-flag" aria-hidden="true">{{ flag }}</span>
+                        }
+                        {{ airline.country || 'Unavailable' }}
+                      </dd></div>
                       <div><dt>IATA</dt><dd>{{ airline.iata || 'Unavailable' }}</dd></div>
                       <div><dt>ICAO</dt><dd>{{ airline.icao || 'Unavailable' }}</dd></div>
                     </dl>

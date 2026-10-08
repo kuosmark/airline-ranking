@@ -91,3 +91,5 @@ li.is-expanded { background: #edf4ef; }
   .chevron { transition: none; }
   .details-enter, .details-leave { animation: none; }
 }
+
+.country-flag { margin-right: 5px; }

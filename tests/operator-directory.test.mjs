@@ -12,9 +12,9 @@ const start = Date.parse('2026-10-04T12:00:00Z');
 const day = 24 * 60 * 60 * 1000;
 const snapshot = { updatedAt: new Date(start).toISOString(), isStale: false,
   airlines: [{ id: 'FIN', name: 'Old SkyLink label', country: 'Old country', count: 1, aircraftTypes: [{ name: 'A320', count: 1 }] }] };
-const details = { name: 'Finnair', country: 'Finland', iata: 'AY', icao: 'FIN' };
-const missing = { name: null, country: null, iata: null, icao: null };
-const record = (name = 'Finnair', country = 'Finland', iata = 'AY') => ({ icao: 'FIN', name, country, iata });
+const details = { name: 'Finnair', country: 'Finland', countryIso: 'FI', iata: 'AY', icao: 'FIN' };
+const missing = { name: null, country: null, countryIso: null, iata: null, icao: null };
+const record = (name = 'Finnair', country = 'Finland', iata = 'AY') => ({ icao: 'FIN', name, country, country_iso: 'FI', iata });
 const response = () => new globalThis.Response(JSON.stringify({ response: [record()] }));
 function setup(t) {
   const dir = mkdtempSync(join(tmpdir(), 'operator-cache-'));
@@ -40,10 +40,10 @@ test('resolves exact ICAO matches and duplicate agreement', () => {
 test('missing and conflicting countries and IATA codes remain unavailable', () => {
   assert.deepEqual(operatorDetails({ response: [record('Finnair', ' Finland ', 'AY')] }, 'FIN'), details);
   assert.deepEqual(operatorDetails({ response: [record(), record('Finnair', 'Sweden', 'ZZ')] }, 'FIN'),
-    { ...details, country: null, iata: null });
+    { ...details, country: null, countryIso: null, iata: null });
   for (const value of [undefined, null, '', '   ', 123]) {
     assert.deepEqual(operatorDetails({ response: [{ ...record(), country: value, iata: value }] }, 'FIN'),
-      { ...details, country: null, iata: null });
+      { ...details, country: null, countryIso: null, iata: null });
   }
   assert.deepEqual(operatorDetails({ response: [record('Finnair', 'Finland', '5F')] }, 'FIN'), { ...details, iata: '5F' });
   assert.equal(operatorDetails({ response: [record('Finnair', 'Finland', 'TOOLONG')] }, 'FIN').iata, null);
@@ -84,7 +84,7 @@ test('calls only ADSBDB without credentials and persists all metadata across res
   await directory.refresh(['FIN', 'FIN', 'bad']);
   directory = await directoryAt(path, () => clock);
   const airline = directory.apply(snapshot).airlines[0];
-  for (const field of ['name', 'country', 'iata', 'icao']) assert.equal(airline[field], details[field]);
+  for (const field of ['name', 'country', 'countryIso', 'iata', 'icao']) assert.equal(airline[field], details[field]);
   clock += NAME_REFRESH_MS - 1;
   await directory.refresh(['FIN']);
   assert.equal(fetch.mock.callCount(), 1);
@@ -269,5 +269,29 @@ test('deadline checks stop requests and pacing before reserving another attempt'
   const directory = await createOperatorDirectory(path, () => clock, async () => { waits++; });
   await directory.refresh(['FIN'], clock + 15500);
   assert.equal(waits, 0);
+  assert.equal(fetch.mock.callCount(), 1);
+});
+
+test('country ISO codes reject missing, malformed and conflicting values without losing other metadata', () => {
+  for (const code of [undefined, null, '', 'fi', 'FIN', 123]) {
+    assert.deepEqual(operatorDetails({ response: [{ ...record(), country_iso: code }] }, 'FIN'),
+      { ...details, countryIso: null });
+  }
+  assert.deepEqual(operatorDetails({ response: [record(), { ...record(), country_iso: 'SE' }] }, 'FIN'),
+    { ...details, countryIso: null });
+});
+
+test('existing ADSBDB cache entries gain country ISO once without resetting lookup history', async t => {
+  const path = setup(t);
+  const oldDetails = { ...details };
+  delete oldDetails.countryIso;
+  save(path, { FIN: { ...oldDetails, checkedAt: new Date(start).toISOString() } }, [start]);
+  const fetch = t.mock.method(globalThis, 'fetch', async () => response());
+  const directory = await directoryAt(path);
+  await directory.refresh(['FIN']);
+  assert.equal(directory.apply(snapshot).airlines[0].countryIso, 'FI');
+  assert.equal(directory.apply(snapshot).airlines[0].name, 'Finnair');
+  assert.equal(read(path).attempts.length, 2);
+  await directory.refresh(['FIN']);
   assert.equal(fetch.mock.callCount(), 1);
 });
