@@ -6,7 +6,7 @@
 
   @if (snapshot()) {
     <div class="search-toolbar">
-      <input #operatorSearch type="search" aria-label="Search operators by name or prefix" placeholder="Search name or prefix"
+      <input #operatorSearch type="search" aria-label="Search operators by name, ICAO, IATA or country" placeholder="Search name, code or country"
         [value]="searchQuery()" (input)="updateSearch(operatorSearch.value)">
       <div class="ranking-status">
         <span class="search-results" role="status">

@@ -5,8 +5,7 @@ export function filterOperators(airlines: readonly Airline[], query: string): { 
   const rankedOperators = airlines.map((airline, index) => ({ airline, rank: index + 1 }));
 
   return rankedOperators.filter(({ airline }) => {
-    const name = airline.name.toLowerCase();
-    const prefix = airline.id.toLowerCase();
-    return name.includes(search) || prefix.includes(search);
+    const fields = [airline.name, airline.id, airline.icao ?? '', airline.iata ?? '', airline.country ?? ''];
+    return fields.some(field => field.toLowerCase().includes(search));
   });
 }
