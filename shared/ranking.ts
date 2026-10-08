@@ -2,6 +2,7 @@ export interface Airline {
   id: string;
   name: string;
   country?: string | null;
+  countryIso?: string | null;
   iata?: string | null;
   icao?: string | null;
   count: number;
