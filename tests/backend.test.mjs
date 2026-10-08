@@ -306,3 +306,27 @@ test('uses the newest registration and callsign together before classifying an o
     assert.deepEqual(countAircraft(payload(records), now).airlines, []);
   }
 });
+
+test('retains locations only for the same deduplicated eligible airborne aircraft counted in the ranking', () => {
+  const records = [
+    aircraft({ latitude: 10, longitude: 20, aircraft_type: 'A320', last_seen: '2026-10-04T11:59:00Z' }),
+    aircraft({ latitude: 11, longitude: 21, aircraft_type: 'A320' }),
+    aircraft({ icao24: '000002', latitude: 30, longitude: 40, is_on_ground: true }),
+    aircraft({ icao24: '000003', latitude: 30, longitude: 40, last_seen: '2026-10-04T11:54:00Z' }),
+    aircraft({ icao24: '000004', latitude: 30, longitude: 40, callsign: 'N12345' }),
+    aircraft({ icao24: '000005', latitude: 30, longitude: 40, callsign: 'XABAR', registration: 'XA-BAR' }),
+    aircraft({ icao24: '000006', latitude: 30, longitude: 40, last_seen: '2026-10-04T12:00:01Z' }),
+  ];
+  const airline = countAircraft(payload(records), now).airlines[0];
+  assert.equal(airline.count, 1);
+  assert.deepEqual(airline.positions, [{ id: '000001', callsign: 'AAL123', aircraftType: 'Airbus A320', latitude: 11, longitude: 21 }]);
+});
+
+test('missing or invalid coordinates omit locations without reducing aircraft counts', () => {
+  const coordinates = [[undefined, undefined], [null, null], ['10', '20'], [91, 0], [0, -181], [NaN, 0], [0, Infinity], [0, 0], [-90, -180], [90, 180]];
+  const records = coordinates.map(([latitude, longitude], index) =>
+    aircraft({ icao24: index.toString(16).padStart(6, '0'), latitude, longitude }));
+  const airline = countAircraft(payload(records), now).airlines[0];
+  assert.equal(airline.count, coordinates.length);
+  assert.deepEqual(airline.positions.map(position => position.id), ['000007', '000008', '000009']);
+});
