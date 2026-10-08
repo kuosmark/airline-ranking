@@ -216,3 +216,27 @@ test('malformed snapshot request history blocks paid requests', async () => {
     assert.equal(h.calls(), 0);
   }
 });
+
+test('persists map positions and restores them without another provider request', async () => {
+  const h = setup();
+  const position = { id: '000001', callsign: 'AAA123', aircraftType: 'Airbus A320', latitude: 60, longitude: 25 };
+  const withPositions = snapshot(start, [['AAA', 1]]);
+  withPositions.airlines[0].positions = [position];
+  h.options.fetchSnapshot = async () => withPositions;
+  await refreshScheduledRanking(h.options);
+  assert.deepEqual(h.saved().snapshot.airlines[0].positions, [position]);
+  h.options.fetchSnapshot = async () => { throw new Error('Must not fetch twice'); };
+  await refreshScheduledRanking(h.options);
+  assert.deepEqual(h.published.at(-1).airlines[0].positions, [position]);
+});
+
+test('malformed saved positions block paid requests rather than publishing invalid map data', async () => {
+  for (const invalid of [[{ id: '000001', callsign: 'AAA1', aircraftType: 'A320', latitude: 91, longitude: 0 }], 'bad']) {
+    const h = setup();
+    const saved = snapshot(start, [['AAA', 1]]);
+    saved.airlines[0].positions = invalid;
+    await h.store.write({ lastAttemptSlot: null, snapshot: saved, snapshotAttempts: [] });
+    await assert.rejects(refreshScheduledRanking(h.options), /Invalid scheduled state/);
+    assert.equal(h.calls(), 0);
+  }
+});

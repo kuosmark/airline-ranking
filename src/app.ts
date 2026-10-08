@@ -4,13 +4,14 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import type { Airline, Snapshot } from '../shared/ranking';
 import { rankAirlines, isSnapshotStale } from '../shared/ranking';
 import { formatSnapshotAge } from './snapshot-age';
+import { AircraftMapComponent } from './aircraft-map';
 import { countryFlag } from './country-flag';
 import { filterOperators } from './operator-search';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [DatePipe, DecimalPipe],
+  imports: [DatePipe, DecimalPipe, AircraftMapComponent],
   templateUrl: './app.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })

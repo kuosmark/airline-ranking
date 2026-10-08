@@ -1,4 +1,4 @@
-import { rankAirlines, type Snapshot } from '../shared/ranking.ts';
+import { isValidCoordinates, rankAirlines, type AircraftPosition, type Snapshot } from '../shared/ranking.ts';
 import { aircraftTypeName } from './aircraft-types.ts';
 
 export { REFRESH_INTERVAL_MS } from '../shared/ranking.ts';
@@ -29,7 +29,7 @@ export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
     throw new Error('SkyLink snapshot is not current');
   }
 
-  const observations = new Map<string, { seen: number; callsign: string; isAirborne: boolean; aircraftType: unknown; registration: string }>();
+  const observations = new Map<string, { seen: number; callsign: string; isAirborne: boolean; aircraftType: unknown; registration: string; latitude: unknown; longitude: unknown }>();
   for (const record of payload['aircraft'] as unknown[]) {
     if (!isRecord(record) || typeof record['icao24'] !== 'string' || !/^[\da-f]{6}$/i.test(record['icao24'])) {
       throw new Error('Invalid SkyLink aircraft identifier');
@@ -43,12 +43,13 @@ export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
       : '';
     const previous = observations.get(id);
     if (!previous || seen > previous.seen || (seen === previous.seen && !isAirborne)) {
-      observations.set(id, { seen, callsign, isAirborne, aircraftType: record['aircraft_type'], registration });
+      observations.set(id, { seen, callsign, isAirborne, aircraftType: record['aircraft_type'], registration, latitude: record['latitude'], longitude: record['longitude'] });
     }
   }
 
   const counts = new Map<string, Map<string, number>>();
-  for (const { seen, callsign, isAirborne, aircraftType, registration } of observations.values()) {
+  const positions = new Map<string, AircraftPosition[]>();
+  for (const [id, { seen, callsign, isAirborne, aircraftType, registration, latitude, longitude }] of observations) {
     if (!isAirborne || seen > snapshotTime || snapshotTime - seen > OBSERVATION_MAX_AGE_MS) { continue; }
     const isOperatorCallsignFormat = /^[A-Z]{3}[A-Z\d]{1,4}$/.test(callsign);
     if (!isOperatorCallsignFormat || callsign === registration) { continue; }
@@ -58,13 +59,19 @@ export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
     const currentCount = types.get(name) ?? 0;
     types.set(name, currentCount + 1);
     counts.set(prefix, types);
+    if (isValidCoordinates(latitude, longitude)) {
+      const operatorPositions = positions.get(prefix) ?? [];
+      operatorPositions.push({ id, callsign, aircraftType: name, latitude: latitude as number, longitude: longitude as number });
+      positions.set(prefix, operatorPositions);
+    }
   }
   return {
     updatedAt: new Date(snapshotTime).toISOString(),
     airlines: rankAirlines(Array.from(counts, ([prefix, types]) => {
       const aircraftTypes = Array.from(types, ([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'en'));
-      return { id: prefix, name: prefix, count: aircraftTypes.reduce((total, type) => total + type.count, 0), aircraftTypes };
+      return { id: prefix, name: prefix, count: aircraftTypes.reduce((total, type) => total + type.count, 0), aircraftTypes,
+        positions: (positions.get(prefix) ?? []).sort((a, b) => a.id.localeCompare(b.id, 'en')) };
     })),
     isStale: false,
   };

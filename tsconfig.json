@@ -8,7 +8,8 @@
     "experimentalDecorators": true,
     "skipLibCheck": true,
     "isolatedModules": true,
-    "importHelpers": true
+    "importHelpers": true,
+    "rewriteRelativeImportExtensions": true
   },
   "angularCompilerOptions": { "strictTemplates": true, "strictInjectionParameters": true },
   "files": ["src/main.ts"]

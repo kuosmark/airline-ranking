@@ -1,4 +1,4 @@
-import { type Snapshot } from '../shared/ranking.ts';
+import { isValidCoordinates, type Snapshot } from '../shared/ranking.ts';
 import { compareRanks } from './server.ts';
 import { REFRESH_INTERVAL_MS } from './skylink.ts';
 import type { JsonStore } from './storage.ts';
@@ -30,11 +30,17 @@ function isSnapshot(value: unknown): value is Snapshot {
     const country = airline['country'];
     const iata = airline['iata'];
     const icao = airline['icao'];
+    const positions = airline['positions'];
     return typeof airline['id'] === 'string' && /^[A-Z]{3}$/.test(airline['id']) &&
       typeof airline['name'] === 'string' && typeof count === 'number' && Number.isInteger(count) && count >= 0 &&
       (country === undefined || country === null || typeof country === 'string') &&
       (iata === undefined || iata === null || (typeof iata === 'string' && /^[A-Z\d]{2}$/.test(iata))) &&
       (icao === undefined || icao === null || icao === airline['id']) &&
+      (positions === undefined || (Array.isArray(positions) && positions.length <= count &&
+        positions.every((position: unknown) => isRecord(position) &&
+          typeof position['id'] === 'string' && /^[a-f\d]{6}$/.test(position['id']) &&
+          typeof position['callsign'] === 'string' && typeof position['aircraftType'] === 'string' &&
+          isValidCoordinates(position['latitude'], position['longitude'])))) &&
       (movement === undefined || movement === 'new' || (typeof movement === 'number' && Number.isInteger(movement))) &&
       Array.isArray(airline['aircraftTypes']) && airline['aircraftTypes'].every((type: unknown) =>
         isRecord(type) && typeof type['name'] === 'string' && typeof type['count'] === 'number' &&

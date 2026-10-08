@@ -93,3 +93,15 @@ li.is-expanded { background: #edf4ef; }
 }
 
 .country-flag { margin-right: 5px; }
+
+.aircraft-map { margin-top: 22px; }
+.map-surface { background: #fff; border: 1px solid #d6e1d8; border-radius: 8px; overflow: hidden; }
+.map-surface svg { display: block; width: 100%; height: auto; }
+.aircraft-dot { fill: #27745c; stroke: #fff; stroke-width: 1; cursor: pointer; }
+.aircraft-dot:hover, .aircraft-dot:focus-visible, .aircraft-dot.is-selected { fill: #113f30; stroke: #113f30; stroke-width: 2; outline: none; }
+.map-selection { margin: 0; padding: 10px 12px; border-top: 1px solid #e5e8eb; color: #34473d; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.map-caption, .map-coverage { color: #626c76; font-size: 12px; line-height: 1.5; margin: 8px 0 0; }
+.map-coverage { margin: 0 0 8px; }
+@media (max-width: 480px) {
+  .aircraft-map { margin-left: -44px; margin-right: -24px; }
+}

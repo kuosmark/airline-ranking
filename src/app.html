@@ -112,6 +112,9 @@
                         }
                       </div>
                     }
+                    @if (airline.positions; as positions) {
+                      <app-aircraft-map [positions]="positions" [count]="airline.count" />
+                    }
                   </div>
                 </div>
               </div>
