@@ -30,13 +30,16 @@ import { projectAircraft } from './aircraft-map-projection';
               </circle>
             }
           </svg>
-          @if (selectedAircraft(); as aircraft) {
-            <p class="map-selection" role="status">{{ aircraft.callsign }} · {{ aircraft.aircraftType }}
+          <p class="map-selection" role="status" [class.is-empty]="!selectedAircraft()">
+            @if (selectedAircraft(); as aircraft) {
+              {{ aircraft.callsign }} · {{ aircraft.aircraftType }}
               @if (aircraft.altitudeFt !== undefined) {
                 <span class="map-altitude"> · {{ aircraft.altitudeFt | number: '1.0-0' }} ft</span>
               }
-            </p>
-          }
+            } @else {
+              Select an aircraft for details
+            }
+          </p>
         </div>
       }
       <p class="map-caption">Locations at last update</p>
