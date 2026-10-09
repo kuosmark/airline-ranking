@@ -219,7 +219,7 @@ test('malformed snapshot request history blocks paid requests', async () => {
 
 test('persists map positions and restores them without another provider request', async () => {
   const h = setup();
-  const position = { id: '000001', callsign: 'AAA123', aircraftType: 'Airbus A320', latitude: 60, longitude: 25 };
+  const position = { id: '000001', callsign: 'AAA123', aircraftType: 'Airbus A320', latitude: 60, longitude: 25, altitudeFt: 35000 };
   const withPositions = snapshot(start, [['AAA', 1]]);
   withPositions.airlines[0].positions = [position];
   h.options.fetchSnapshot = async () => withPositions;
@@ -231,7 +231,7 @@ test('persists map positions and restores them without another provider request'
 });
 
 test('malformed saved positions block paid requests rather than publishing invalid map data', async () => {
-  for (const invalid of [[{ id: '000001', callsign: 'AAA1', aircraftType: 'A320', latitude: 91, longitude: 0 }], 'bad']) {
+  for (const invalid of [[{ id: '000001', callsign: 'AAA1', aircraftType: 'A320', latitude: 91, longitude: 0 }], [{ id: '000001', callsign: 'AAA1', aircraftType: 'A320', latitude: 60, longitude: 25, altitudeFt: '35000' }], 'bad']) {
     const h = setup();
     const saved = snapshot(start, [['AAA', 1]]);
     saved.airlines[0].positions = invalid;

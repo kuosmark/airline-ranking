@@ -310,7 +310,7 @@ test('uses the newest registration and callsign together before classifying an o
 test('retains locations only for the same deduplicated eligible airborne aircraft counted in the ranking', () => {
   const records = [
     aircraft({ latitude: 10, longitude: 20, aircraft_type: 'A320', last_seen: '2026-10-04T11:59:00Z' }),
-    aircraft({ latitude: 11, longitude: 21, aircraft_type: 'A320' }),
+    aircraft({ latitude: 11, longitude: 21, aircraft_type: 'A320', altitude: 35000 }),
     aircraft({ icao24: '000002', latitude: 30, longitude: 40, is_on_ground: true }),
     aircraft({ icao24: '000003', latitude: 30, longitude: 40, last_seen: '2026-10-04T11:54:00Z' }),
     aircraft({ icao24: '000004', latitude: 30, longitude: 40, callsign: 'N12345' }),
@@ -319,7 +319,7 @@ test('retains locations only for the same deduplicated eligible airborne aircraf
   ];
   const airline = countAircraft(payload(records), now).airlines[0];
   assert.equal(airline.count, 1);
-  assert.deepEqual(airline.positions, [{ id: '000001', callsign: 'AAL123', aircraftType: 'Airbus A320', latitude: 11, longitude: 21 }]);
+  assert.deepEqual(airline.positions, [{ id: '000001', callsign: 'AAL123', aircraftType: 'Airbus A320', latitude: 11, longitude: 21, altitudeFt: 35000 }]);
 });
 
 test('missing or invalid coordinates omit locations without reducing aircraft counts', () => {
@@ -329,4 +329,15 @@ test('missing or invalid coordinates omit locations without reducing aircraft co
   const airline = countAircraft(payload(records), now).airlines[0];
   assert.equal(airline.count, coordinates.length);
   assert.deepEqual(airline.positions.map(position => position.id), ['000007', '000008', '000009']);
+});
+
+
+test('keeps finite altitude values, including zero and negative values, and omits missing or invalid altitude', () => {
+  const altitudes = [undefined, null, '35000', NaN, Infinity, -Infinity, 0, -100, 35000.5];
+  const records = altitudes.map((altitude, index) =>
+    aircraft({ icao24: index.toString(16).padStart(6, '0'), latitude: 60, longitude: 25, altitude }));
+  const airline = countAircraft(payload(records), now).airlines[0];
+  assert.equal(airline.count, altitudes.length);
+  assert.deepEqual(airline.positions.map(position => position.altitudeFt),
+    [undefined, undefined, undefined, undefined, undefined, undefined, 0, -100, 35000.5]);
 });

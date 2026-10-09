@@ -4,6 +4,7 @@ export interface AircraftPosition {
   aircraftType: string;
   latitude: number;
   longitude: number;
+  altitudeFt?: number;
 }
 
 export function isValidCoordinates(latitude: unknown, longitude: unknown): boolean {

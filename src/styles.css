@@ -105,3 +105,5 @@ li.is-expanded { background: #edf4ef; }
 @media (max-width: 480px) {
   .aircraft-map { margin-left: -44px; margin-right: -24px; }
 }
+
+.map-altitude { white-space: nowrap; }
