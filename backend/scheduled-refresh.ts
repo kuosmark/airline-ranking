@@ -40,7 +40,8 @@ function isSnapshot(value: unknown): value is Snapshot {
         positions.every((position: unknown) => isRecord(position) &&
           typeof position['id'] === 'string' && /^[a-f\d]{6}$/.test(position['id']) &&
           typeof position['callsign'] === 'string' && typeof position['aircraftType'] === 'string' &&
-          isValidCoordinates(position['latitude'], position['longitude'])))) &&
+          isValidCoordinates(position['latitude'], position['longitude']) &&
+          (position['altitudeFt'] === undefined || (typeof position['altitudeFt'] === 'number' && Number.isFinite(position['altitudeFt'])))))) &&
       (movement === undefined || movement === 'new' || (typeof movement === 'number' && Number.isInteger(movement))) &&
       Array.isArray(airline['aircraftTypes']) && airline['aircraftTypes'].every((type: unknown) =>
         isRecord(type) && typeof type['name'] === 'string' && typeof type['count'] === 'number' &&

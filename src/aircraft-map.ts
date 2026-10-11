@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import type { AircraftPosition } from '../shared/ranking';
 import { worldOutline } from './world-outline';
 import { projectAircraft } from './aircraft-map-projection';
@@ -6,6 +7,7 @@ import { projectAircraft } from './aircraft-map-projection';
 @Component({
   selector: 'app-aircraft-map',
   standalone: true,
+  imports: [DecimalPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="aircraft-map" aria-label="Aircraft locations">
@@ -28,9 +30,16 @@ import { projectAircraft } from './aircraft-map-projection';
               </circle>
             }
           </svg>
-          @if (selectedAircraft(); as aircraft) {
-            <p class="map-selection" role="status">{{ aircraft.callsign }} · {{ aircraft.aircraftType }}</p>
-          }
+          <p class="map-selection" role="status" [class.is-empty]="!selectedAircraft()">
+            @if (selectedAircraft(); as aircraft) {
+              {{ aircraft.callsign }} · {{ aircraft.aircraftType }}
+              @if (aircraft.altitudeFt !== undefined) {
+                <span class="map-altitude"> · {{ aircraft.altitudeFt | number: '1.0-0' }} ft</span>
+              }
+            } @else {
+              Select an aircraft for details
+            }
+          </p>
         </div>
       }
       <p class="map-caption">Locations at last update</p>
