@@ -47,8 +47,9 @@ li.is-expanded { background: #edf4ef; }
 .operator-details dt { color: #626c76; font-weight: 400; }
 .operator-details dd { color: #171c24; font-weight: 500; }
 .count { justify-self: end; font-size: 21px; line-height: 22px; font-weight: 550; letter-spacing: -.025em; font-variant-numeric: tabular-nums; padding: 0 4px; margin-right: -4px; border-radius: 5px; }
-.chevron { justify-self: center; margin-top: 7px; width: 7px; height: 7px; border-right: 2px solid #626c76; border-bottom: 2px solid #626c76; transform: rotate(45deg); transition: transform 180ms ease; }
-[aria-expanded="true"] .chevron { transform: rotate(225deg); }
+.chevron { justify-self: center; display: grid; place-items: center; width: 12px; height: 22px; }
+.chevron::before { content: ""; width: 7px; height: 7px; border-right: 2px solid #626c76; border-bottom: 2px solid #626c76; transform: translateY(-2.5px) rotate(45deg); transition: transform 180ms ease; }
+[aria-expanded="true"] .chevron::before { transform: translateY(2.5px) rotate(225deg); }
 .aircraft-details { display: grid; grid-template-rows: 1fr; }
 .details-content { min-height: 0; overflow: hidden; }
 .details-panel { padding: 4px 52px 24px 144px; }
@@ -90,7 +91,7 @@ li.is-expanded { background: #edf4ef; }
   .update-warning { margin-left: 14px; margin-right: 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .chevron { transition: none; }
+  .chevron::before { transition: none; }
   .details-enter, .details-leave { animation: none; }
 }
 
