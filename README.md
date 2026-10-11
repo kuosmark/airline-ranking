@@ -163,7 +163,7 @@ Before deploying, finish domain registration and verify any registrant email AWS
 
 Polling is **disabled by default**. Lambda has one reserved concurrent execution, a two-minute timeout and no automatic retries; Scheduler retries are also disabled. Logs expire after seven days. The state bucket retains its current objects and seven days of superseded versions. Both buckets survive stack removal, and termination protection is enabled. Retained resources continue to incur storage charges; review them explicitly when retiring the application. Version history is for recovery, not for resetting the lookup budget.
 
-CloudFront honors each object's cache headers, with a 30-second default and no minimum TTL. The ranking expires after 30 seconds; missing objects return an error instead of the Angular page. Only `/` is an application route. The alarm covers Lambda execution errors, not every possible scheduling or delivery failure; also check snapshot freshness after enabling polling.
+CloudFront honors each object's cache headers, with a 30-second default and no minimum TTL. The ranking expires after 30 seconds; missing objects return an error instead of the Angular page. Only `/` is an application route. The refresh alarm emails when both evaluated 15-minute periods contain a Lambda execution error, rather than notifying on an isolated failure. Missing data is treated as non-breaching, and recovery does not send an email. The alarm does not cover every possible scheduling or delivery failure; also check snapshot freshness after enabling polling.
 
 ### First deployment
 
