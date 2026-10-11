@@ -107,7 +107,9 @@ test('refresh failures notify the deployment-supplied email', () => {
   template.hasResourceProperties('AWS::SNS::Subscription', { Protocol: 'email', Endpoint: { Ref: 'AlertEmail' } });
   template.hasResourceProperties('AWS::CloudWatch::Alarm', {
     Namespace: 'AWS/Lambda', MetricName: 'Errors', Period: 900, Threshold: 1,
-    EvaluationPeriods: 1, TreatMissingData: 'notBreaching', AlarmActions: [Match.anyValue()],
+    EvaluationPeriods: 2, DatapointsToAlarm: 2,
+    TreatMissingData: 'notBreaching', AlarmActions: [Match.anyValue()],
+    OKActions: Match.absent(), InsufficientDataActions: Match.absent(),
   });
 });
 

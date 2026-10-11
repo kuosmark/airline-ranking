@@ -115,7 +115,10 @@ export class AirlineRankingStack extends Stack {
     const alerts = new sns.Topic(this, 'Alerts');
     alerts.addSubscription(new subscriptions.EmailSubscription(alertEmail.valueAsString));
     const failures = new cloudwatch.Alarm(this, 'RefreshFailures', {
-      metric: refresh.metricErrors({ period: Duration.minutes(15) }), threshold: 1, evaluationPeriods: 1,
+      metric: refresh.metricErrors({ period: Duration.minutes(15) }),
+      threshold: 1,
+      evaluationPeriods: 2,
+      datapointsToAlarm: 2,
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
     failures.addAlarmAction(new actions.SnsAction(alerts));
