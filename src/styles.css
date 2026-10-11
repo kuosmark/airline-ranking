@@ -27,26 +27,26 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 ol { list-style: none; padding: 0; margin: 0; }
 li { position: relative; border-bottom: 1px solid #dce1e5; background: white; }
 li:last-child { border-bottom: 0; border-radius: 0 0 16px 16px; }
-.airline-toggle { width: 100%; grid-template-rows: minmax(58px, auto); padding: 0 28px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.airline-toggle { width: 100%; align-items: start; min-height: 58px; padding: 18px 28px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 li.is-expanded { background: #edf4ef; }
 @media (hover: hover) {
   li:not(.is-expanded):hover { background: #f3f4f6; }
 }
 .airline-toggle:focus-visible { outline: 2px solid #617a70; outline-offset: -3px; }
-.rank { color: #515e58; font-size: 14px; font-weight: 500; line-height: 1.45; font-variant-numeric: tabular-nums; }
-.rank-indicator { display: flex; align-items: center; justify-content: center; min-height: 20px; font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rank { text-align: right; color: #515e58; font-size: 14px; font-weight: 500; line-height: 22px; font-variant-numeric: tabular-nums; }
+.rank-indicator { display: flex; align-items: center; justify-content: center; height: 22px; font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rank-up { color: #176957; }
 .rank-down { color: #b44242; }
 .rank-new { font-size: 11px; line-height: 1; font-weight: 400; color: #626c76; }
 .rank-unchanged { color: #626c76; font-size: 15px; }
-.airline-name { font-size: 15px; font-weight: 500; letter-spacing: -.015em; line-height: 1.45; padding: 12px 0; overflow-wrap: anywhere; }
-.name-unavailable { display: block; color: #626c76; font-size: 11px; font-weight: 400; letter-spacing: normal; }
+.airline-name { font-size: 15px; font-weight: 500; letter-spacing: -.015em; line-height: 22px; overflow-wrap: anywhere; }
+.name-unavailable { display: block; line-height: 22px; color: #626c76; font-size: 11px; font-weight: 400; letter-spacing: normal; }
 .operator-details { display: flex; flex-wrap: wrap; gap: 8px 20px; color: #626c76; font-size: 12px; line-height: 1.5; padding-bottom: 16px; }
 .operator-details > div { display: flex; flex-wrap: wrap; gap: 5px; }
 .operator-details dt, .operator-details dd { margin: 0; overflow-wrap: anywhere; }
 .operator-details dd { color: #171c24; }
-.count { justify-self: end; font-size: 21px; line-height: 1.5; font-weight: 550; letter-spacing: -.025em; font-variant-numeric: tabular-nums; padding: 2px 4px; margin-right: -4px; border-radius: 5px; }
-.chevron { justify-self: center; width: 7px; height: 7px; border-right: 2px solid #626c76; border-bottom: 2px solid #626c76; transform: rotate(45deg); transition: transform 180ms ease; }
+.count { justify-self: end; font-size: 21px; line-height: 22px; font-weight: 550; letter-spacing: -.025em; font-variant-numeric: tabular-nums; padding: 0 4px; margin-right: -4px; border-radius: 5px; }
+.chevron { justify-self: center; margin-top: 7px; width: 7px; height: 7px; border-right: 2px solid #626c76; border-bottom: 2px solid #626c76; transform: rotate(45deg); transition: transform 180ms ease; }
 [aria-expanded="true"] .chevron { transform: rotate(225deg); }
 .aircraft-details { display: grid; grid-template-rows: 1fr; }
 .details-content { min-height: 0; overflow: hidden; }
@@ -80,8 +80,9 @@ li.is-expanded { background: #edf4ef; }
   .search-toolbar { align-items: stretch; flex-direction: column; gap: 8px; }
   .search-toolbar input { width: 100%; font-size: 16px; }
   .column-headings { padding: 12px; font-size: 9px; letter-spacing: .02em; }
-  .airline-toggle { padding: 0 12px; }
-  .column-headings, .airline-toggle { grid-template-columns: 40px 26px minmax(0, 1fr) 56px 18px; column-gap: 6px; }
+  .airline-toggle { padding: 18px 12px; }
+  .column-headings, .airline-toggle { grid-template-columns: 40px 34px minmax(0, 1fr) 56px 18px; column-gap: 6px; }
+  .rank { padding-right: 8px; }
   .airline-name { font-size: 14px; }
   .count { font-size: 19px; }
   .details-panel { padding: 4px 36px 22px 58px; }
