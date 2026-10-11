@@ -19,7 +19,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Keep `main` working. Make all changes through pull requests from short-lived `codex/<description>` branches, including documentation fixes.
 - Ask the repository owner for explicit approval before opening a pull request. Approval to implement a change does not authorize opening a PR.
 - Make focused commits with concise, imperative messages describing the change.
-- Before committing, run `npm run check` and review the diff. Check UI changes in the browser too.
+- Before committing, run `npm run check` and review the diff. Check UI changes in the browser at 320px, a typical mobile width, and a desktop width. Verify text wrapping, horizontal overflow, spacing, and changed interactions.
 - Never commit `.env`, API keys, private information, or generated build files.
 - Use `.github/pull_request_template.md` to describe the change, verification, and review outcome. Include a clear screenshot of the final UI for visible changes, with readable text, complete framing, and no prototype labels or accidental focus indicators.
 - Update relevant existing documentation when a change affects setup, commands, or behavior. Reviewers should verify that it remains accurate.
@@ -39,7 +39,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Check that each new dependency, abstraction, configuration option, and file serves a current requirement. Flag concrete duplication or unnecessary complexity, and suggest the smallest sufficient alternative.
 - Check that tests verify observable behavior and meaningful failure cases. Flag unjustified changes that weaken tests, linting, or CI.
 - Report actionable findings with file locations, impact, and supporting evidence or a reproducible scenario. Distinguish blocking issues from optional suggestions; avoid speculative requirements and stylistic preferences already handled by tooling.
-- Record the review outcome and any remaining limitations. Passing tests or an agent review alone does not establish correctness.
+- Record the review outcome and any remaining limitations. For UI changes, verify that responsive browser checks cover the affected behavior. Passing tests or an agent review alone does not establish correctness.
 
 ## AWS deployment
 

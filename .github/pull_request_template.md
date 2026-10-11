@@ -4,7 +4,7 @@ Describe the problem and resulting behavior.
 
 ## Verification
 
-List commands and results, plus relevant manual checks or screenshots.
+List commands and results, plus relevant manual checks or screenshots. For UI changes, record the tested viewport widths and verify wrapping, overflow, spacing, and changed interactions.
 
 ## Review
 
