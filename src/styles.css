@@ -12,7 +12,7 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 .method-details p { margin: 8px 0 0; max-width: 620px; }
 .author-credit { margin-top: 24px; color: #626c76; font-size: 12px; line-height: 1.5; }
 .refresh-interval { display: inline-block; margin-left: 16px; font-size: 12px; font-weight: 400; white-space: nowrap; }
-.leaderboard { background: #fff; border: 1px solid #e5e8eb; border-radius: 16px; box-shadow: 0 4px 22px #18263503; }
+.leaderboard { overflow-anchor: none; background: #fff; border: 1px solid #e5e8eb; border-radius: 16px; box-shadow: 0 4px 22px #18263503; }
 .board-header { display: flow-root; position: sticky; top: 0; z-index: 1; background: #fff; border-radius: 16px 16px 0 0; border-bottom: 1px solid #e5e8eb; }
 .snapshot-status { color: #626c76; font-size: 12px; line-height: 1.5; white-space: nowrap; }
 .ranking-status { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: #626c76; }
@@ -44,14 +44,15 @@ li.is-expanded { background: #edf4ef; }
 .operator-details { display: flex; flex-wrap: wrap; gap: 8px 20px; color: #626c76; font-size: 12px; line-height: 1.5; padding-bottom: 16px; }
 .operator-details > div { display: flex; flex-wrap: wrap; gap: 5px; }
 .operator-details dt, .operator-details dd { margin: 0; overflow-wrap: anywhere; }
-.operator-details dd { color: #171c24; }
+.operator-details dt { color: #626c76; font-weight: 400; }
+.operator-details dd { color: #171c24; font-weight: 500; }
 .count { justify-self: end; font-size: 21px; line-height: 22px; font-weight: 550; letter-spacing: -.025em; font-variant-numeric: tabular-nums; padding: 0 4px; margin-right: -4px; border-radius: 5px; }
 .chevron { justify-self: center; margin-top: 7px; width: 7px; height: 7px; border-right: 2px solid #626c76; border-bottom: 2px solid #626c76; transform: rotate(45deg); transition: transform 180ms ease; }
 [aria-expanded="true"] .chevron { transform: rotate(225deg); }
 .aircraft-details { display: grid; grid-template-rows: 1fr; }
 .details-content { min-height: 0; overflow: hidden; }
 .details-panel { padding: 4px 52px 24px 144px; }
-.details-panel h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+.details-panel h2 { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
 .aircraft-details dl { margin: 0; }
 .aircraft-type { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 24px; padding: 4px 0; color: #515e58; font-size: 13px; line-height: 1.5; }
 .aircraft-type dt { overflow-wrap: anywhere; }
