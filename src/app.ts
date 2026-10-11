@@ -21,6 +21,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly abort = new AbortController();
   private pollTimer?: ReturnType<typeof setInterval>;
   private animations: Animation[] = [];
+  private cancelDrawerScroll?: () => void;
 
   readonly countryFlag = countryFlag;
   readonly snapshot = signal<Snapshot | null>(null);
@@ -51,10 +52,54 @@ export class AppComponent implements OnInit, OnDestroy {
     this.visibleLimit.set(this.rowBatchSize);
   }
 
-  toggleAirline(airline: Airline): void {
+  toggleAirline(airline: Airline, event: MouseEvent): void {
+    this.cancelDrawerScroll?.();
+    const button = event.currentTarget as HTMLElement;
+    const previousTop = button.getBoundingClientRect().top;
     const isExpanded = this.expandedAirlineId() === airline.id;
     if (!isExpanded) { this.isShowingAllTypes.set(false); }
     this.expandedAirlineId.set(isExpanded ? null : airline.id);
+    this.changeDetector.detectChanges();
+    this.preserveDrawerRowPosition(button, previousTop);
+  }
+
+  private preserveDrawerRowPosition(button: HTMLElement, previousTop: number): void {
+    const scrollEvents = new AbortController();
+    let frame: number;
+    const stop = (): void => {
+      cancelAnimationFrame(frame);
+      scrollEvents.abort();
+      this.cancelDrawerScroll = undefined;
+    };
+    this.cancelDrawerScroll = stop;
+    for (const eventName of ['wheel', 'touchmove', 'keydown', 'pointerdown']) {
+      window.addEventListener(eventName, stop, { passive: true, signal: scrollEvents.signal });
+    }
+
+    frame = requestAnimationFrame(() => {
+      // Angular applies the drawer animation classes after rendering.
+      const drawerAnimations: Animation[] = [];
+      for (const { nativeElement: row } of this.rowElements.toArray()) {
+        for (const drawer of Array.from(row.querySelectorAll('.aircraft-details'))) {
+          drawerAnimations.push(...drawer.getAnimations());
+        }
+      }
+      let isAnimating = drawerAnimations.length > 0;
+      void Promise.allSettled(drawerAnimations.map(animation => animation.finished)).then(() => {
+        isAnimating = false;
+      });
+
+      const preservePosition = (): void => {
+        const distance = button.getBoundingClientRect().top - previousTop;
+        if (distance !== 0) { window.scrollBy({ top: distance, behavior: 'instant' }); }
+        if (isAnimating) {
+          frame = requestAnimationFrame(preservePosition);
+        } else {
+          stop();
+        }
+      };
+      preservePosition();
+    });
   }
 
   ngOnInit(): void {
@@ -126,6 +171,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.cancelDrawerScroll?.();
     this.abort.abort();
     clearInterval(this.pollTimer);
     this.animations.forEach(animation => { animation.cancel(); });

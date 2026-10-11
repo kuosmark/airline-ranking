@@ -38,7 +38,7 @@
         @for (rankedOperator of visibleRows(); track rankedOperator.airline.id) {
           @let airline = rankedOperator.airline;
           <li #row [attr.data-id]="airline.id" [class.is-expanded]="expandedAirlineId() === airline.id">
-            <button class="airline-toggle" type="button" (click)="toggleAirline(airline)"
+            <button class="airline-toggle" type="button" (click)="toggleAirline(airline, $event)"
               [attr.aria-expanded]="expandedAirlineId() === airline.id"
               [attr.aria-controls]="'types-' + airline.id">
               @let change = airline.rankChange;
