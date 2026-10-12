@@ -13,12 +13,16 @@ export function readWebsiteOutputs(value: unknown): WebsiteOutputs {
   }
   const outputs = value.AirlineRanking;
   if (typeof outputs !== 'object' || outputs === null ||
-      !('WebsiteBucket' in outputs) || !('DistributionId' in outputs) ||
-      typeof outputs.WebsiteBucket !== 'string' || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(outputs.WebsiteBucket) ||
-      typeof outputs.DistributionId !== 'string' || !/^[A-Z0-9]+$/.test(outputs.DistributionId)) {
+      !('WebsiteBucket' in outputs) || !('DistributionId' in outputs)) {
     throw new Error('Invalid website bucket or distribution outputs');
   }
-  return { WebsiteBucket: outputs.WebsiteBucket, DistributionId: outputs.DistributionId };
+  const bucket = outputs.WebsiteBucket;
+  const distributionId = outputs.DistributionId;
+  if (typeof bucket !== 'string' || !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(bucket) ||
+      typeof distributionId !== 'string' || !/^[A-Z0-9]+$/.test(distributionId)) {
+    throw new Error('Invalid website bucket or distribution outputs');
+  }
+  return { WebsiteBucket: bucket, DistributionId: distributionId };
 }
 
 export async function publishWebsite(directory: string, outputs: WebsiteOutputs): Promise<void> {

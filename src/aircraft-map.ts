@@ -21,8 +21,8 @@ import { projectAircraft } from './aircraft-map-projection';
           <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
           <svg viewBox="0 0 800 412" role="group" aria-label="Aircraft positions on a world map"
             [class.is-pointer-near-aircraft]="hoveredId() !== null"
-            (pointermove)="hoveredId.set(nearestAircraft($event))" (pointerleave)="hoveredId.set(null)"
-            (click)="selectedId.set(nearestAircraft($event) ?? selectedId())">
+            (pointermove)="hoveredId.set(nearestAircraftId($event))" (pointerleave)="hoveredId.set(null)"
+            (click)="selectedId.set(nearestAircraftId($event) ?? selectedId())">
             @if (hoveredAircraft(); as aircraft) {
               <title>{{ aircraft.callsign }} · {{ aircraft.aircraftType }}</title>
             }
@@ -70,15 +70,16 @@ export class AircraftMapComponent {
   readonly hoveredAircraft = computed(() =>
     this.points().find(point => point.aircraft.id === this.hoveredId())?.aircraft);
 
-  nearestAircraft(event: MouseEvent): string | null {
+  nearestAircraftId(event: MouseEvent): string | null {
     const matrix = (event.currentTarget as SVGSVGElement).getScreenCTM();
     if (!matrix) { return null; }
     let nearestId: string | null = null;
-    let shortestDistance = 12;
+    const hitRadiusPx = 12;
+    let shortestDistance = hitRadiusPx;
     for (const point of this.points()) {
-      const x = matrix.a * point.x + matrix.c * point.y + matrix.e;
-      const y = matrix.b * point.x + matrix.d * point.y + matrix.f;
-      const distance = Math.hypot(x - event.clientX, y - event.clientY);
+      const screenX = matrix.a * point.x + matrix.c * point.y + matrix.e;
+      const screenY = matrix.b * point.x + matrix.d * point.y + matrix.f;
+      const distance = Math.hypot(screenX - event.clientX, screenY - event.clientY);
       if (distance < shortestDistance) {
         nearestId = point.aircraft.id;
         shortestDistance = distance;
