@@ -144,7 +144,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.animations = [];
     this.snapshot.set(snapshot);
     this.rows.set(rankAirlines(snapshot.airlines));
-    this.announcement.set('Ranking updated.');
+    const updatedAt = new Date(snapshot.updatedAt).toLocaleString('en-GB', { timeZone: 'UTC' });
+    this.announcement.set(`Ranking updated at ${updatedAt} UTC.`);
     this.changeDetector.detectChanges();
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
