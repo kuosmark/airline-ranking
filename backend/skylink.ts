@@ -1,7 +1,6 @@
 import { isValidCoordinates, rankAirlines, type AircraftPosition, type Snapshot } from '../shared/ranking.ts';
 import { aircraftTypeName } from './aircraft-types.ts';
 
-export { REFRESH_INTERVAL_MS } from '../shared/ranking.ts';
 const OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -19,6 +18,17 @@ function timestamp(value: unknown): number {
   return time;
 }
 
+interface AircraftObservation {
+  seen: number;
+  callsign: string;
+  isAirborne: boolean;
+  aircraftType: unknown;
+  registration: string;
+  latitude: unknown;
+  longitude: unknown;
+  altitude: unknown;
+}
+
 export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
   if (!isRecord(payload) || !Array.isArray(payload['aircraft']) ||
       payload['aircraft'].length === 0 || payload['total_count'] !== payload['aircraft'].length) {
@@ -29,7 +39,7 @@ export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
     throw new Error('SkyLink snapshot is not current');
   }
 
-  const observations = new Map<string, { seen: number; callsign: string; isAirborne: boolean; aircraftType: unknown; registration: string; latitude: unknown; longitude: unknown; altitude: unknown }>();
+  const observations = new Map<string, AircraftObservation>();
   for (const record of payload['aircraft'] as unknown[]) {
     if (!isRecord(record) || typeof record['icao24'] !== 'string' || !/^[\da-f]{6}$/i.test(record['icao24'])) {
       throw new Error('Invalid SkyLink aircraft identifier');
@@ -43,7 +53,13 @@ export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
       : '';
     const previous = observations.get(id);
     if (!previous || seen > previous.seen || (seen === previous.seen && !isAirborne)) {
-      observations.set(id, { seen, callsign, isAirborne, aircraftType: record['aircraft_type'], registration, latitude: record['latitude'], longitude: record['longitude'], altitude: record['altitude'] });
+      observations.set(id, {
+        seen, callsign, isAirborne, registration,
+        aircraftType: record['aircraft_type'],
+        latitude: record['latitude'],
+        longitude: record['longitude'],
+        altitude: record['altitude'],
+      });
     }
   }
 

@@ -1,6 +1,4 @@
-import { isValidCoordinates, type Snapshot } from '../shared/ranking.ts';
-import { compareRanks } from './server.ts';
-import { REFRESH_INTERVAL_MS } from './skylink.ts';
+import { compareRanks, isValidCoordinates, REFRESH_INTERVAL_MS, type Snapshot } from '../shared/ranking.ts';
 import type { JsonStore } from './storage.ts';
 import type { createOperatorDirectory } from './operator-directory.ts';
 
@@ -20,33 +18,49 @@ interface RefreshOptions {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
+function isAircraftPosition(value: unknown): boolean {
+  if (!isRecord(value)) { return false; }
+  const altitude = value['altitudeFt'];
+  return typeof value['id'] === 'string' && /^[a-f\d]{6}$/.test(value['id']) &&
+    typeof value['callsign'] === 'string' && typeof value['aircraftType'] === 'string' &&
+    isValidCoordinates(value['latitude'], value['longitude']) &&
+    (altitude === undefined || (typeof altitude === 'number' && Number.isFinite(altitude)));
+}
+
+function isAircraftType(value: unknown): boolean {
+  if (!isRecord(value)) { return false; }
+  const count = value['count'];
+  return typeof value['name'] === 'string' && typeof count === 'number' &&
+    Number.isInteger(count) && count >= 0;
+}
+
+function isAirline(value: unknown): boolean {
+  if (!isRecord(value)) { return false; }
+  const id = value['id'];
+  const count = value['count'];
+  if (typeof id !== 'string' || !/^[A-Z]{3}$/.test(id) || typeof value['name'] !== 'string' ||
+      typeof count !== 'number' || !Number.isInteger(count) || count < 0) { return false; }
+
+  const country = value['country'];
+  const iata = value['iata'];
+  const icao = value['icao'];
+  if (country !== undefined && country !== null && typeof country !== 'string') { return false; }
+  if (iata !== undefined && iata !== null && (typeof iata !== 'string' || !/^[A-Z\d]{2}$/.test(iata))) { return false; }
+  if (icao !== undefined && icao !== null && icao !== id) { return false; }
+
+  const positions = value['positions'];
+  if (positions !== undefined && (!Array.isArray(positions) || positions.length > count ||
+      !positions.every(isAircraftPosition))) { return false; }
+  const movement = value['rankChange'];
+  if (movement !== undefined && movement !== 'new' &&
+      (typeof movement !== 'number' || !Number.isInteger(movement))) { return false; }
+  const aircraftTypes = value['aircraftTypes'];
+  return Array.isArray(aircraftTypes) && aircraftTypes.every(isAircraftType);
+}
+
 function isSnapshot(value: unknown): value is Snapshot {
-  if (!isRecord(value) || typeof value['updatedAt'] !== 'string' || !Number.isFinite(Date.parse(value['updatedAt'])) ||
-      typeof value['isStale'] !== 'boolean' || !Array.isArray(value['airlines'])) { return false; }
-  return value['airlines'].every((airline: unknown) => {
-    if (!isRecord(airline)) { return false; }
-    const count = airline['count'];
-    const movement = airline['rankChange'];
-    const country = airline['country'];
-    const iata = airline['iata'];
-    const icao = airline['icao'];
-    const positions = airline['positions'];
-    return typeof airline['id'] === 'string' && /^[A-Z]{3}$/.test(airline['id']) &&
-      typeof airline['name'] === 'string' && typeof count === 'number' && Number.isInteger(count) && count >= 0 &&
-      (country === undefined || country === null || typeof country === 'string') &&
-      (iata === undefined || iata === null || (typeof iata === 'string' && /^[A-Z\d]{2}$/.test(iata))) &&
-      (icao === undefined || icao === null || icao === airline['id']) &&
-      (positions === undefined || (Array.isArray(positions) && positions.length <= count &&
-        positions.every((position: unknown) => isRecord(position) &&
-          typeof position['id'] === 'string' && /^[a-f\d]{6}$/.test(position['id']) &&
-          typeof position['callsign'] === 'string' && typeof position['aircraftType'] === 'string' &&
-          isValidCoordinates(position['latitude'], position['longitude']) &&
-          (position['altitudeFt'] === undefined || (typeof position['altitudeFt'] === 'number' && Number.isFinite(position['altitudeFt'])))))) &&
-      (movement === undefined || movement === 'new' || (typeof movement === 'number' && Number.isInteger(movement))) &&
-      Array.isArray(airline['aircraftTypes']) && airline['aircraftTypes'].every((type: unknown) =>
-        isRecord(type) && typeof type['name'] === 'string' && typeof type['count'] === 'number' &&
-        Number.isInteger(type['count']) && type['count'] >= 0);
-  });
+  return isRecord(value) && typeof value['updatedAt'] === 'string' && Number.isFinite(Date.parse(value['updatedAt'])) &&
+    typeof value['isStale'] === 'boolean' && Array.isArray(value['airlines']) && value['airlines'].every(isAirline);
 }
 
 function readState(value: unknown): RefreshState {

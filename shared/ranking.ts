@@ -36,6 +36,17 @@ export function rankAirlines(airlines: Airline[]): Airline[] {
   return [...airlines].sort((a, b) => b.count - a.count || a.id.localeCompare(b.id, 'en'));
 }
 
+export function compareRanks(next: Snapshot, previous: Snapshot | null): Snapshot {
+  if (!previous) { return next; }
+  const previousRanks = new Map(rankAirlines(previous.airlines).map((airline, index) => [airline.id, index]));
+  const airlines = rankAirlines(next.airlines).map<Airline>((airline, index) => {
+    const previousRank = previousRanks.get(airline.id);
+    const rankChange = previousRank === undefined ? 'new' : previousRank - index;
+    return { ...airline, rankChange };
+  });
+  return { ...next, airlines };
+}
+
 export const REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
 export function isSnapshotStale(snapshot: Snapshot, now: number): boolean {

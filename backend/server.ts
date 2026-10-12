@@ -1,16 +1,5 @@
 import { createServer } from 'node:http';
-import { rankAirlines, isSnapshotStale, type Airline, type Snapshot } from '../shared/ranking.ts';
-
-export function compareRanks(next: Snapshot, previous: Snapshot | null): Snapshot {
-  if (!previous) { return next; }
-  const previousRanks = new Map(rankAirlines(previous.airlines).map((airline, index) => [airline.id, index]));
-  const airlines = rankAirlines(next.airlines).map<Airline>((airline, index) => {
-    const previousRank = previousRanks.get(airline.id);
-    const rankChange = previousRank === undefined ? 'new' : previousRank - index;
-    return { ...airline, rankChange };
-  });
-  return { ...next, airlines };
-}
+import { compareRanks, isSnapshotStale, type Snapshot } from '../shared/ranking.ts';
 
 export function createRankingService(load: () => Promise<Snapshot>, now = Date.now, enrich?: (snapshot: Snapshot) => Promise<Snapshot>) {
   let snapshot: Snapshot | null = null;

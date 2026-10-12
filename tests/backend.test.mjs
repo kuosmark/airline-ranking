@@ -3,7 +3,8 @@ import console from 'node:console';
 import { once } from 'node:events';
 import process from 'node:process';
 import { test } from 'node:test';
-import { countAircraft, fetchSnapshot, REFRESH_INTERVAL_MS } from '../backend/skylink.ts';
+import { countAircraft, fetchSnapshot } from '../backend/skylink.ts';
+import { REFRESH_INTERVAL_MS } from '../shared/ranking.ts';
 import { createRankingServer, createRankingService } from '../backend/server.ts';
 
 const time = '2026-10-04T12:00:00Z';
