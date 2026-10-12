@@ -22,21 +22,23 @@ import { projectAircraft } from './aircraft-map-projection';
           <svg viewBox="0 0 800 412" role="group" aria-label="Aircraft positions on a world map"
             [class.is-pointer-near-aircraft]="hoveredId() !== null"
             (pointermove)="hoveredId.set(nearestAircraftId($event))" (pointerleave)="hoveredId.set(null)"
-            (click)="selectedId.set(nearestAircraftId($event) ?? selectedId())">
+            (click)="selectAircraft(nearestAircraftId($event))">
             @if (hoveredAircraft(); as aircraft) {
               <title>{{ aircraft.callsign }} · {{ aircraft.aircraftType }}</title>
             }
             <path [attr.d]="worldOutline" fill="#e6ebe8" stroke="#d5ddd7" stroke-width="0.6" aria-hidden="true" />
-            @for (point of points(); track point.aircraft.id) {
-              <g class="aircraft-dot" [class.is-selected]="selectedAircraft()?.id === point.aircraft.id"
+            @for (point of points(); track point.aircraft.id; let index = $index) {
+              <circle class="aircraft-dot" [attr.cx]="point.x" [attr.cy]="point.y" r="4"
+                [class.is-selected]="selectedAircraft()?.id === point.aircraft.id"
                 [class.is-hovered]="hoveredId() === point.aircraft.id"
-                tabindex="0" role="button"
+                [attr.tabindex]="focusedAircraftId() === point.aircraft.id ? 0 : -1" role="button"
                 [attr.aria-label]="point.aircraft.callsign + ', ' + point.aircraft.aircraftType"
+                aria-description="Use arrow keys to browse aircraft in callsign order, Enter or Space to select, and Tab to leave the map."
                 [attr.aria-pressed]="selectedAircraft()?.id === point.aircraft.id"
-                (click)="$event.stopPropagation(); selectedId.set(point.aircraft.id)" (keydown.enter)="selectedId.set(point.aircraft.id)"
-                (keydown.space)="$event.preventDefault(); selectedId.set(point.aircraft.id)">
-                <circle class="aircraft-marker" [attr.cx]="point.x" [attr.cy]="point.y" r="4" />
-              </g>
+                (focus)="focusedId.set(point.aircraft.id)" (keydown)="navigateAircraft($event, index)"
+                (click)="$event.stopPropagation(); selectAircraft(point.aircraft.id)"
+                (keydown.enter)="selectAircraft(point.aircraft.id)"
+                (keydown.space)="$event.preventDefault(); selectAircraft(point.aircraft.id)" />
             }
           </svg>
           <p class="map-selection" role="status" [class.is-empty]="!selectedAircraft()">
@@ -61,14 +63,44 @@ export class AircraftMapComponent {
   readonly count = input.required<number>();
   readonly selectedId = signal<string | null>(null);
   readonly hoveredId = signal<string | null>(null);
-  readonly points = computed(() => this.positions().flatMap(aircraft => {
-    const position = projectAircraft(aircraft.latitude, aircraft.longitude);
-    return position ? [{ aircraft, x: position[0], y: position[1] }] : [];
-  }));
+  readonly focusedId = signal<string | null>(null);
+  readonly points = computed(() => {
+    const points = this.positions().flatMap(aircraft => {
+      const position = projectAircraft(aircraft.latitude, aircraft.longitude);
+      return position ? [{ aircraft, x: position[0], y: position[1] }] : [];
+    });
+    return points.sort((a, b) => {
+      const callsignOrder = a.aircraft.callsign.localeCompare(b.aircraft.callsign, 'en');
+      return callsignOrder || a.aircraft.id.localeCompare(b.aircraft.id, 'en');
+    });
+  });
+  readonly focusedAircraftId = computed(() => {
+    const points = this.points();
+    const focusedId = this.focusedId();
+    return points.find(point => point.aircraft.id === focusedId)?.aircraft.id ?? points[0]?.aircraft.id;
+  });
   readonly selectedAircraft = computed(() =>
     this.points().find(point => point.aircraft.id === this.selectedId())?.aircraft);
   readonly hoveredAircraft = computed(() =>
     this.points().find(point => point.aircraft.id === this.hoveredId())?.aircraft);
+
+  selectAircraft(id: string | null): void {
+    if (id === null) { return; }
+    this.selectedId.set(id);
+    this.focusedId.set(id);
+  }
+
+  navigateAircraft(event: KeyboardEvent, index: number): void {
+    const isPrevious = event.key === 'ArrowLeft' || event.key === 'ArrowUp';
+    const isNext = event.key === 'ArrowRight' || event.key === 'ArrowDown';
+    if (!isPrevious && !isNext) { return; }
+    event.preventDefault();
+    const direction = isPrevious ? -1 : 1;
+    const aircraftCount = this.points().length;
+    const nextIndex = (index + direction + aircraftCount) % aircraftCount;
+    const marker = event.currentTarget as SVGElement;
+    marker.ownerSVGElement?.querySelectorAll<SVGElement>('.aircraft-dot')[nextIndex]?.focus();
+  }
 
   nearestAircraftId(event: MouseEvent): string | null {
     const matrix = (event.currentTarget as SVGSVGElement).getScreenCTM();
