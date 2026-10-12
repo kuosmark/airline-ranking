@@ -46,8 +46,14 @@ export async function handler(event: { scheduledAt: string }, context: { getRema
         stage = 'Refreshing ranking';
       },
     });
-  } catch {
+  } catch (error) {
     // Provider payloads and credentials must never reach logs or asynchronous failure records.
-    throw new Error(`${stage} failed.`);
+    const name = error instanceof Error ? error.name : '';
+    let category = 'unknown';
+    if (['AbortError', 'TimeoutError', 'RequestTimeout'].includes(name)) { category = 'timeout'; }
+    else if (['AccessDenied', 'AccessDeniedException'].includes(name)) { category = 'access denied'; }
+    else if (['PreconditionFailed', 'ConditionalRequestConflict'].includes(name)) { category = 'conflicting write'; }
+    // eslint-disable-next-line preserve-caught-error -- Attaching the original cause would expose unsanitized errors in Lambda logs.
+    throw new Error(`${stage} failed. Category: ${category}.`);
   }
 }

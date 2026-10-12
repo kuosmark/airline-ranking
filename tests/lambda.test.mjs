@@ -8,7 +8,7 @@ import { handler } from '../backend/lambda.ts';
 
 const secret = 'test-secret-must-not-appear';
 
-function setup(t, failure) {
+function setup(t, failure, underlyingError = new Error(secret)) {
   for (const name of ['STATE_BUCKET', 'WEBSITE_BUCKET', 'SKYLINK_KEY_PARAMETER']) {
     const previous = process.env[name];
     process.env[name] = name.toLowerCase();
@@ -20,7 +20,7 @@ function setup(t, failure) {
   const logs = [];
   t.mock.method(console, 'error', (...args) => logs.push(args.join(' ')));
   t.mock.method(SSMClient.prototype, 'send', async () => {
-    if (failure === 'key') throw new Error(secret);
+    if (failure === 'key') throw underlyingError;
     return { Parameter: { Value: secret } };
   });
   let publications = 0;
@@ -36,7 +36,10 @@ function setup(t, failure) {
       if (failure === 'after-publish' && Key === 'refresh-state.json' && publications > 0) throw new Error(secret);
       return { ETag: 'saved' };
     }
-    const savedSnapshot = { updatedAt: new Date().toISOString(), isStale: false, airlines: [] };
+    const savedSnapshot = { updatedAt: new Date().toISOString(), isStale: false, airlines: [
+      { id: 'FIN', name: 'Finnair', country: 'Finland', countryIso: 'FI', iata: 'AY', icao: 'FIN',
+        count: 1, aircraftTypes: [{ name: 'Airbus A350', count: 1 }] },
+    ] };
     const refreshState = failure === 'recovery-cache'
       ? { lastAttemptSlot: Math.floor(Date.now() / 900_000), snapshot: savedSnapshot }
       : { lastAttemptSlot: null, snapshot: null };
@@ -69,7 +72,7 @@ for (const [failure, expected] of [
     await assert.rejects(
       handler({ scheduledAt: new Date().toISOString() }, { getRemainingTimeInMillis: () => 120_000 }),
       error => {
-        assert.equal(error.message, expected);
+        assert.equal(error.message, `${expected} Category: unknown.`);
         assert.equal(error.cause, undefined);
         assert.equal(error.stack.includes(secret), false);
         return true;
@@ -91,6 +94,31 @@ test('duplicate delivery can republish saved ranking when the operator cache is 
   await handler({ scheduledAt: new Date().toISOString() }, { getRemainingTimeInMillis: () => 120_000 });
   const publications = S3Client.prototype.send.mock.calls.filter(call => call.arguments[0].input.Key === 'api/ranking');
   assert.equal(publications.length, 1);
-  assert.deepEqual(JSON.parse(publications[0].arguments[0].input.Body).airlines, []);
+  assert.deepEqual(JSON.parse(publications[0].arguments[0].input.Body).airlines, [
+    { id: 'FIN', name: 'Finnair', country: 'Finland', countryIso: 'FI', iata: 'AY', icao: 'FIN',
+      count: 1, aircraftTypes: [{ name: 'Airbus A350', count: 1 }] },
+  ]);
   assert.equal(globalThis.fetch.mock.callCount(), 0);
 });
+
+for (const [name, category] of [
+  ['AbortError', 'timeout'], ['TimeoutError', 'timeout'], ['RequestTimeout', 'timeout'],
+  ['AccessDenied', 'access denied'], ['AccessDeniedException', 'access denied'],
+  ['PreconditionFailed', 'conflicting write'], ['ConditionalRequestConflict', 'conflicting write'],
+  [secret, 'unknown'],
+]) {
+  test(`sanitizes diagnostic category ${name === secret ? 'unrecognized' : name}`, async t => {
+    const underlyingError = Object.assign(new Error(secret), { name, cause: new Error(secret) });
+    const logs = setup(t, 'key', underlyingError);
+    await assert.rejects(
+      handler({ scheduledAt: new Date().toISOString() }, { getRemainingTimeInMillis: () => 120_000 }),
+      error => {
+        assert.equal(error.message, `Reading API key failed. Category: ${category}.`);
+        assert.equal(error.cause, undefined);
+        assert.equal(error.stack.includes(secret), false);
+        return true;
+      },
+    );
+    assert.equal(logs.join('\n').includes(secret), false);
+  });
+}

@@ -85,7 +85,10 @@ export async function refreshScheduledRanking(options: RefreshOptions): Promise<
   const slot = Math.floor(scheduledTime / REFRESH_INTERVAL_MS);
   if (state.lastAttemptSlot !== null && slot <= state.lastAttemptSlot) {
     // Recover a failed publication without repeating the provider request.
-    if (state.snapshot) { await publish(directory.apply(state.snapshot)); }
+    if (state.snapshot) {
+      const snapshot = directory.isAvailable() ? directory.apply(state.snapshot) : state.snapshot;
+      await publish(snapshot);
+    }
     return;
   }
   if (!directory.isAvailable() || now() + 30_000 >= deadline) { throw new Error('Refresh cannot safely start'); }
