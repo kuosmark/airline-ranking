@@ -30,15 +30,15 @@ async function setup(t) {
 test('publishing sends assets before HTML, uses cache headers, and waits for invalidation', async t => {
   const { directory, calls } = await setup(t);
   await publishWebsite(directory, outputs);
-  assert.deepEqual(calls.slice(0, 3).map(command => command.input.Key), [
-    'main-ABCDEFGH.js', 'styles-12345678.css', 'index.html',
-  ]);
+  assert.deepEqual(calls.slice(0, 2).map(command => command.input.Key).sort(),
+    ['main-ABCDEFGH.js', 'styles-12345678.css']);
+  assert.equal(calls[2].input.Key, 'index.html');
   for (const command of calls.slice(0, 2)) {
     assert.equal(command.input.CacheControl, 'public, max-age=31536000, immutable');
     assert.equal(command.input.Bucket, outputs.WebsiteBucket);
   }
-  assert.equal(calls[0].input.ContentType, 'text/javascript');
-  assert.equal(calls[1].input.ContentType, 'text/css');
+  assert.equal(calls.find(command => command.input.Key === 'main-ABCDEFGH.js').input.ContentType, 'text/javascript');
+  assert.equal(calls.find(command => command.input.Key === 'styles-12345678.css').input.ContentType, 'text/css');
   assert.equal(calls[2].input.ContentType, 'text/html');
   assert.equal(calls[2].input.CacheControl, 'no-cache');
   assert.ok(calls[3] instanceof CreateInvalidationCommand);

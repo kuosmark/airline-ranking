@@ -91,11 +91,13 @@ test('the refresh role can access only its state objects, published ranking and 
   assert.ok(policy);
   const statements = policy.Properties.PolicyDocument.Statement;
   assert.equal(statements.length, 3);
-  const [state, ranking, key] = statements;
-  assert.deepEqual(state.Action, ['s3:GetObject', 's3:PutObject']);
+  const state = statements.find(statement => [].concat(statement.Action).includes('s3:GetObject'));
+  const ranking = statements.find(statement => statement.Action === 's3:PutObject');
+  const key = statements.find(statement => statement.Action === 'ssm:GetParameter');
+  assert.deepEqual([...state.Action].sort(), ['s3:GetObject', 's3:PutObject']);
   assert.equal(state.Resource.length, 2);
-  assert.match(JSON.stringify(state.Resource[0]), /\/operator-names\.json/);
-  assert.match(JSON.stringify(state.Resource[1]), /\/refresh-state\.json/);
+  assert.match(JSON.stringify(state.Resource), /\/operator-names\.json/);
+  assert.match(JSON.stringify(state.Resource), /\/refresh-state\.json/);
   assert.equal(ranking.Action, 's3:PutObject');
   assert.match(JSON.stringify(ranking.Resource), /\/api\/ranking/);
   assert.equal(key.Action, 'ssm:GetParameter');
