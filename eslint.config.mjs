@@ -15,6 +15,10 @@ export default defineConfig(
     rules: {
       eqeqeq: ['error', 'always'],
       curly: ['error', 'all'],
+      'no-else-return': ['error', { allowElseIf: false }],
+      'max-depth': ['error', 4],
+      'no-shadow': 'off',
+      '@typescript-eslint/no-shadow': 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
     },

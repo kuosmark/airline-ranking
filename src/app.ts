@@ -120,8 +120,7 @@ export class AppComponent implements OnInit, OnDestroy {
       if (snapshot.updatedAt !== this.snapshot()?.updatedAt) {
         this.applySnapshot(snapshot);
       } else {
-        this.snapshot.set(snapshot);
-        this.rows.set(rankAirlines(snapshot.airlines));
+        this.setSnapshot(snapshot);
       }
     } catch {
       if (!this.abort.signal.aborted) {
@@ -130,10 +129,14 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
+  private setSnapshot(snapshot: Snapshot): void {
+    this.snapshot.set(snapshot);
+    this.rows.set(rankAirlines(snapshot.airlines));
+  }
+
   private applySnapshot(snapshot: Snapshot): void {
     if (!this.snapshot()) {
-      this.snapshot.set(snapshot);
-      this.rows.set(rankAirlines(snapshot.airlines));
+      this.setSnapshot(snapshot);
       return;
     }
     const expandedId = this.expandedAirlineId();
@@ -142,8 +145,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const positions = new Map(this.rowElements.map(({ nativeElement: row }) => [row.dataset['id'], row.getBoundingClientRect().top]));
     this.animations.forEach(animation => { animation.cancel(); });
     this.animations = [];
-    this.snapshot.set(snapshot);
-    this.rows.set(rankAirlines(snapshot.airlines));
+    this.setSnapshot(snapshot);
     const updatedAt = new Date(snapshot.updatedAt).toLocaleString('en-GB', { timeZone: 'UTC' });
     this.announcement.set(`Ranking updated at ${updatedAt} UTC.`);
     this.changeDetector.detectChanges();
@@ -152,9 +154,15 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
 
+    this.animateRows(snapshot, previousCounts, positions);
+  }
+
+  private animateRows(snapshot: Snapshot, previousCounts: Map<string, number>, previousPositions: Map<string | undefined, number>): void {
     this.rowElements.forEach(({ nativeElement: row }) => {
-      const distance = (positions.get(row.dataset['id']) ?? row.getBoundingClientRect().top) - row.getBoundingClientRect().top;
-      if (distance) {
+      const currentTop = row.getBoundingClientRect().top;
+      const previousTop = previousPositions.get(row.dataset['id']) ?? currentTop;
+      const distance = previousTop - currentTop;
+      if (distance !== 0) {
         this.animations.push(row.animate([
           { transform: `translateY(${distance}px)` },
           { transform: 'translateY(0)' },

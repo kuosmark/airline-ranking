@@ -35,7 +35,6 @@ test('builds check and release application code without deploying infrastructure
   assert.deepEqual(spec.phases.install.commands, ['npm ci']);
   assert.equal(spec.phases.install['runtime-versions'].nodejs, 22);
   const commands = spec.phases.build.commands;
-  assert.equal(commands[0], 'npm run check');
   assert.deepEqual(commands, ['npm run check', 'npm run infra:release -- "$WEBSITE_BUCKET" "$DISTRIBUTION_ID" "$REFRESH_FUNCTION"']);
   assert.deepEqual(Object.keys(template.toJSON().Parameters).sort(), ['BootstrapVersion', 'ConnectionArn']);
   assert.deepEqual(project.Properties.Environment.EnvironmentVariables.map(variable => variable.Name).sort(),

@@ -10,13 +10,11 @@ const makeSnapshot = (minute, entries) => ({
 });
 const changes = service => Object.fromEntries(service.read().airlines.map(row => [row.id, row.rankChange]));
 
-test('first snapshot and restarted service have no indicators', async () => {
+test('first snapshot has no indicators', async () => {
   const data = makeSnapshot(0, [['AAA', 10], ['BBB', 5]]);
-  for (let i = 0; i < 2; i++) {
-    const service = createRankingService(async () => data, () => start);
-    await service.refresh();
-    assert.deepEqual(changes(service), { AAA: undefined, BBB: undefined });
-  }
+  const service = createRankingService(async () => data, () => start);
+  await service.refresh();
+  assert.deepEqual(changes(service), { AAA: undefined, BBB: undefined });
 });
 
 test('compares positions, including unchanged ranks, entrants, and stable prefix ties', async () => {
@@ -46,10 +44,8 @@ test('name enrichment and repeated timestamps preserve movement and the comparis
   assert.equal(service.read().airlines[0].name, 'Name BBB');
   data = makeSnapshot(15, [['AAA', 100], ['BBB', 15]]);
   await service.refresh();
-  for (let i = 0; i < 3; i++) {
-    assert.deepEqual(changes(service), { BBB: 1, AAA: -1 });
-    assert.equal(service.read().airlines.find(row => row.id === 'AAA').count, 10);
-  }
+  assert.deepEqual(changes(service), { BBB: 1, AAA: -1 });
+  assert.equal(service.read().airlines.find(row => row.id === 'AAA').count, 10);
   data = makeSnapshot(30, [['AAA', 20], ['BBB', 15]]);
   await service.refresh();
   assert.deepEqual(changes(service), { AAA: 1, BBB: -1 });

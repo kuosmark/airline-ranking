@@ -75,7 +75,7 @@ Run `npm run check` before committing. GitHub Actions runs the same command on p
 | `npm run infra:publish -- cdk.out/outputs.json` | Upload the frontend and wait for CloudFront cache invalidation |
 | `npm run infra:release -- BUCKET DISTRIBUTION FUNCTION_ARN` | Update the existing Lambda code and publish the frontend; requires Python 3 for ZIP packaging |
 
-Tests use Node's built-in test runner and synthetic data. They do not require an API key or contact either provider. Lint warnings fail the check. Drawer layout, responsive spacing and animations are checked manually in the browser; the unit tests do not verify their appearance.
+Tests use Node's built-in test runner and synthetic data. They do not require an API key or contact either provider. Lint warnings fail the check. TypeScript rules prohibit unnecessary `else` branches after returns and shadowed names, and limit nesting to four levels. Drawer layout, responsive spacing and animations are checked manually in the browser; the unit tests do not verify their appearance.
 
 ## Scope
 

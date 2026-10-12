@@ -148,13 +148,18 @@ export async function createOperatorDirectory(storage: string | JsonStore, now =
   return {
     isAvailable(): boolean { return !isDisabled; },
     apply(snapshot: Snapshot): Snapshot {
-      return { ...snapshot, airlines: snapshot.airlines.map(airline => ({
-        ...airline, name: cache.names[airline.id]?.name ?? airline.id,
-        country: cache.names[airline.id]?.country ?? null,
-        countryIso: cache.names[airline.id]?.countryIso ?? null,
-        iata: cache.names[airline.id]?.iata ?? null,
-        icao: cache.names[airline.id]?.icao ?? null,
-      })) };
+      const airlines = snapshot.airlines.map(airline => {
+        const details = cache.names[airline.id];
+        return {
+          ...airline,
+          name: details?.name ?? airline.id,
+          country: details?.country ?? null,
+          countryIso: details?.countryIso ?? null,
+          iata: details?.iata ?? null,
+          icao: details?.icao ?? null,
+        };
+      });
+      return { ...snapshot, airlines };
     },
     refresh(prefixes: string[], deadline = Infinity): Promise<void> {
       pending ??= lookupNames(prefixes, deadline).finally(() => { pending = undefined; });

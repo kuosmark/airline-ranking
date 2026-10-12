@@ -1,6 +1,7 @@
 import { createOperatorDirectory } from './operator-directory.ts';
 import { createRankingServer, createRankingService } from './server.ts';
-import { fetchSnapshot, REFRESH_INTERVAL_MS } from './skylink.ts';
+import { fetchSnapshot } from './skylink.ts';
+import { REFRESH_INTERVAL_MS } from '../shared/ranking.ts';
 
 const apiKey = process.env['SKYLINK_API_KEY'];
 if (!apiKey?.trim()) { throw new Error('Set SKYLINK_API_KEY in .env before starting the backend.'); }

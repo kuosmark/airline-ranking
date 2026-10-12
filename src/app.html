@@ -37,9 +37,10 @@
       <ol>
         @for (rankedOperator of visibleRows(); track rankedOperator.airline.id) {
           @let airline = rankedOperator.airline;
-          <li #row [attr.data-id]="airline.id" [class.is-expanded]="expandedAirlineId() === airline.id">
+          @let isExpanded = expandedAirlineId() === airline.id;
+          <li #row [attr.data-id]="airline.id" [class.is-expanded]="isExpanded">
             <button class="airline-toggle" type="button" (click)="toggleAirline(airline, $event)"
-              [attr.aria-expanded]="expandedAirlineId() === airline.id"
+              [attr.aria-expanded]="isExpanded"
               [attr.aria-controls]="'types-' + airline.id">
               @let change = airline.rankChange;
               <span class="rank-indicator" [title]="change === undefined ? 'No previous snapshot to compare' : 'Rank change since the previous snapshot'">
@@ -70,7 +71,7 @@
               </span>
               <span class="chevron" aria-hidden="true"></span>
             </button>
-            @if (expandedAirlineId() === airline.id) {
+            @if (isExpanded) {
               <div class="aircraft-details" [id]="'types-' + airline.id" animate.enter="details-enter" animate.leave="details-leave">
                 <div class="details-content">
                   <div class="details-panel">
