@@ -159,7 +159,7 @@ Use one active poller per API key. Stop the local backend when enabling the clou
 
 ## AWS infrastructure
 
-`infra/stack.ts` defines one stack: two private S3 buckets, CloudFront with Origin Access Control, an ARM64 Node.js 22 Lambda, a 15-minute EventBridge Scheduler schedule, and an email alarm for Lambda errors. The frontend and `api/ranking` share one CloudFront origin; browser traffic does not invoke Lambda or SkyLink. No API Gateway, VPC or NAT gateway is required.
+`infra/stack.ts` defines one stack: two private S3 buckets, CloudFront with Origin Access Control, an ARM64 Node.js 22 Lambda, a 15-minute EventBridge Scheduler schedule, and an email alarm for Lambda errors. The frontend and `api/ranking` share one CloudFront origin; browser traffic does not invoke Lambda or SkyLink. No API Gateway, VPC or NAT gateway is required. Stack helpers separate hosting, state storage, refresh scheduling and alerts while creating resources under the original stack scope and construct IDs.
 
 The public address is `https://airlines.markuskuosmanen.com`. The stack creates an A alias pointing to the existing distribution in the supplied public hosted zone; it does not create another zone or register the domain. It uses a separately issued, non-exportable ACM certificate in `us-east-1`, as required for global CloudFront HTTPS. Application resources stay in Stockholm. The original CloudFront address remains available as `WebsiteUrl`; `CustomDomainUrl` supplies the custom address.
 
@@ -207,7 +207,7 @@ Local synthesis and tests need no AWS credentials and make no provider calls. Be
 
 ### Automatic deployment from main
 
-GitHub Actions checks pull requests and `main` using `npm run check`. `infra/deployment-stack.ts` defines a separate `AirlineRankingDeployment` stack: CodePipeline V2 fetches `main` through CodeConnections and runs one CodeBuild job. The job installs dependencies, runs the checks, and releases application code. Executions queue, with one build at a time and a 30-minute build timeout. The project has upgraded to Paid, which cannot be reversed, so releases do not check the plan. Confirm the spend limit separately in AWS Settings before infrastructure changes.
+GitHub Actions checks pull requests and `main` using `npm run check`. `infra/deployment-stack.ts` defines a separate `AirlineRankingDeployment` stack: CodePipeline V2 fetches `main` through CodeConnections and runs one CodeBuild job. The job installs dependencies, runs the checks, and releases application code. Separate helpers define the build, pipeline and restricted release/source permissions. Executions queue, with one build at a time and a 30-minute build timeout. The project has upgraded to Paid, which cannot be reversed, so releases do not check the plan. Confirm the spend limit separately in AWS Settings before infrastructure changes.
 
 `infra/release.ts` bundles the backend with esbuild and creates a ZIP using Python 3's standard library, included in the CodeBuild image. It verifies the existing Lambda's Node.js 22 runtime, ARM64 architecture and handler, updates code with an optimistic revision guard, waits for completion, and verifies the deployed package hash before publishing the frontend. It never invokes Lambda or calls SkyLink. A failure stops the release; backend and frontend updates are sequential, not an atomic transaction. If frontend publication fails, the updated backend remains deployed.
 
