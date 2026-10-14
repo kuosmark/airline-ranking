@@ -3,6 +3,7 @@ import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/c
 import { DatePipe } from '@angular/common';
 import type { Snapshot } from '../shared/ranking';
 import { isSnapshotStale } from '../shared/ranking';
+import { isSnapshot } from '../shared/snapshot-validation';
 import { formatSnapshotAge } from './snapshot-age';
 import { RankingBoardComponent } from './ranking-board';
 
@@ -42,8 +43,9 @@ export class AppComponent implements OnInit, OnDestroy {
         signal: AbortSignal.any([this.abort.signal, AbortSignal.timeout(10_000)]),
       });
       if (!response.ok) { throw new Error('Ranking request failed'); }
-      const snapshot = await response.json() as Snapshot;
+      const snapshot: unknown = await response.json();
       if (this.abort.signal.aborted) { return; }
+      if (!isSnapshot(snapshot)) { throw new Error('Invalid ranking response'); }
       this.error.set(null);
       this.snapshot.set(snapshot);
     } catch {
