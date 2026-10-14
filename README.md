@@ -83,6 +83,8 @@ The frontend separates polling and page layout (`app`) from leaderboard interact
 
 The local backend uses Node's built-in HTTP server and fetch API, holding the latest ranking in memory and persisting operator details and lookup cost controls in an untracked JSON cache. In AWS, Lambda persists these in S3. CDK defines the infrastructure in `infra/`; an AWS-native pipeline deploys application changes from `main`.
 
+The browser and scheduled-state reader share `shared/snapshot-validation.ts`. A successful HTTP response with malformed ranking data is rejected before rendering; the browser keeps its last valid snapshot and retries normally. Optional metadata and positions may be absent in older snapshots.
+
 `backend/skylink.ts` validates and deduplicates observations before grouping aircraft by operator. `backend/adsbdb.ts` handles operator-detail requests and response parsing; `backend/operator-directory.ts` owns caching, pacing and lookup limits. `backend/operator-cache.ts` validates and migrates stored operator details; `backend/refresh-state.ts` does the same for scheduled snapshot state and request history. `backend/scheduled-refresh.ts` keeps request reservation, fetching and publication in one workflow.
 
 Aircraft are deduplicated by ICAO24, keeping the newest observation (ground wins equal-time conflicts). We count only explicitly airborne aircraft observed within five minutes of the snapshot. Callsigns must contain three letters followed by one to four letters or digits. Callsigns matching the aircraft registration after removing spaces and hyphens are excluded. Malformed, incomplete, or outdated global snapshots are rejected.
