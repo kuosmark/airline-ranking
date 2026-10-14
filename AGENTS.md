@@ -6,6 +6,10 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Do not add speculative features, dependencies, abstractions, infrastructure, documentation, or tooling.
 - Prefer the simplest implementation that meets the current requirements.
 - Prioritize readability over brevity. Use clear names and intermediate variables when they make logic easier to follow; avoid dense expressions and unnecessary verbosity.
+- Prefer small, clearly named functions with shallow control flow and a clear responsibility.
+- Give Angular components one clear UI responsibility. Keep substantial templates in separate HTML files and component-specific styles in their own CSS files; reserve global CSS for document defaults and shared utilities.
+- Format CSS with one declaration per line and keep related responsive rules with their component styles.
+- Extract components when they clarify ownership; avoid arbitrary file-length limits or components for every small element.
 - Reuse existing code where appropriate. Add dependencies or abstractions only when the current change has a concrete need for them.
 - Keep changes focused; avoid unrelated refactoring, duplicate logic, and configuration for hypothetical use cases.
 - Name project-owned boolean variables, parameters, and properties with an `is` prefix and a descriptive condition, such as `isAirborne` or `isStale`. Preserve names required by external APIs and libraries.
@@ -37,7 +41,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Trace important behavior from input to output, including boundary conditions, external input validation, and failure handling.
 - Check that the code is easy to follow, and suggest simpler expressions or clearer names where they help.
 - Check that each new dependency, abstraction, configuration option, and file serves a current requirement. Flag concrete duplication or unnecessary complexity, and suggest the smallest sufficient alternative.
-- Check that tests verify observable behavior and meaningful failure cases. Flag unjustified changes that weaken tests, linting, or CI.
+- Check that tests verify observable behavior and meaningful failure cases. During refactors, preserve behavior and explain test changes in terms of changed requirements or public interfaces. Flag unjustified changes that weaken tests, linting, or CI.
 - Report actionable findings with file locations, impact, and supporting evidence or a reproducible scenario. Distinguish blocking issues from optional suggestions; avoid speculative requirements and stylistic preferences already handled by tooling.
 - Record the review outcome and any remaining limitations. For UI changes, verify that responsive browser checks cover the affected behavior. Passing tests or an agent review alone does not establish correctness.
 

@@ -1,0 +1,83 @@
+@if (snapshot()) {
+  <app-ranking-toolbar [searchQuery]="searchQuery()" [matchingCount]="matchingRows().length"
+    [totalCount]="rows().length" [snapshotAge]="snapshotAge()" (searchChanged)="updateSearch($event)" />
+}
+
+<section class="leaderboard" aria-label="Airline leaderboard">
+  <div class="board-header">
+    @if (snapshot() && (isRankingStale() || error())) {
+      <p class="update-warning" role="status">Updates delayed. Showing the last successful snapshot.</p>
+    }
+    @if (snapshot()) {
+      <div class="column-headings" aria-hidden="true">
+        <span>Change</span><span></span><span>Operator</span><span>Airborne</span><span></span>
+      </div>
+    }
+  </div>
+  @if (snapshot()) {
+    <ol>
+      @for (rankedOperator of visibleRows(); track rankedOperator.airline.id) {
+        @let airline = rankedOperator.airline;
+        @let isExpanded = expandedAirlineId() === airline.id;
+        <li #row [attr.data-id]="airline.id" [class.is-expanded]="isExpanded">
+          <button class="airline-toggle" type="button" (click)="toggleAirline(airline, $event)"
+            [attr.aria-expanded]="isExpanded"
+            [attr.aria-controls]="'types-' + airline.id">
+            @let change = airline.rankChange;
+            <span class="rank-indicator" [title]="change === undefined ? 'No previous snapshot to compare' : 'Rank change since the previous snapshot'">
+              @if (change === 'new') {
+                <span class="rank-new" aria-hidden="true">NEW</span>
+                <span class="visually-hidden">Not observed in the previous snapshot.</span>
+              } @else if (change === undefined) {
+                <span class="visually-hidden">No previous snapshot to compare.</span>
+              } @else if (change === 0) {
+                <span class="rank-unchanged" aria-hidden="true">—</span>
+                <span class="visually-hidden">Rank unchanged since the previous snapshot.</span>
+              } @else if (change > 0) {
+                <span class="rank-up" aria-hidden="true">↑ {{ change }}</span>
+                <span class="visually-hidden">Up {{ change }} {{ change === 1 ? 'place' : 'places' }} since the previous snapshot.</span>
+              } @else {
+                <span class="rank-down" aria-hidden="true">↓ {{ -change }}</span>
+                <span class="visually-hidden">Down {{ -change }} {{ change === -1 ? 'place' : 'places' }} since the previous snapshot.</span>
+              }
+            </span>
+            <span class="rank"><span class="visually-hidden">Rank </span>{{ rankedOperator.rank | number: '2.0-0' }}</span>
+            <span class="airline-name">{{ airline.name }}
+              @if (airline.name === airline.id) {
+                <span class="name-unavailable">Name unavailable</span>
+              }
+            </span>
+            <span class="count" [attr.aria-label]="airline.count + ' aircraft airborne'">
+              <span aria-hidden="true">{{ airline.count | number }}</span>
+            </span>
+            <span class="chevron" aria-hidden="true"></span>
+          </button>
+          @if (isExpanded) {
+            <div class="aircraft-details" [id]="'types-' + airline.id" animate.enter="details-enter" animate.leave="details-leave">
+              <div class="details-content">
+                <app-operator-details [operator]="airline" [isShowingAllTypes]="isShowingAllTypes()"
+                  (typesToggled)="isShowingAllTypes.set(!isShowingAllTypes())" />
+              </div>
+            </div>
+          }
+        </li>
+      }
+    </ol>
+    @if (nextBatchSize() > 0) {
+      <div class="operators-more">
+        <button type="button" (click)="visibleLimit.set(visibleLimit() + rowBatchSize)">
+          Show {{ nextBatchSize() }} more <span class="page-progress">· {{ visibleRows().length }} of {{ matchingRows().length }} shown</span>
+        </button>
+      </div>
+    }
+    @if (visibleRows().length === 0) {
+      <p class="empty-state">No operators match your search.</p>
+    }
+  } @else if (error()) {
+    <p class="empty-state" role="alert">{{ error() }}</p>
+  } @else {
+    <p class="empty-state" role="status">Loading the ranking…</p>
+  }
+</section>
+
+<p class="visually-hidden" role="status">{{ announcement() }}</p>

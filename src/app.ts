@@ -1,29 +1,23 @@
-import type { ElementRef, OnDestroy, OnInit, QueryList } from '@angular/core';
-import { ChangeDetectionStrategy, ChangeDetectorRef, Component, ViewChildren, computed, inject, signal } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
-import type { Airline, Snapshot } from '../shared/ranking';
-import { rankAirlines, isSnapshotStale } from '../shared/ranking';
+import type { OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
+import type { Snapshot } from '../shared/ranking';
+import { isSnapshotStale } from '../shared/ranking';
 import { formatSnapshotAge } from './snapshot-age';
-import { AircraftMapComponent } from './aircraft-map';
-import { countryFlag } from './country-flag';
-import { filterOperators } from './operator-search';
+import { RankingBoardComponent } from './ranking-board';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, AircraftMapComponent],
+  imports: [DatePipe, RankingBoardComponent],
   templateUrl: './app.html',
+  styleUrl: './app.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppComponent implements OnInit, OnDestroy {
-  @ViewChildren('row') private rowElements!: QueryList<ElementRef<HTMLElement>>;
-  private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly abort = new AbortController();
   private pollTimer?: ReturnType<typeof setInterval>;
-  private animations: Animation[] = [];
-  private cancelDrawerScroll?: () => void;
 
-  readonly countryFlag = countryFlag;
   readonly snapshot = signal<Snapshot | null>(null);
   private readonly now = signal(Date.now());
   readonly snapshotAge = computed(() => {
@@ -35,72 +29,6 @@ export class AppComponent implements OnInit, OnDestroy {
     return snapshot ? isSnapshotStale(snapshot, this.now()) : false;
   });
   readonly error = signal<string | null>(null);
-  readonly rows = signal<Airline[]>([]);
-  readonly searchQuery = signal('');
-  readonly rowBatchSize = 100;
-  readonly visibleLimit = signal(this.rowBatchSize);
-  readonly matchingRows = computed(() => filterOperators(this.rows(), this.searchQuery()));
-  readonly visibleRows = computed(() => this.matchingRows().slice(0, this.visibleLimit()));
-  readonly nextBatchSize = computed(() => Math.min(this.rowBatchSize, this.matchingRows().length - this.visibleRows().length));
-  readonly announcement = signal('');
-  readonly expandedAirlineId = signal<string | null>(null);
-  readonly isShowingAllTypes = signal(false);
-  readonly collapsedTypeLimit = 5;
-
-  updateSearch(query: string): void {
-    this.searchQuery.set(query);
-    this.visibleLimit.set(this.rowBatchSize);
-  }
-
-  toggleAirline(airline: Airline, event: MouseEvent): void {
-    this.cancelDrawerScroll?.();
-    const button = event.currentTarget as HTMLElement;
-    const previousTop = button.getBoundingClientRect().top;
-    const isExpanded = this.expandedAirlineId() === airline.id;
-    if (!isExpanded) { this.isShowingAllTypes.set(false); }
-    this.expandedAirlineId.set(isExpanded ? null : airline.id);
-    this.changeDetector.detectChanges();
-    this.preserveDrawerRowPosition(button, previousTop);
-  }
-
-  private preserveDrawerRowPosition(button: HTMLElement, previousTop: number): void {
-    const scrollEvents = new AbortController();
-    let frame: number;
-    const stop = (): void => {
-      cancelAnimationFrame(frame);
-      scrollEvents.abort();
-      this.cancelDrawerScroll = undefined;
-    };
-    this.cancelDrawerScroll = stop;
-    for (const eventName of ['wheel', 'touchmove', 'keydown', 'pointerdown']) {
-      window.addEventListener(eventName, stop, { passive: true, signal: scrollEvents.signal });
-    }
-
-    frame = requestAnimationFrame(() => {
-      // Angular applies the drawer animation classes after rendering.
-      const drawerAnimations: Animation[] = [];
-      for (const { nativeElement: row } of this.rowElements.toArray()) {
-        for (const drawer of Array.from(row.querySelectorAll('.aircraft-details'))) {
-          drawerAnimations.push(...drawer.getAnimations());
-        }
-      }
-      let isAnimating = drawerAnimations.length > 0;
-      void Promise.allSettled(drawerAnimations.map(animation => animation.finished)).then(() => {
-        isAnimating = false;
-      });
-
-      const preservePosition = (): void => {
-        const distance = button.getBoundingClientRect().top - previousTop;
-        if (distance !== 0) { window.scrollBy({ top: distance, behavior: 'instant' }); }
-        if (isAnimating) {
-          frame = requestAnimationFrame(preservePosition);
-        } else {
-          stop();
-        }
-      };
-      preservePosition();
-    });
-  }
 
   ngOnInit(): void {
     void this.loadRanking();
@@ -117,11 +45,7 @@ export class AppComponent implements OnInit, OnDestroy {
       const snapshot = await response.json() as Snapshot;
       if (this.abort.signal.aborted) { return; }
       this.error.set(null);
-      if (snapshot.updatedAt !== this.snapshot()?.updatedAt) {
-        this.applySnapshot(snapshot);
-      } else {
-        this.setSnapshot(snapshot);
-      }
+      this.snapshot.set(snapshot);
     } catch {
       if (!this.abort.signal.aborted) {
         this.error.set('The ranking is temporarily unavailable. Retrying automatically.');
@@ -129,60 +53,8 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  private setSnapshot(snapshot: Snapshot): void {
-    this.snapshot.set(snapshot);
-    this.rows.set(rankAirlines(snapshot.airlines));
-  }
-
-  private applySnapshot(snapshot: Snapshot): void {
-    if (!this.snapshot()) {
-      this.setSnapshot(snapshot);
-      return;
-    }
-    const expandedId = this.expandedAirlineId();
-    if (!snapshot.airlines.some(airline => airline.id === expandedId)) { this.expandedAirlineId.set(null); }
-    const previousCounts = new Map(this.rows().map(airline => [airline.id, airline.count]));
-    const positions = new Map(this.rowElements.map(({ nativeElement: row }) => [row.dataset['id'], row.getBoundingClientRect().top]));
-    this.animations.forEach(animation => { animation.cancel(); });
-    this.animations = [];
-    this.setSnapshot(snapshot);
-    const updatedAt = new Date(snapshot.updatedAt).toLocaleString('en-GB', { timeZone: 'UTC' });
-    this.announcement.set(`Ranking updated at ${updatedAt} UTC.`);
-    this.changeDetector.detectChanges();
-
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      return;
-    }
-
-    this.animateRows(snapshot, previousCounts, positions);
-  }
-
-  private animateRows(snapshot: Snapshot, previousCounts: Map<string, number>, previousPositions: Map<string | undefined, number>): void {
-    this.rowElements.forEach(({ nativeElement: row }) => {
-      const currentTop = row.getBoundingClientRect().top;
-      const previousTop = previousPositions.get(row.dataset['id']) ?? currentTop;
-      const distance = previousTop - currentTop;
-      if (distance !== 0) {
-        this.animations.push(row.animate([
-          { transform: `translateY(${distance}px)` },
-          { transform: 'translateY(0)' },
-        ], { duration: 650, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }));
-      }
-      const airline = snapshot.airlines.find(item => item.id === row.dataset['id']);
-      const count = row.querySelector('.count');
-      if (airline && count && previousCounts.get(airline.id) !== airline.count) {
-        this.animations.push(count.animate([
-          { color: '#171c24', backgroundColor: '#e9edf1' },
-          { color: '#171c24', backgroundColor: 'transparent' },
-        ], { duration: 800, easing: 'ease-out' }));
-      }
-    });
-  }
-
   ngOnDestroy(): void {
-    this.cancelDrawerScroll?.();
     this.abort.abort();
     clearInterval(this.pollTimer);
-    this.animations.forEach(animation => { animation.cancel(); });
   }
 }

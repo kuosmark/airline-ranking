@@ -1,123 +1,36 @@
-:root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #171c24; background: #f7f8fa; font-synthesis: none; -webkit-font-smoothing: antialiased; }
-* { box-sizing: border-box; }
-html { scroll-padding-top: 180px; }
-body { margin: 0; }
-main { max-width: 760px; margin: 0 auto; padding: 48px 24px 32px; }
-.page-header { margin-bottom: 22px; }
-h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055em; font-weight: 600; margin: 0 0 10px; }
-.subtitle { color: #626c76; margin: 0; font-size: 15px; line-height: 1.5; }
-.method-details { margin-top: 16px; color: #626c76; font-size: 13px; line-height: 1.7; }
-.method-details summary { width: fit-content; padding: 8px 0; font-weight: 500; cursor: pointer; }
-.method-details summary:focus-visible, .types-toggle:focus-visible { outline: 2px solid #617a70; outline-offset: 3px; }
-.method-details p { margin: 8px 0 0; max-width: 620px; }
-.author-credit { margin-top: 24px; color: #626c76; font-size: 12px; line-height: 1.5; }
-.refresh-interval { display: inline-block; margin-left: 16px; font-size: 12px; font-weight: 400; white-space: nowrap; }
-.leaderboard { overflow-anchor: none; background: #fff; border: 1px solid #e5e8eb; border-radius: 16px; box-shadow: 0 4px 22px #18263503; }
-.board-header { display: flow-root; position: sticky; top: 0; z-index: 1; background: #fff; border-radius: 16px 16px 0 0; border-bottom: 1px solid #e5e8eb; }
-.snapshot-status { color: #626c76; font-size: 12px; line-height: 1.5; white-space: nowrap; }
-.ranking-status { display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; gap: 6px; color: #626c76; }
-.search-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
-.search-toolbar input { width: 285px; min-width: 0; padding: 11px 14px; border: 1px solid #e5e8eb; border-radius: 10px; background: #fff; color: inherit; font: inherit; font-size: 14px; }
-.search-toolbar input:focus-visible { outline: 2px solid #617a70; outline-offset: 2px; }
-.search-results { color: #515e58; font-size: 12px; white-space: nowrap; }
-.column-headings, .airline-toggle { display: grid; grid-template-columns: 54px 42px minmax(0, 1fr) 80px 12px; column-gap: 12px; align-items: center; }
-.column-headings { padding: 14px 28px; color: #626c76; font-size: 11px; letter-spacing: .06em; font-weight: 600; text-transform: uppercase; }
-.column-headings > :nth-child(4) { text-align: right; }
-.column-headings > :first-child { text-align: center; }
-ol { list-style: none; padding: 0; margin: 0; }
-li { position: relative; border-bottom: 1px solid #dce1e5; background: white; }
-li:last-child { border-bottom: 0; border-radius: 0 0 16px 16px; }
-.airline-toggle { width: 100%; align-items: start; min-height: 58px; padding: 18px 28px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-li.is-expanded { background: #edf4ef; }
-@media (hover: hover) {
-  li:not(.is-expanded):hover { background: #f3f4f6; }
+:root {
+  color-scheme: light;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #171c24;
+  background: #f7f8fa;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
 }
-.airline-toggle:focus-visible { outline: 2px solid #617a70; outline-offset: -3px; }
-.rank { padding-right: 4px; text-align: right; color: #515e58; font-size: 14px; font-weight: 500; line-height: 22px; font-variant-numeric: tabular-nums; }
-.rank-indicator { display: flex; align-items: center; justify-content: center; height: 22px; font-size: 12px; font-weight: 400; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rank-up { color: #176957; }
-.rank-down { color: #b44242; }
-.rank-new { font-size: 11px; line-height: 1; font-weight: 400; color: #626c76; }
-.rank-unchanged { color: #626c76; font-size: 15px; }
-.airline-name { font-size: 15px; font-weight: 500; letter-spacing: -.015em; line-height: 22px; overflow-wrap: anywhere; }
-.name-unavailable { display: block; line-height: 22px; color: #626c76; font-size: 11px; font-weight: 400; letter-spacing: normal; }
-.operator-details { display: grid; gap: 8px 20px; color: #626c76; font-size: 12px; line-height: 1.5; padding-bottom: 16px; }
-.operator-details > div { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 5px; }
-.operator-details dt, .operator-details dd { margin: 0; overflow-wrap: anywhere; }
-.operator-details dt { color: #626c76; font-weight: 400; }
-.operator-details dd { min-width: 0; color: #171c24; font-weight: 500; }
-.count { justify-self: end; font-size: 21px; line-height: 22px; font-weight: 550; letter-spacing: -.025em; font-variant-numeric: tabular-nums; padding: 0 4px; margin-right: -4px; border-radius: 5px; }
-.chevron { justify-self: center; display: grid; place-items: center; width: 12px; height: 22px; }
-.chevron::before { content: ""; width: 7px; height: 7px; border-right: 2px solid #626c76; border-bottom: 2px solid #626c76; transform: translateY(-2.5px) rotate(45deg); transition: transform 180ms ease; }
-[aria-expanded="true"] .chevron::before { transform: translateY(2.5px) rotate(225deg); }
-.aircraft-details { display: grid; grid-template-rows: 1fr; }
-.details-content { min-height: 0; overflow: hidden; }
-.details-panel { container-type: inline-size; padding: 4px clamp(16px, 7%, 52px) 24px clamp(24px, 21%, 148px); }
-@container (min-width: 440px) {
-  .operator-details { grid-template-columns: minmax(0, max-content) auto auto; justify-content: start; }
-  .operator-details > div { display: flex; gap: 5px; }
-}
-.details-panel h2 { margin: 0 0 8px; font-size: 13px; font-weight: 700; }
-.aircraft-details dl { margin: 0; }
-.aircraft-type { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 24px; padding: 4px 0; color: #515e58; font-size: 13px; line-height: 1.5; }
-.aircraft-type dt { overflow-wrap: anywhere; }
-.aircraft-type dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; color: #34473d; }
-.types-toggle { display: block; margin-top: 6px; min-height: 36px; padding: 6px 0; border: 0; background: transparent; color: #34473d; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-.types-toggle:hover { text-decoration: underline; text-underline-offset: 3px; }
-.types-footer { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px 16px; margin-top: 12px; border-top: 1px solid #d6e1d8; padding-top: 8px; color: #626c76; font-size: 12px; }
-.types-footer .types-toggle { margin-top: 0; font-size: 12px; font-weight: 500; }
-.no-aircraft { margin: 10px 0 0; color: #626c76; font-size: 13px; line-height: 1.5; }
-.update-warning { font-size: 12px; line-height: 1.5; color: #755319; background: #fcf7ed; border-radius: 6px; margin: 16px 28px 0; padding: 9px 12px; }
-.operators-more { padding: 12px; border-top: 1px solid #e5e8eb; text-align: center; }
-.operators-more button { min-height: 44px; padding: 10px 16px; border: 0; border-radius: 8px; background: transparent; color: #34473d; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
-.operators-more button:hover { background: #f3f5f4; }
-.operators-more button:focus-visible { outline: 2px solid #617a70; outline-offset: 2px; }
-.page-progress { color: #626c76; font-weight: 400; }
-.empty-state { padding: 50px 28px; font-size: 14px; color: #626c76; text-align: center; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.details-enter { animation: reveal-details 200ms ease-out; }
-.details-leave { animation: reveal-details 200ms ease-in reverse; }
-@keyframes reveal-details { from { grid-template-rows: 0fr; opacity: 0; } to { grid-template-rows: 1fr; opacity: 1; } }
 
-@media (min-width: 481px) and (max-width: 640px) {
-  .ranking-status { flex-direction: column; align-items: flex-end; gap: 4px; }
-  .status-separator { display: none; }
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-padding-top: 180px;
+}
+
+body {
+  margin: 0;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 @media (max-width: 480px) {
-  html { scroll-padding-top: 230px; }
-  main { padding: 28px 12px; }
-  .page-header { margin-bottom: 18px; padding: 0 4px; }
-  .search-toolbar { align-items: stretch; flex-direction: column; gap: 8px; }
-  .search-toolbar input { width: 100%; font-size: 16px; }
-  .ranking-status { justify-content: flex-start; flex-wrap: wrap; }
-  .column-headings { padding: 12px; font-size: 9px; letter-spacing: .02em; }
-  .airline-toggle { padding: 18px 12px; }
-  .column-headings, .airline-toggle { grid-template-columns: 40px 38px minmax(0, 1fr) 56px 18px; column-gap: 6px; }
-  .rank { padding-right: 12px; }
-  .airline-name { font-size: 14px; }
-  .count { font-size: 19px; }
-  .details-panel { padding-bottom: 22px; }
-  .update-warning { margin-left: 14px; margin-right: 14px; }
+  html {
+    scroll-padding-top: 230px;
+  }
 }
-@media (prefers-reduced-motion: reduce) {
-  .chevron::before { transition: none; }
-  .details-enter, .details-leave { animation: none; }
-}
-
-.country-flag { margin-right: 5px; }
-
-.aircraft-map { margin-top: 22px; }
-.map-surface { background: #fff; border: 1px solid #d6e1d8; border-radius: 8px; overflow: hidden; }
-.map-surface svg { display: block; width: 100%; height: auto; }
-.map-surface svg.is-pointer-near-aircraft { cursor: pointer; }
-.aircraft-dot { fill: #27745c; stroke: #fff; stroke-width: 1; pointer-events: none; }
-.aircraft-dot:focus-visible { outline: none; }
-.aircraft-dot.is-hovered, .aircraft-dot:focus-visible, .aircraft-dot.is-selected { fill: #113f30; stroke: #113f30; stroke-width: 2; }
-.map-selection { min-height: 57px; margin: 0; padding: 10px 12px; border-top: 1px solid #e5e8eb; color: #34473d; font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
-.map-caption, .map-coverage { color: #626c76; font-size: 12px; line-height: 1.5; margin: 8px 0 0; }
-.map-coverage { margin: 0 0 8px; }
-
-.map-altitude { white-space: nowrap; }
-
-.map-selection.is-empty { color: #626c76; }

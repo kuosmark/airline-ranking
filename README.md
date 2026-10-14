@@ -79,6 +79,8 @@ Tests use Node's built-in test runner and synthetic data. They do not require an
 
 ## Scope
 
+The frontend separates polling and page layout (`app`) from leaderboard interactions (`ranking-board`), search/status (`ranking-toolbar`), drawer content (`operator-details`) and aircraft selection (`aircraft-map`). Each component has separate TypeScript, HTML and scoped CSS files. Global styles contain document defaults and the shared screen-reader utility.
+
 The local backend uses Node's built-in HTTP server and fetch API, holding the latest ranking in memory and persisting operator details and lookup cost controls in an untracked JSON cache. In AWS, Lambda persists these in S3. CDK defines the infrastructure in `infra/`; an AWS-native pipeline deploys application changes from `main`.
 
 Aircraft are deduplicated by ICAO24, keeping the newest observation (ground wins equal-time conflicts). We count only explicitly airborne aircraft observed within five minutes of the snapshot. Callsigns must contain three letters followed by one to four letters or digits. Callsigns matching the aircraft registration after removing spaces and hyphens are excluded. Malformed, incomplete, or outdated global snapshots are rejected.
