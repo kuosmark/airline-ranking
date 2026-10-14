@@ -4,8 +4,9 @@ import { mkdtempSync, readFileSync, writeFileSync, rmSync, mkdirSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
-import { createOperatorDirectory, operatorDetails, NAME_REFRESH_MS, MISSING_NAME_REFRESH_MS,
+import { createOperatorDirectory, NAME_REFRESH_MS, MISSING_NAME_REFRESH_MS,
   LOOKUP_COOLDOWN_MS, LOOKUP_WINDOW_MS, MAX_LOOKUP_ATTEMPTS, MAX_LOOKUPS_PER_REFRESH, LOOKUP_SPACING_MS } from '../backend/operator-directory.ts';
+import { operatorDetails } from '../backend/adsbdb.ts';
 import { createRankingService } from '../backend/server.ts';
 
 const start = Date.parse('2026-10-04T12:00:00Z');

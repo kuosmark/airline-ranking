@@ -1,4 +1,4 @@
-import { isValidCoordinates, rankAirlines, type AircraftPosition, type Snapshot } from '../shared/ranking.ts';
+import { isValidCoordinates, rankAirlines, type AircraftPosition, type Airline, type Snapshot } from '../shared/ranking.ts';
 import { aircraftTypeName } from './aircraft-types.ts';
 
 const OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
@@ -19,6 +19,7 @@ function timestamp(value: unknown): number {
 }
 
 interface AircraftObservation {
+  id: string;
   seen: number;
   callsign: string;
   isAirborne: boolean;
@@ -27,6 +28,85 @@ interface AircraftObservation {
   latitude: unknown;
   longitude: unknown;
   altitude: unknown;
+}
+
+function parseObservation(record: unknown): AircraftObservation {
+  if (!isRecord(record) || typeof record['icao24'] !== 'string' || !/^[\da-f]{6}$/i.test(record['icao24'])) {
+    throw new Error('Invalid SkyLink aircraft identifier');
+  }
+  return {
+    id: record['icao24'].toLowerCase(),
+    seen: timestamp(record['last_seen']),
+    callsign: typeof record['callsign'] === 'string' ? record['callsign'].trim().toUpperCase() : '',
+    isAirborne: record['is_on_ground'] === false,
+    registration: typeof record['registration'] === 'string'
+      ? record['registration'].replace(/[-\s]/g, '').toUpperCase()
+      : '',
+    aircraftType: record['aircraft_type'],
+    latitude: record['latitude'],
+    longitude: record['longitude'],
+    altitude: record['altitude'],
+  };
+}
+
+function deduplicateObservations(records: unknown[]): AircraftObservation[] {
+  const observations = new Map<string, AircraftObservation>();
+  for (const record of records) {
+    const observation = parseObservation(record);
+    const previous = observations.get(observation.id);
+    if (!previous || observation.seen > previous.seen ||
+        (observation.seen === previous.seen && !observation.isAirborne)) {
+      observations.set(observation.id, observation);
+    }
+  }
+  return [...observations.values()];
+}
+
+function isQualifyingObservation(observation: AircraftObservation, snapshotTime: number): boolean {
+  if (!observation.isAirborne || observation.seen > snapshotTime ||
+      snapshotTime - observation.seen > OBSERVATION_MAX_AGE_MS) { return false; }
+  return /^[A-Z]{3}[A-Z\d]{1,4}$/.test(observation.callsign) && observation.callsign !== observation.registration;
+}
+
+function aircraftPosition(observation: AircraftObservation, name: string): AircraftPosition | null {
+  const { id, callsign, latitude, longitude, altitude } = observation;
+  if (!isValidCoordinates(latitude, longitude)) { return null; }
+  const position: AircraftPosition = {
+    id, callsign, aircraftType: name, latitude: latitude as number, longitude: longitude as number,
+  };
+  if (typeof altitude === 'number' && Number.isFinite(altitude)) { position.altitudeFt = altitude; }
+  return position;
+}
+
+function groupOperators(observations: AircraftObservation[], snapshotTime: number): Airline[] {
+  const counts = new Map<string, Map<string, number>>();
+  const positions = new Map<string, AircraftPosition[]>();
+  for (const observation of observations) {
+    if (!isQualifyingObservation(observation, snapshotTime)) { continue; }
+    const prefix = observation.callsign.slice(0, 3);
+    const types = counts.get(prefix) ?? new Map<string, number>();
+    const name = aircraftTypeName(observation.aircraftType);
+    const currentCount = types.get(name) ?? 0;
+    types.set(name, currentCount + 1);
+    counts.set(prefix, types);
+    const position = aircraftPosition(observation, name);
+    if (position) {
+      const operatorPositions = positions.get(prefix) ?? [];
+      operatorPositions.push(position);
+      positions.set(prefix, operatorPositions);
+    }
+  }
+  return rankAirlines(Array.from(counts, ([prefix, types]) => {
+    const aircraftTypes = Array.from(types, ([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'en'));
+    return {
+      id: prefix,
+      name: prefix,
+      count: aircraftTypes.reduce((total, type) => total + type.count, 0),
+      aircraftTypes,
+      positions: (positions.get(prefix) ?? []).sort((a, b) => a.id.localeCompare(b.id, 'en')),
+    };
+  }));
 }
 
 export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
@@ -38,59 +118,10 @@ export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
   if (now - snapshotTime > OBSERVATION_MAX_AGE_MS || snapshotTime - now > 60_000) {
     throw new Error('SkyLink snapshot is not current');
   }
-
-  const observations = new Map<string, AircraftObservation>();
-  for (const record of payload['aircraft'] as unknown[]) {
-    if (!isRecord(record) || typeof record['icao24'] !== 'string' || !/^[\da-f]{6}$/i.test(record['icao24'])) {
-      throw new Error('Invalid SkyLink aircraft identifier');
-    }
-    const seen = timestamp(record['last_seen']);
-    const id = record['icao24'].toLowerCase();
-    const callsign = typeof record['callsign'] === 'string' ? record['callsign'].trim().toUpperCase() : '';
-    const isAirborne = record['is_on_ground'] === false;
-    const registration = typeof record['registration'] === 'string'
-      ? record['registration'].replace(/[-\s]/g, '').toUpperCase()
-      : '';
-    const previous = observations.get(id);
-    if (!previous || seen > previous.seen || (seen === previous.seen && !isAirborne)) {
-      observations.set(id, {
-        seen, callsign, isAirborne, registration,
-        aircraftType: record['aircraft_type'],
-        latitude: record['latitude'],
-        longitude: record['longitude'],
-        altitude: record['altitude'],
-      });
-    }
-  }
-
-  const counts = new Map<string, Map<string, number>>();
-  const positions = new Map<string, AircraftPosition[]>();
-  for (const [id, { seen, callsign, isAirborne, aircraftType, registration, latitude, longitude, altitude }] of observations) {
-    if (!isAirborne || seen > snapshotTime || snapshotTime - seen > OBSERVATION_MAX_AGE_MS) { continue; }
-    const isOperatorCallsignFormat = /^[A-Z]{3}[A-Z\d]{1,4}$/.test(callsign);
-    if (!isOperatorCallsignFormat || callsign === registration) { continue; }
-    const prefix = callsign.slice(0, 3);
-    const types = counts.get(prefix) ?? new Map<string, number>();
-    const name = aircraftTypeName(aircraftType);
-    const currentCount = types.get(name) ?? 0;
-    types.set(name, currentCount + 1);
-    counts.set(prefix, types);
-    if (isValidCoordinates(latitude, longitude)) {
-      const operatorPositions = positions.get(prefix) ?? [];
-      const position: AircraftPosition = { id, callsign, aircraftType: name, latitude: latitude as number, longitude: longitude as number };
-      if (typeof altitude === 'number' && Number.isFinite(altitude)) { position.altitudeFt = altitude; }
-      operatorPositions.push(position);
-      positions.set(prefix, operatorPositions);
-    }
-  }
+  const observations = deduplicateObservations(payload['aircraft'] as unknown[]);
   return {
     updatedAt: new Date(snapshotTime).toISOString(),
-    airlines: rankAirlines(Array.from(counts, ([prefix, types]) => {
-      const aircraftTypes = Array.from(types, ([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'en'));
-      return { id: prefix, name: prefix, count: aircraftTypes.reduce((total, type) => total + type.count, 0), aircraftTypes,
-        positions: (positions.get(prefix) ?? []).sort((a, b) => a.id.localeCompare(b.id, 'en')) };
-    })),
+    airlines: groupOperators(observations, snapshotTime),
     isStale: false,
   };
 }
