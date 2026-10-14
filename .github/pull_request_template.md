@@ -10,6 +10,8 @@ List commands and results, plus relevant manual checks or screenshots. For UI ch
 
 Summarize the review approach, findings, resolutions, and any remaining limitations.
 
+For refactors, explain how existing behavior was verified and why any tests needed to change. Review component responsibilities and template/style ownership.
+
 ## Before merging
 
 - [ ] Changes match the agreed scope and introduce only necessary complexity.
