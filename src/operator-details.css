@@ -2,11 +2,6 @@
   display: block;
 }
 
-.types-toggle:focus-visible {
-  outline: 2px solid #617a70;
-  outline-offset: 3px;
-}
-
 .operator-details {
   display: grid;
   gap: 8px 20px;
@@ -38,9 +33,8 @@
   font-weight: 500;
 }
 
-.details-panel {
-  container-type: inline-size;
-  padding: 4px clamp(16px, 7%, 52px) 24px var(--drawer-inset, 24px);
+dl {
+  margin: 0;
 }
 
 @container (min-width: 440px) {
@@ -52,89 +46,6 @@
   .operator-details > div {
     display: flex;
     gap: 5px;
-  }
-}
-
-h2 {
-  margin: 0 0 8px;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-dl {
-  margin: 0;
-}
-
-.aircraft-type {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 24px;
-  padding: 4px 0;
-  color: #515e58;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.aircraft-type dt {
-  overflow-wrap: anywhere;
-}
-
-.aircraft-type dd {
-  margin: 0;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: #34473d;
-}
-
-.types-toggle {
-  display: block;
-  margin-top: 6px;
-  min-height: 36px;
-  padding: 6px 0;
-  border: 0;
-  background: transparent;
-  color: #34473d;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.types-toggle:hover {
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.types-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  margin-top: 12px;
-  border-top: 1px solid #d6e1d8;
-  padding-top: 8px;
-  color: #626c76;
-  font-size: 12px;
-}
-
-.types-footer .types-toggle {
-  margin-top: 0;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.no-aircraft {
-  margin: 10px 0 0;
-  color: #626c76;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-@media (max-width: 480px) {
-  .details-panel {
-    padding-bottom: 22px;
   }
 }
 

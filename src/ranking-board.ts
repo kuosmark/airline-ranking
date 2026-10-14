@@ -4,13 +4,14 @@ import { DecimalPipe } from '@angular/common';
 import type { Airline, Snapshot } from '../shared/ranking';
 import { rankAirlines } from '../shared/ranking';
 import { filterOperators } from './operator-search';
+import { AircraftGroupDetailsComponent } from './aircraft-group-details';
 import { OperatorDetailsComponent } from './operator-details';
 import { RankingToolbarComponent } from './ranking-toolbar';
 
 @Component({
   selector: 'app-ranking-board',
   standalone: true,
-  imports: [DecimalPipe, OperatorDetailsComponent, RankingToolbarComponent],
+  imports: [DecimalPipe, OperatorDetailsComponent, AircraftGroupDetailsComponent, RankingToolbarComponent],
   templateUrl: './ranking-board.html',
   styleUrl: './ranking-board.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -35,7 +36,7 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
   readonly visibleRows = computed(() => this.matchingRows().slice(0, this.visibleLimit()));
   readonly nextBatchSize = computed(() => Math.min(this.rowBatchSize, this.matchingRows().length - this.visibleRows().length));
   readonly announcement = signal('');
-  readonly expandedAirlineId = signal<string | null>(null);
+  readonly expandedGroupId = signal<string | null>(null);
   readonly isShowingAllTypes = signal(false);
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -56,13 +57,13 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
     this.visibleLimit.set(this.rowBatchSize);
   }
 
-  toggleAirline(airline: Airline, event: MouseEvent): void {
+  toggleGroup(id: string, event: MouseEvent): void {
     this.cancelDrawerScroll?.();
     const button = event.currentTarget as HTMLElement;
     const previousTop = button.getBoundingClientRect().top;
-    const isExpanded = this.expandedAirlineId() === airline.id;
+    const isExpanded = this.expandedGroupId() === id;
     if (!isExpanded) { this.isShowingAllTypes.set(false); }
-    this.expandedAirlineId.set(isExpanded ? null : airline.id);
+    this.expandedGroupId.set(isExpanded ? null : id);
     this.changeDetector.detectChanges();
     this.preserveDrawerRowPosition(button, previousTop);
   }
@@ -107,9 +108,10 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
   }
 
   private applySnapshot(snapshot: Snapshot): void {
-    const expandedId = this.expandedAirlineId();
-    if (!snapshot.airlines.some(airline => airline.id === expandedId)) {
-      this.expandedAirlineId.set(null);
+    const expandedId = this.expandedGroupId();
+    const isUnassignedExpanded = expandedId === 'unassigned' && (snapshot.unassignedAircraft?.count ?? 0) > 0;
+    if (!isUnassignedExpanded && !snapshot.airlines.some(airline => airline.id === expandedId)) {
+      this.expandedGroupId.set(null);
     }
     const previousCounts = new Map(this.rows().map(airline => [airline.id, airline.count]));
     const previousPositions = new Map(this.rowElements.map(({ nativeElement: row }) =>

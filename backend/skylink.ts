@@ -1,4 +1,4 @@
-import { isValidCoordinates, rankAirlines, type AircraftPosition, type Airline, type Snapshot } from '../shared/ranking.ts';
+import { isValidCoordinates, rankAirlines, type AircraftPosition, type AircraftGroup, type Snapshot } from '../shared/ranking.ts';
 import { aircraftTypeName } from './aircraft-types.ts';
 
 const OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
@@ -63,9 +63,14 @@ function deduplicateObservations(records: unknown[]): AircraftObservation[] {
 }
 
 function isQualifyingObservation(observation: AircraftObservation, snapshotTime: number): boolean {
-  if (!observation.isAirborne || observation.seen > snapshotTime ||
-      snapshotTime - observation.seen > OBSERVATION_MAX_AGE_MS) { return false; }
-  return /^[A-Z]{3}[A-Z\d]{1,4}$/.test(observation.callsign) && observation.callsign !== observation.registration;
+  return observation.isAirborne && observation.seen <= snapshotTime &&
+    snapshotTime - observation.seen <= OBSERVATION_MAX_AGE_MS;
+}
+
+function operatorPrefix(observation: AircraftObservation): string | null {
+  const { callsign, registration } = observation;
+  if (!/^[A-Z]{3}[A-Z\d]{1,4}$/.test(callsign) || callsign === registration) { return null; }
+  return callsign.slice(0, 3);
 }
 
 function aircraftPosition(observation: AircraftObservation, name: string): AircraftPosition | null {
@@ -78,35 +83,50 @@ function aircraftPosition(observation: AircraftObservation, name: string): Aircr
   return position;
 }
 
-function groupOperators(observations: AircraftObservation[], snapshotTime: number): Airline[] {
-  const counts = new Map<string, Map<string, number>>();
-  const positions = new Map<string, AircraftPosition[]>();
+interface AircraftGroupBuilder {
+  types: Map<string, number>;
+  positions: AircraftPosition[];
+}
+
+function createGroup(): AircraftGroupBuilder {
+  return { types: new Map(), positions: [] };
+}
+
+function addAircraft(group: AircraftGroupBuilder, observation: AircraftObservation): void {
+  const name = aircraftTypeName(observation.aircraftType);
+  group.types.set(name, (group.types.get(name) ?? 0) + 1);
+  const position = aircraftPosition(observation, name);
+  if (position) { group.positions.push(position); }
+}
+
+function finishGroup(group: AircraftGroupBuilder): AircraftGroup {
+  const aircraftTypes = Array.from(group.types, ([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'en'));
+  return {
+    count: aircraftTypes.reduce((total, type) => total + type.count, 0),
+    aircraftTypes,
+    positions: group.positions.sort((a, b) => a.id.localeCompare(b.id, 'en')),
+  };
+}
+
+function groupAircraft(observations: AircraftObservation[], snapshotTime: number) {
+  const operators = new Map<string, AircraftGroupBuilder>();
+  const unassigned = createGroup();
+  let airborneCount = 0;
   for (const observation of observations) {
     if (!isQualifyingObservation(observation, snapshotTime)) { continue; }
-    const prefix = observation.callsign.slice(0, 3);
-    const types = counts.get(prefix) ?? new Map<string, number>();
-    const name = aircraftTypeName(observation.aircraftType);
-    const currentCount = types.get(name) ?? 0;
-    types.set(name, currentCount + 1);
-    counts.set(prefix, types);
-    const position = aircraftPosition(observation, name);
-    if (position) {
-      const operatorPositions = positions.get(prefix) ?? [];
-      operatorPositions.push(position);
-      positions.set(prefix, operatorPositions);
+    airborneCount += 1;
+    const prefix = operatorPrefix(observation);
+    if (prefix === null) {
+      addAircraft(unassigned, observation);
+      continue;
     }
+    const group = operators.get(prefix) ?? createGroup();
+    addAircraft(group, observation);
+    operators.set(prefix, group);
   }
-  return rankAirlines(Array.from(counts, ([prefix, types]) => {
-    const aircraftTypes = Array.from(types, ([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, 'en'));
-    return {
-      id: prefix,
-      name: prefix,
-      count: aircraftTypes.reduce((total, type) => total + type.count, 0),
-      aircraftTypes,
-      positions: (positions.get(prefix) ?? []).sort((a, b) => a.id.localeCompare(b.id, 'en')),
-    };
-  }));
+  const airlines = rankAirlines(Array.from(operators, ([id, group]) => ({ id, name: id, ...finishGroup(group) })));
+  return { airlines, airborneCount, unassignedAircraft: finishGroup(unassigned) };
 }
 
 export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
@@ -121,7 +141,7 @@ export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
   const observations = deduplicateObservations(payload['aircraft'] as unknown[]);
   return {
     updatedAt: new Date(snapshotTime).toISOString(),
-    airlines: groupOperators(observations, snapshotTime),
+    ...groupAircraft(observations, snapshotTime),
     isStale: false,
   };
 }

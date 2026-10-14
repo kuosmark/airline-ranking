@@ -1,5 +1,6 @@
 @let airline = operator();
-<div class="details-panel">
+<app-aircraft-group-details [aircraft]="airline" [groupId]="airline.id" [groupName]="airline.name"
+  [isShowingAllTypes]="isShowingAllTypes()" (typesToggled)="typesToggled.emit()">
   <dl class="operator-details" aria-label="Operator details">
     <div>
       <dt>Country</dt>
@@ -19,35 +20,4 @@
       <dd>{{ airline.icao || 'Unavailable' }}</dd>
     </div>
   </dl>
-  <h2>Airborne aircraft by type</h2>
-  @if (airline.count === 0) {
-    <p class="no-aircraft">No aircraft currently observed airborne.</p>
-  } @else {
-    @let visibleTypes = isShowingAllTypes() ? airline.aircraftTypes : airline.aircraftTypes.slice(0, collapsedTypeLimit);
-    <dl aria-label="Aircraft types" [id]="'type-list-' + airline.id">
-      @for (type of visibleTypes; track type.name) {
-        <div class="aircraft-type">
-          <dt>{{ type.name }}</dt>
-          <dd>{{ type.count | number }}</dd>
-        </div>
-      }
-    </dl>
-    <div class="types-footer">
-      <span>{{ visibleTypes.length }} of {{ airline.aircraftTypes.length }} types</span>
-      @if (airline.aircraftTypes.length > collapsedTypeLimit) {
-        <button class="types-toggle" type="button" (click)="typesToggled.emit()"
-          [attr.aria-expanded]="isShowingAllTypes()" [attr.aria-controls]="'type-list-' + airline.id">
-          @if (isShowingAllTypes()) {
-            Show fewer
-          } @else {
-            Show {{ airline.aircraftTypes.length - collapsedTypeLimit }} more
-          }
-          <span class="visually-hidden"> aircraft types for {{ airline.name }}</span>
-        </button>
-      }
-    </div>
-  }
-  @if (airline.positions; as positions) {
-    <app-aircraft-map [positions]="positions" [count]="airline.count" />
-  }
-</div>
+</app-aircraft-group-details>

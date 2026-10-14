@@ -82,12 +82,12 @@ li:last-child {
   -webkit-tap-highlight-color: transparent;
 }
 
-li.is-expanded {
+.is-expanded {
   background: #edf4ef;
 }
 
 @media (hover: hover) {
-  li:not(.is-expanded):hover {
+  li:not(.is-expanded):hover, .unassigned-row:not(.is-expanded):hover {
     background: #f3f4f6;
   }
 }
@@ -314,4 +314,13 @@ li.is-expanded {
   .details-enter, .details-leave {
     animation: none;
   }
+}
+
+.unassigned-row {
+  border-top: 1px solid #dce1e5;
+  border-radius: 0 0 16px 16px;
+}
+
+.unassigned-row .airline-name {
+  grid-column: 3;
 }

@@ -243,17 +243,20 @@ test('malformed snapshot request history blocks paid requests', async () => {
   }
 });
 
-test('persists map positions and restores them without another provider request', async () => {
+test('persists complete airborne coverage and restores it without another provider request', async () => {
   const fixture = setup();
   const position = { id: '000001', callsign: 'AAA123', aircraftType: 'Airbus A320', latitude: 60, longitude: 25, altitudeFt: 35000 };
   const withPositions = snapshot(start, [['AAA', 1]]);
   withPositions.airlines[0].positions = [position];
+  withPositions.airborneCount = 2;
+  withPositions.unassignedAircraft = { count: 1, aircraftTypes: [{ name: 'Airbus A320', count: 1 }], positions: [{ ...position, id: '000002', callsign: '' }] };
   fixture.options.fetchSnapshot = async () => withPositions;
   await refreshScheduledRanking(fixture.options);
   assert.deepEqual(fixture.saved().snapshot.airlines[0].positions, [position]);
   fixture.options.fetchSnapshot = async () => { throw new Error('Must not fetch twice'); };
   await refreshScheduledRanking(fixture.options);
-  assert.deepEqual(fixture.published.at(-1).airlines[0].positions, [position]);
+  assert.deepEqual(fixture.published.at(-1), withPositions);
+  assert.deepEqual(fixture.saved().snapshot, withPositions);
 });
 
 test('malformed saved positions block paid requests rather than publishing invalid map data', async () => {
