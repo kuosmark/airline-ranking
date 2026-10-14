@@ -1,5 +1,6 @@
 import { setTimeout } from 'node:timers/promises';
-import { fetchOperatorDetails, type OperatorDetails } from './adsbdb.ts';
+import { fetchOperatorDetails } from './adsbdb.ts';
+import { createEmptyOperatorCache, readOperatorCache, type OperatorCache } from './operator-cache.ts';
 import { fileStore, type JsonStore } from './storage.ts';
 import type { Snapshot } from '../shared/ranking.ts';
 
@@ -12,41 +13,17 @@ export const MAX_LOOKUP_ATTEMPTS = 5_000;
 export const MAX_LOOKUPS_PER_REFRESH = 100;
 export const LOOKUP_SPACING_MS = 1_000;
 
-interface Entry extends OperatorDetails { checkedAt: string }
-interface RequestHistory { attempts: number[]; cooldownUntil: number }
-export interface OperatorCache extends RequestHistory {
-  source: 'adsbdb';
-  names: Record<string, Entry | undefined>;
-  legacySkylink?: RequestHistory;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-function isTimestamp(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
-}
-function isHistory(value: unknown): value is RequestHistory {
-  return isRecord(value) && Array.isArray(value['attempts']) && value['attempts'].every(isTimestamp) &&
-    isTimestamp(value['cooldownUntil']);
-}
-function isCache(value: unknown): value is OperatorCache {
-  if (!isRecord(value) || value['source'] !== 'adsbdb' || !isHistory(value) || !isRecord(value['names']) ||
-      (value['legacySkylink'] !== undefined && !isHistory(value['legacySkylink']))) { return false; }
-  return Object.entries(value['names']).every(([prefix, entry]) =>
-    /^[A-Z]{3}$/.test(prefix) && isRecord(entry) &&
-    (entry['name'] === null || (typeof entry['name'] === 'string' && entry['name'].trim().length > 0)) &&
-    (entry['country'] === null || typeof entry['country'] === 'string') &&
-    (entry['countryIso'] === undefined || entry['countryIso'] === null ||
-      (typeof entry['countryIso'] === 'string' && /^[A-Z]{2}$/.test(entry['countryIso']))) &&
-    (entry['iata'] === null || (typeof entry['iata'] === 'string' && /^[A-Z\d]{2}$/.test(entry['iata']))) &&
-    (entry['icao'] === null || entry['icao'] === prefix) &&
-    typeof entry['checkedAt'] === 'string' && Number.isFinite(Date.parse(entry['checkedAt'])));
+function isLookupNeeded(cache: OperatorCache, prefix: string, time: number): boolean {
+  if (!/^[A-Z]{3}$/.test(prefix)) { return false; }
+  const entry = cache.names[prefix];
+  if (!entry || entry.countryIso === undefined) { return true; }
+  const refreshAfter = entry.name === null ? MISSING_NAME_REFRESH_MS : NAME_REFRESH_MS;
+  return time - Date.parse(entry.checkedAt) >= refreshAfter;
 }
 
 export async function createOperatorDirectory(storage: string | JsonStore, now = Date.now, wait = setTimeout) {
   const store = typeof storage === 'string' ? fileStore(storage) : storage;
-  let cache: OperatorCache = { source: 'adsbdb', names: {}, attempts: [], cooldownUntil: 0 };
+  let cache = createEmptyOperatorCache();
   let isDisabled = false;
   let pending: Promise<void> | undefined;
 
@@ -61,16 +38,10 @@ export async function createOperatorDirectory(storage: string | JsonStore, now =
     }
   }
   try {
-    const saved = await store.read();
     // Cloud storage must already exist; only an absent local file returns null.
-    if (saved !== null) {
-      if (isCache(saved)) { cache = saved; }
-      else if (isRecord(saved) && saved['source'] === undefined && isHistory(saved) && isRecord(saved['names'])) {
-        // Archive paid request history, but do not reuse SkyLink's operator labels.
-        cache.legacySkylink = { attempts: saved.attempts, cooldownUntil: saved.cooldownUntil };
-        await save();
-      } else { throw new Error('Invalid operator cache'); }
-    }
+    const loaded = readOperatorCache(await store.read());
+    cache = loaded.cache;
+    if (loaded.isMigrated) { await save(); }
   } catch {
     isDisabled = true;
     console.error('Operator cache could not be read; directory lookups are disabled.');
@@ -81,10 +52,7 @@ export async function createOperatorDirectory(storage: string | JsonStore, now =
     for (const prefix of new Set(prefixes)) {
       let time = now();
       if (isDisabled || time + 15_000 >= deadline || time < cache.cooldownUntil || lookups >= MAX_LOOKUPS_PER_REFRESH) { return; }
-      if (!/^[A-Z]{3}$/.test(prefix)) { continue; }
-      const entry = cache.names[prefix];
-      const refreshAfter = entry?.name === null ? MISSING_NAME_REFRESH_MS : NAME_REFRESH_MS;
-      if (entry && entry.countryIso !== undefined && time - Date.parse(entry.checkedAt) < refreshAfter) { continue; }
+      if (!isLookupNeeded(cache, prefix, time)) { continue; }
       cache.attempts = cache.attempts.filter(attempt => time - attempt < LOOKUP_WINDOW_MS);
       if (cache.attempts.length >= MAX_LOOKUP_ATTEMPTS) { return; }
       const nextAttemptAt = cache.attempts.length > 0 ? Math.max(...cache.attempts) + LOOKUP_SPACING_MS : time;
