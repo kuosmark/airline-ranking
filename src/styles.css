@@ -15,7 +15,7 @@ h1 { font-size: clamp(32px, 6vw, 46px); line-height: 1.12; letter-spacing: -.055
 .leaderboard { overflow-anchor: none; background: #fff; border: 1px solid #e5e8eb; border-radius: 16px; box-shadow: 0 4px 22px #18263503; }
 .board-header { display: flow-root; position: sticky; top: 0; z-index: 1; background: #fff; border-radius: 16px 16px 0 0; border-bottom: 1px solid #e5e8eb; }
 .snapshot-status { color: #626c76; font-size: 12px; line-height: 1.5; white-space: nowrap; }
-.ranking-status { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; color: #626c76; }
+.ranking-status { display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; gap: 6px; color: #626c76; }
 .search-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .search-toolbar input { width: 285px; min-width: 0; padding: 11px 14px; border: 1px solid #e5e8eb; border-radius: 10px; background: #fff; color: inherit; font: inherit; font-size: 14px; }
 .search-toolbar input:focus-visible { outline: 2px solid #617a70; outline-offset: 2px; }
@@ -79,12 +79,18 @@ li.is-expanded { background: #edf4ef; }
 .details-leave { animation: reveal-details 200ms ease-in reverse; }
 @keyframes reveal-details { from { grid-template-rows: 0fr; opacity: 0; } to { grid-template-rows: 1fr; opacity: 1; } }
 
+@media (min-width: 481px) and (max-width: 640px) {
+  .ranking-status { flex-direction: column; align-items: flex-end; gap: 4px; }
+  .status-separator { display: none; }
+}
+
 @media (max-width: 480px) {
   html { scroll-padding-top: 230px; }
   main { padding: 28px 12px; }
   .page-header { margin-bottom: 18px; padding: 0 4px; }
   .search-toolbar { align-items: stretch; flex-direction: column; gap: 8px; }
   .search-toolbar input { width: 100%; font-size: 16px; }
+  .ranking-status { justify-content: flex-start; flex-wrap: wrap; }
   .column-headings { padding: 12px; font-size: 9px; letter-spacing: .02em; }
   .airline-toggle { padding: 18px 12px; }
   .column-headings, .airline-toggle { grid-template-columns: 40px 38px minmax(0, 1fr) 56px 18px; column-gap: 6px; }
