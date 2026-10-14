@@ -19,7 +19,10 @@ test('preserves leaderboard ranks and order when filtering without changing the 
   const original = airlines.map(airline => ({ ...airline, aircraftTypes: [...airline.aircraftTypes] }));
   assert.deepEqual(filterOperators(airlines, 'fin'), [{ airline: airlines[2], rank: 3 }]);
   assert.deepEqual(airlines, original);
-  assert.deepEqual(filterOperators(airlines, '  ').map(row => row.rank), [1, 2, 3, 4]);
+  const allRows = airlines.map((airline, index) => ({ airline, rank: index + 1 }));
+  for (const query of ['', '  ', '\t\n']) {
+    assert.deepEqual(filterOperators(airlines, query), allRows);
+  }
 });
 
 test('returns no rows for an unmatched query or an empty ranking', () => {

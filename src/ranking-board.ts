@@ -127,9 +127,11 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
   }
 
   private animateRows(snapshot: Snapshot, previousCounts: Map<string, number>, previousPositions: Map<string | undefined, number>): void {
+    const currentCounts = new Map(snapshot.airlines.map(airline => [airline.id, airline.count]));
     this.rowElements.forEach(({ nativeElement: row }) => {
+      const id = row.dataset['id'];
       const currentTop = row.getBoundingClientRect().top;
-      const previousTop = previousPositions.get(row.dataset['id']) ?? currentTop;
+      const previousTop = previousPositions.get(id) ?? currentTop;
       const distance = previousTop - currentTop;
       if (distance !== 0) {
         this.animations.push(row.animate([
@@ -137,9 +139,9 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
           { transform: 'translateY(0)' },
         ], { duration: 650, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' }));
       }
-      const airline = snapshot.airlines.find(item => item.id === row.dataset['id']);
+      const currentCount = id === undefined ? undefined : currentCounts.get(id);
       const count = row.querySelector('.count');
-      if (airline && count && previousCounts.get(airline.id) !== airline.count) {
+      if (id !== undefined && currentCount !== undefined && count && previousCounts.get(id) !== currentCount) {
         this.animations.push(count.animate([
           { color: '#171c24', backgroundColor: '#e9edf1' },
           { color: '#171c24', backgroundColor: 'transparent' },
