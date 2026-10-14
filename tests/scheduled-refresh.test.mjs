@@ -204,7 +204,8 @@ test('S3 aborts a stalled response body after headers arrive', async () => {
 });
 
 test('paid snapshot requests have a separate rolling cap with reservations surviving failures and restarts', async () => {
-  const { MAX_SNAPSHOT_ATTEMPTS, SNAPSHOT_WINDOW_MS } = await import('../backend/scheduled-refresh.ts');
+  const { MAX_SNAPSHOT_ATTEMPTS } = await import('../backend/scheduled-refresh.ts');
+  const { SNAPSHOT_WINDOW_MS } = await import('../backend/refresh-state.ts');
   assert.equal(MAX_SNAPSHOT_ATTEMPTS, 3100);
   assert.equal(SNAPSHOT_WINDOW_MS, 32 * 24 * 60 * 60 * 1000);
   assert.equal(SNAPSHOT_WINDOW_MS / REFRESH_INTERVAL_MS, 3072);
