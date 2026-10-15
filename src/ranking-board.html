@@ -66,35 +66,13 @@
     @if (nextBatchSize() > 0) {
       <div class="operators-more">
         <button type="button" (click)="visibleLimit.set(visibleLimit() + rowBatchSize)">
-          Show {{ nextBatchSize() }} more <span class="page-progress">· {{ visibleRows().length }} of {{ matchingRows().length }} shown</span>
+          <span>Show {{ nextBatchSize() }} more</span>
+          <span class="page-progress">{{ visibleRows().length }} of {{ matchingRows().length }} shown</span>
         </button>
       </div>
     }
     @if (visibleRows().length === 0) {
       <p class="empty-state">{{ searchQuery().trim() ? 'No operators match your search.' : 'No operators identified in this snapshot.' }}</p>
-    }
-    @if (snapshot()?.unassignedAircraft; as unassigned) {
-      @if (unassigned.count > 0) {
-        @let isExpanded = expandedGroupId() === 'unassigned';
-        <div #row class="unassigned-row" data-id="unassigned" [class.is-expanded]="isExpanded">
-          <button class="airline-toggle" type="button" (click)="toggleGroup('unassigned', $event)"
-            [attr.aria-expanded]="isExpanded" aria-controls="types-unassigned">
-            <span class="airline-name">Unknown operator<span class="name-unavailable">Not included in operator ranks</span></span>
-            <span class="count" [attr.aria-label]="unassigned.count + ' aircraft airborne'">
-              <span aria-hidden="true">{{ unassigned.count | number }}</span>
-            </span>
-            <span class="chevron" aria-hidden="true"></span>
-          </button>
-          @if (isExpanded) {
-            <div class="aircraft-details" id="types-unassigned" animate.enter="details-enter" animate.leave="details-leave">
-              <div class="details-content">
-                <app-aircraft-group-details [aircraft]="unassigned" groupId="unassigned" groupName="Unknown operator"
-                  [isShowingAllTypes]="isShowingAllTypes()" (typesToggled)="isShowingAllTypes.set(!isShowingAllTypes())" />
-              </div>
-            </div>
-          }
-        </div>
-      }
     }
   } @else if (error()) {
     <p class="empty-state" role="alert">{{ error() }}</p>
@@ -102,5 +80,29 @@
     <p class="empty-state" role="status">Loading the ranking…</p>
   }
 </section>
+
+@if (snapshot()?.unassignedAircraft; as unassigned) {
+  @if (unassigned.count > 0) {
+    @let isExpanded = expandedGroupId() === 'unassigned';
+    <section #row aria-label="Unknown operator aircraft" class="unassigned-row" data-id="unassigned" [class.is-expanded]="isExpanded">
+      <button class="airline-toggle" type="button" (click)="toggleGroup('unassigned', $event)"
+        [attr.aria-expanded]="isExpanded" aria-controls="types-unassigned">
+        <span class="airline-name">Unknown operator<span class="name-unavailable">Operator not identified</span></span>
+        <span class="count" [attr.aria-label]="unassigned.count + ' aircraft airborne'">
+          <span aria-hidden="true">{{ unassigned.count | number }}</span>
+        </span>
+        <span class="chevron" aria-hidden="true"></span>
+      </button>
+      @if (isExpanded) {
+        <div class="aircraft-details" id="types-unassigned" animate.enter="details-enter" animate.leave="details-leave">
+          <div class="details-content">
+            <app-aircraft-group-details [aircraft]="unassigned" groupId="unassigned" groupName="Unknown operator"
+              [isShowingAllTypes]="isShowingAllTypes()" (typesToggled)="isShowingAllTypes.set(!isShowingAllTypes())" />
+          </div>
+        </div>
+      }
+    </section>
+  }
+}
 
 <p class="visually-hidden" role="status">{{ announcement() }}</p>
