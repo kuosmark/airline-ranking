@@ -12,7 +12,7 @@
         (pointermove)="hoveredId.set(nearestAircraftId($event))" (pointerleave)="hoveredId.set(null)"
         (click)="selectAircraft(nearestAircraftId($event))">
         @if (hoveredAircraft(); as aircraft) {
-          <title>{{ aircraft.callsign }} · {{ aircraft.aircraftType }}</title>
+          <title>{{ aircraft.callsign || aircraft.id }} · {{ aircraft.aircraftType }}</title>
         }
         <path [attr.d]="worldOutline" fill="#e6ebe8" stroke="#d5ddd7" stroke-width="0.6" aria-hidden="true" />
         @for (point of points(); track point.aircraft.id; let index = $index) {
@@ -20,7 +20,7 @@
             [class.is-selected]="selectedAircraft()?.id === point.aircraft.id"
             [class.is-hovered]="hoveredId() === point.aircraft.id"
             [attr.tabindex]="focusedAircraftId() === point.aircraft.id ? 0 : -1" role="button"
-            [attr.aria-label]="point.aircraft.callsign + ', ' + point.aircraft.aircraftType"
+            [attr.aria-label]="(point.aircraft.callsign || point.aircraft.id) + ', ' + point.aircraft.aircraftType"
             aria-description="Use arrow keys to browse aircraft in callsign order, Enter or Space to select, and Tab to leave the map."
             [attr.aria-pressed]="selectedAircraft()?.id === point.aircraft.id"
             (focus)="focusedId.set(point.aircraft.id)" (keydown)="navigateAircraft($event, index)"
@@ -31,7 +31,7 @@
       </svg>
       <p class="map-selection" role="status" [class.is-empty]="!selectedAircraft()">
         @if (selectedAircraft(); as aircraft) {
-          {{ aircraft.callsign }} · {{ aircraft.aircraftType }}
+          {{ aircraft.callsign || aircraft.id }} · {{ aircraft.aircraftType }}
           @if (aircraft.altitudeFt !== undefined) {
             <span class="map-altitude"> · {{ aircraft.altitudeFt | number: '1.0-0' }} ft</span>
           }

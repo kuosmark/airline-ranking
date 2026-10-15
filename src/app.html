@@ -9,8 +9,8 @@
 
   <details class="method-details">
     <summary><span>How does it work</span><span class="refresh-interval">Refreshes every 15 minutes</span></summary>
-    <p>All qualifying operators are ranked by aircraft observed airborne in SkyLink data; coverage varies. Operators are grouped by their callsign prefix, including cargo, regional and private operators. These are observed counts, not complete worldwide totals. Equal counts are ordered by prefix.</p>
-    <p>Callsigns matching aircraft registrations are excluded. Unresolved operators appear as codes; callsigns do not guarantee operator identity. Aircraft types use verified labels where available; unfamiliar model labels remain separate.</p>
+    <p>The total includes all fresh, explicitly airborne aircraft observed in SkyLink data; coverage varies. Identifiable operator prefixes are ranked by aircraft count. Operators are grouped by their callsign prefix, including cargo, regional and private operators. These are observed counts, not complete worldwide totals. Equal counts are ordered by prefix.</p>
+    <p>Aircraft with missing or unrecognized callsigns, including callsigns matching their registration, appear in a separate unranked Unknown operator group. Unresolved operators appear as codes; callsigns do not guarantee operator identity. Aircraft types use verified labels where available; unfamiliar model labels remain separate.</p>
     <p>Arrows show how many places an operator moved since the previous successful snapshot. NEW means it was not observed in the previous snapshot; a dash means unchanged. A blank movement cell means no previous snapshot is available. After a delay, the comparison still uses the last successful snapshot.</p>
     @if (snapshot(); as currentSnapshot) {
       <p>Snapshot <time [attr.datetime]="currentSnapshot.updatedAt">{{ currentSnapshot.updatedAt | date: 'd MMM, HH:mm' : 'UTC' }} UTC</time></p>

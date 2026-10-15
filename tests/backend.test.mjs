@@ -22,7 +22,7 @@ test('counts all observed operators separately, including cargo and regional ope
   assert.ok(snapshot.airlines.every(row => row.name === row.id && row.count > 0));
 });
 
-test('excludes registrations and invalid callsign formats', () => {
+test('retains registrations and unrecognized callsigns outside the operator ranking', () => {
   const records = [
     aircraft({ callsign: 'XABAR', registration: 'xa-bar' }),
     aircraft({ callsign: 'N12345' }),
@@ -35,6 +35,9 @@ test('excludes registrations and invalid callsign formats', () => {
   ].map((record, i) => ({ ...record, icao24: i.toString(16).padStart(6, '0') }));
   const snapshot = countAircraft(payload(records), now);
   assert.deepEqual(snapshot.airlines.map(row => row.id), ['ABC', 'FIN']);
+  assert.equal(snapshot.airborneCount, 8);
+  assert.equal(snapshot.unassignedAircraft.count, 6);
+  assert.deepEqual(snapshot.unassignedAircraft.aircraftTypes, [{ name: 'Unknown type', count: 6 }]);
 });
 
 test('keeps all operators beyond 100 with stable prefix ties', () => {
@@ -341,4 +344,32 @@ test('keeps finite altitude values, including zero and negative values, and omit
   assert.equal(airline.count, altitudes.length);
   assert.deepEqual(airline.positions.map(position => position.altitudeFt),
     [undefined, undefined, undefined, undefined, undefined, undefined, 0, -100, 35000.5]);
+});
+
+
+test('partitions fresh airborne aircraft exactly once, independently of operator and location availability', () => {
+  const records = [
+    aircraft({ icao24: '000001', callsign: 'FIN123', aircraft_type: 'A320', latitude: 60, longitude: 25 }),
+    aircraft({ icao24: '000002', callsign: 'XABAR', registration: 'XA-BAR', aircraft_type: 'A320', latitude: 20, longitude: -100 }),
+    aircraft({ icao24: '000003', callsign: null, latitude: 91, longitude: 0 }),
+    aircraft({ icao24: '000004', callsign: 'N12345', is_on_ground: true }),
+    aircraft({ icao24: '000005', callsign: 'N54321', last_seen: '2026-10-04T11:54:59Z' }),
+    aircraft({ icao24: '000006', callsign: '', is_on_ground: null }),
+    aircraft({ icao24: '000007', callsign: '', last_seen: '2026-10-04T12:00:01Z' }),
+    aircraft({ icao24: '000008', callsign: 'N10000', last_seen: '2026-10-04T11:59:00Z' }),
+    aircraft({ icao24: '000008', callsign: 'N10000', is_on_ground: true }),
+  ];
+  const result = countAircraft(payload(records), now);
+  assert.equal(result.airborneCount, 3);
+  assert.equal(result.airlines.length, 1);
+  assert.equal(result.airlines[0].count, 1);
+  assert.equal(result.unassignedAircraft.count, 2);
+  assert.deepEqual(result.unassignedAircraft.positions.map(position => position.id), ['000002']);
+  assert.deepEqual(result.unassignedAircraft.aircraftTypes, [
+    { name: 'Airbus A320', count: 1 }, { name: 'Unknown type', count: 1 },
+  ]);
+  assert.deepEqual(countAircraft(payload([...records].reverse()), now), result);
+  const onlyUnassigned = countAircraft(payload(records.slice(1)), now);
+  assert.equal(onlyUnassigned.airborneCount, 2);
+  assert.deepEqual(onlyUnassigned.airlines, []);
 });

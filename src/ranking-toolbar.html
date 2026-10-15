@@ -2,6 +2,10 @@
   <input #operatorSearch type="search" aria-label="Search operators by name, ICAO, IATA or country" placeholder="Search name, code or country"
     [value]="searchQuery()" (input)="searchChanged.emit(operatorSearch.value)">
   <div class="ranking-status">
+    @if (airborneCount() !== undefined) {
+      <span class="airborne-total">{{ airborneCount() | number }} aircraft</span>
+      <span class="status-separator" aria-hidden="true">·</span>
+    }
     <span class="search-results" role="status">
       @if (searchQuery().trim()) {
         {{ matchingCount() }} of {{ totalCount() }} operators

@@ -46,3 +46,21 @@ test('rejects invalid map positions while accepting omitted or finite altitude v
   }
   assert.equal(isSnapshot({ ...snapshot, airlines: [{ ...snapshot.airlines[0], positions: [position, position] }] }), false);
 });
+
+
+test('accepts complete airborne coverage only when group totals and type breakdowns reconcile', () => {
+  const unassignedAircraft = { count: 1, aircraftTypes: [{ name: 'Unknown type', count: 1 }], positions: [{ ...position, callsign: '' }] };
+  const complete = { ...snapshot, airborneCount: 2, unassignedAircraft };
+  assert.equal(isSnapshot(complete), true);
+  assert.equal(isSnapshot({ ...complete, airborneCount: 1, airlines: [] }), true);
+  assert.equal(isSnapshot({ ...snapshot, airborneCount: 1, unassignedAircraft: { count: 0, aircraftTypes: [], positions: [] } }), true);
+  for (const fields of [
+    { airborneCount: undefined }, { unassignedAircraft: undefined }, { airborneCount: 3 },
+    { airborneCount: -1 }, { airborneCount: 1.5 }, { unassignedAircraft: null },
+    { unassignedAircraft: { ...unassignedAircraft, aircraftTypes: [] } },
+    { unassignedAircraft: { ...unassignedAircraft, positions: [{ ...position, longitude: 181 }] } },
+    { airlines: [{ ...snapshot.airlines[0], aircraftTypes: [] }] },
+  ]) {
+    assert.equal(isSnapshot({ ...complete, ...fields }), false);
+  }
+});

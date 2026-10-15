@@ -12,23 +12,29 @@ export function isValidCoordinates(latitude: unknown, longitude: unknown): boole
     typeof longitude === 'number' && Number.isFinite(longitude) && longitude >= -180 && longitude <= 180;
 }
 
-export interface Airline {
+export interface AircraftGroup {
+  count: number;
+  positions?: AircraftPosition[];
+  aircraftTypes: { name: string; count: number }[];
+}
+
+export interface Airline extends AircraftGroup {
   id: string;
   name: string;
   country?: string | null;
   countryIso?: string | null;
   iata?: string | null;
   icao?: string | null;
-  count: number;
-  positions?: AircraftPosition[];
   // Positive values move up; zero is unchanged. Omitted before the first comparison.
   rankChange?: number | 'new';
-  aircraftTypes: { name: string; count: number }[];
 }
 
 export interface Snapshot {
   updatedAt: string;
   airlines: Airline[];
+  // Absent together in snapshots created before complete airborne coverage.
+  airborneCount?: number;
+  unassignedAircraft?: AircraftGroup;
   isStale: boolean;
 }
 
