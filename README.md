@@ -57,11 +57,17 @@ Comparison happens in the backend, so browser reloads and different viewers rece
 The **Operators / Aircraft types** switch selects two rankings built from the same
 filtered, deduplicated SkyLink observations. Switching clears search, pagination
 and the open drawer. Type search matches the display name or ICAO type code.
-Aircraft types are grouped by verified ICAO designator, ordered by airborne count
-and then code. Each drawer shows operator counts (including Unknown operator) and
-the aircraft map. Unknown types have their own expandable section outside the
-ranked list. Both rankings reconcile to the same total, even when positions are
-missing. Type rank changes use a separate previous-snapshot comparison; the first
+Aircraft types are grouped by ICAO designator matched against the bundled
+reference, ordered by airborne count
+and then code. Each drawer shows its ICAO code, operator counts (including Unknown
+operator) and the aircraft map. The operator breakdown initially shows five entries
+and can be expanded. Unknown type contains airborne aircraft whose type is missing
+or could not be matched to a specific ICAO aircraft type. This includes generic
+designators and provider model descriptions without a recognized code or verified
+alias. These aircraft remain included in the total and have their own expandable
+operator breakdown and map outside the ranked list; the section remains visible
+during search and is omitted when empty. Both rankings reconcile to the same
+total, even when positions are missing. Type rank changes use a separate previous-snapshot comparison; the first
 snapshot after upgrading has no type movement indicators.
 
 `backend/data/mictronics-aircraft-types.json` is derived from the Mictronics aircraft
