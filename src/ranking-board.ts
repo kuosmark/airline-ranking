@@ -1,7 +1,7 @@
 import type { AfterRenderRef, ElementRef, OnChanges, OnDestroy, QueryList, SimpleChanges } from '@angular/core';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Injector, ViewChildren, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import type { Airline, Snapshot } from '../shared/ranking';
+import type { AircraftTypeRanking, RankingRow, RankingView, Snapshot } from '../shared/ranking';
 import { rankAirlines } from '../shared/ranking';
 import { filterOperators } from './operator-search';
 import { AircraftGroupDetailsComponent } from './aircraft-group-details';
@@ -28,7 +28,12 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
   readonly snapshotAge = input('');
   readonly isRankingStale = input(false);
   readonly error = input<string | null>(null);
-  readonly rows = signal<Airline[]>([]);
+  readonly view = signal<RankingView>('operators');
+  readonly isTypeView = computed(() => this.view() === 'types');
+  readonly unknownGroup = computed(() => this.isTypeView() ? this.snapshot()?.unknownAircraftType : this.snapshot()?.unassignedAircraft);
+  readonly unknownLabel = computed(() => this.isTypeView() ? 'Unknown type' : 'Unknown operator');
+  readonly operatorNames = computed(() => new Map(this.snapshot()?.airlines.map(row => [row.id, row.name]) ?? []));
+  readonly rows = signal<RankingRow[]>([]);
   readonly searchQuery = signal('');
   readonly rowBatchSize = 100;
   readonly visibleLimit = signal(this.rowBatchSize);
@@ -46,10 +51,44 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
     if (!snapshot) { return; }
     const previousSnapshot = snapshotChange.previousValue as Snapshot | null;
     if (!previousSnapshot || snapshot.updatedAt === previousSnapshot.updatedAt) {
-      this.rows.set(rankAirlines(snapshot.airlines));
+      this.rows.set(this.rankingRows(snapshot));
       return;
     }
     this.applySnapshot(snapshot);
+  }
+
+  private rankingRows(snapshot: Snapshot): RankingRow[] {
+    return this.isTypeView() ? rankAirlines(snapshot.aircraftTypeRankings ?? []) : rankAirlines(snapshot.airlines);
+  }
+
+  changeView(view: RankingView): void {
+    if (view === this.view()) { return; }
+    this.cancelDrawerScroll?.();
+    this.pendingRender?.destroy();
+    this.cancelAnimations();
+    this.view.set(view);
+    this.updateSearch('');
+    this.expandedGroupId.set(null);
+    this.isShowingAllTypes.set(false);
+    const snapshot = this.snapshot();
+    this.rows.set(snapshot ? this.rankingRows(snapshot) : []);
+  }
+
+  isAircraftType(row: RankingRow): row is AircraftTypeRanking {
+    return 'operators' in row;
+  }
+
+  operatorBreakdown(group: { operators: { id: string | null; count: number }[] }): { name: string; count: number }[] {
+    return group.operators.map(operator => ({
+      name: operator.id === null ? 'Unknown operator' : this.operatorNames().get(operator.id) ?? operator.id,
+      count: operator.count,
+    }));
+  }
+
+  unknownBreakdown(): { name: string; count: number }[] {
+    const group = this.unknownGroup();
+    if (!group) { return []; }
+    return 'operators' in group ? this.operatorBreakdown(group) : group.aircraftTypes;
   }
 
   updateSearch(query: string): void {
@@ -109,8 +148,8 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
 
   private applySnapshot(snapshot: Snapshot): void {
     const expandedId = this.expandedGroupId();
-    const isUnassignedExpanded = expandedId === 'unassigned' && (snapshot.unassignedAircraft?.count ?? 0) > 0;
-    if (!isUnassignedExpanded && !snapshot.airlines.some(airline => airline.id === expandedId)) {
+    const isUnassignedExpanded = expandedId === 'unassigned' && (this.unknownGroup()?.count ?? 0) > 0;
+    if (!isUnassignedExpanded && !this.rankingRows(snapshot).some(airline => airline.id === expandedId)) {
       this.expandedGroupId.set(null);
     }
     const previousCounts = new Map(this.rows().map(airline => [airline.id, airline.count]));
@@ -118,7 +157,7 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
       [row.dataset['id'], row.getBoundingClientRect().top]));
     this.pendingRender?.destroy();
     this.cancelAnimations();
-    this.rows.set(rankAirlines(snapshot.airlines));
+    this.rows.set(this.rankingRows(snapshot));
     const updatedAt = new Date(snapshot.updatedAt).toLocaleString('en-GB', { timeZone: 'UTC' });
     this.announcement.set(`Ranking updated at ${updatedAt} UTC.`);
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { return; }
@@ -129,7 +168,7 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
   }
 
   private animateRows(snapshot: Snapshot, previousCounts: Map<string, number>, previousPositions: Map<string | undefined, number>): void {
-    const currentCounts = new Map(snapshot.airlines.map(airline => [airline.id, airline.count]));
+    const currentCounts = new Map(this.rankingRows(snapshot).map(airline => [airline.id, airline.count]));
     this.rowElements.forEach(({ nativeElement: row }) => {
       const id = row.dataset['id'];
       const currentTop = row.getBoundingClientRect().top;

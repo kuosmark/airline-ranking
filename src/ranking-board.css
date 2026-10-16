@@ -9,6 +9,22 @@
   display: block;
 }
 
+.type-metadata {
+  display: flex;
+  gap: 5px;
+  margin: 0;
+  padding-bottom: 16px;
+  color: #626c76;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.type-metadata dd {
+  margin: 0;
+  color: #171c24;
+  font-weight: 500;
+}
+
 .leaderboard {
   overflow-anchor: none;
   background: #fff;
@@ -338,4 +354,37 @@ li:last-child {
 
 .unassigned-row .airline-name {
   grid-column: 1 / 4;
+}
+
+.ranking-switch {
+  display: flex;
+  width: fit-content;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  border: 1px solid #dce3df;
+  border-radius: 10px;
+  background: #edf2ef;
+}
+
+.ranking-switch button {
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #515e58;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.ranking-switch button[aria-pressed="true"] {
+  background: #fff;
+  color: #171c24;
+  box-shadow: 0 1px 3px #17251d18;
+}
+
+.ranking-switch button:focus-visible {
+  outline: 2px solid #617a70;
+  outline-offset: 2px;
 }

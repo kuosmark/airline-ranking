@@ -10,6 +10,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RankingToolbarComponent {
+  readonly isTypeView = input(false);
   readonly searchQuery = input.required<string>();
   readonly matchingCount = input.required<number>();
   readonly airborneCount = input<number>();

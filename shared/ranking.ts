@@ -29,28 +29,52 @@ export interface Airline extends AircraftGroup {
   rankChange?: number | 'new';
 }
 
+export interface AircraftTypeGroup {
+  count: number;
+  positions?: AircraftPosition[];
+  operators: { id: string | null; count: number }[];
+}
+
+export interface AircraftTypeRanking extends AircraftTypeGroup {
+  id: string;
+  name: string;
+  rankChange?: number | 'new';
+}
+
+export type RankingRow = Airline | AircraftTypeRanking;
+export type RankingView = 'operators' | 'types';
+
 export interface Snapshot {
   updatedAt: string;
   airlines: Airline[];
   // Absent together in snapshots created before complete airborne coverage.
   airborneCount?: number;
   unassignedAircraft?: AircraftGroup;
+  // Absent together until the first snapshot with aircraft-type rankings.
+  aircraftTypeRankings?: AircraftTypeRanking[];
+  unknownAircraftType?: AircraftTypeGroup;
   isStale: boolean;
 }
 
-export function rankAirlines(airlines: Airline[]): Airline[] {
+export function rankAirlines<T extends { id: string; count: number }>(airlines: T[]): T[] {
   return [...airlines].sort((a, b) => b.count - a.count || a.id.localeCompare(b.id, 'en'));
 }
 
 export function compareRanks(next: Snapshot, previous: Snapshot | null): Snapshot {
   if (!previous) { return next; }
-  const previousRanks = new Map(rankAirlines(previous.airlines).map((airline, index) => [airline.id, index]));
-  const airlines = rankAirlines(next.airlines).map<Airline>((airline, index) => {
-    const previousRank = previousRanks.get(airline.id);
-    const rankChange = previousRank === undefined ? 'new' : previousRank - index;
-    return { ...airline, rankChange };
+  const airlines = rankChanges(next.airlines, previous.airlines);
+  if (!next.aircraftTypeRankings || !previous.aircraftTypeRankings) { return { ...next, airlines }; }
+  const aircraftTypeRankings = rankChanges(next.aircraftTypeRankings, previous.aircraftTypeRankings);
+  return { ...next, airlines, aircraftTypeRankings };
+}
+
+function rankChanges<T extends RankingRow>(next: T[], previous: T[]): T[] {
+  const previousRanks = new Map(rankAirlines(previous).map((row, index) => [row.id, index]));
+  return rankAirlines(next).map((row, index) => {
+    const previousRank = previousRanks.get(row.id);
+    const rankChange = previousRank === undefined ? 'new' as const : previousRank - index;
+    return { ...row, rankChange };
   });
-  return { ...next, airlines };
 }
 
 export const REFRESH_INTERVAL_MS = 15 * 60 * 1000;

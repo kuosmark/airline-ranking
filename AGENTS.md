@@ -22,6 +22,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Agree on the scope and expected behavior before substantial implementation work.
 - Keep `main` working. Make all changes through pull requests from short-lived `codex/<description>` branches, including documentation fixes.
 - Ask the repository owner for explicit approval before opening a pull request. Approval to implement a change does not authorize opening a PR.
+- The monthly Mictronics update workflow may open or update reference-data PRs automatically. These still require owner approval to merge.
 - Make focused commits with concise, imperative messages describing the change.
 - Before committing, run `npm run check` and review the diff. Check UI changes in the browser at 320px, a typical mobile width, and a desktop width. Verify text wrapping, horizontal overflow, spacing, and changed interactions.
 - Never commit `.env`, API keys, private information, or generated build files.

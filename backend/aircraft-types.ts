@@ -1,3 +1,5 @@
+import reference from './data/mictronics-aircraft-types.json' with { type: 'json' };
+
 // Common designators present in the saved SkyLink snapshot, checked against:
 // https://www.faa.gov/air_traffic/publications/atpubs/foa_html/appendix_3.html
 // Preserve variants where a designator covers more than one model.
@@ -71,4 +73,17 @@ export function aircraftTypeName(value: unknown): string {
   const label = value.trim().replace(/\s+/g, ' ').toUpperCase();
   const code = aliases.get(label) ?? label.split(' ').at(-1) ?? '';
   return canonicalNames.get(label) ?? names.get(code) ?? label;
+}
+
+// Use the reference family name for rankings, rather than picking a model variant.
+const typeReference = new Map(Object.entries(reference));
+const canonicalCodes = new Map(Array.from(names, ([code, name]) => [name.toUpperCase(), code]));
+
+export function resolveAircraftType(value: unknown): { id: string; name: string } | null {
+  if (typeof value !== 'string' || !value.trim()) { return null; }
+  const label = value.trim().replace(/\s+/g, ' ').toUpperCase();
+  const code = aliases.get(label) ?? canonicalCodes.get(label) ?? label.split(' ').at(-1) ?? '';
+  const type = typeReference.get(code);
+  if (!type) { return null; }
+  return { id: code, name: type };
 }
