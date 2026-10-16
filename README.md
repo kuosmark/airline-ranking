@@ -64,8 +64,8 @@ ranked list. Both rankings reconcile to the same total, even when positions are
 missing. Type rank changes use a separate previous-snapshot comparison; the first
 snapshot after upgrading has no type movement indicators.
 
-`backend/data/faa-aircraft-types.json` is a bundled reference from FAA Order
-JO 7360.1K; see [reference provenance and update instructions](backend/data/README.md).
+`backend/data/mictronics-aircraft-types.json` is derived from the Mictronics aircraft
+database under the Open Data Commons Attribution License; see [reference provenance and update instructions](backend/data/README.md).
 The lookup adds no runtime requests. It validates trailing type codes and the
 small verified alias set in `backend/aircraft-types.ts`; unresolved model labels
 and generic codes remain in Unknown type. Display names are representative labels,

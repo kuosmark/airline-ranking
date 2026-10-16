@@ -47,9 +47,7 @@
             </span>
             <span class="rank"><span class="visually-hidden">Rank </span>{{ rankedOperator.rank | number: '2.0-0' }}</span>
             <span class="airline-name">{{ airline.name }}
-              @if (isTypeView()) {
-                <span class="name-unavailable">{{ airline.id }}</span>
-              } @else if (airline.name === airline.id) {
+              @if (!isTypeView() && airline.name === airline.id) {
                 <span class="name-unavailable">Name unavailable</span>
               }
             </span>
@@ -64,7 +62,12 @@
                 @if (isAircraftType(airline)) {
                   <app-aircraft-group-details [aircraft]="airline" [breakdown]="operatorBreakdown(airline)"
                     breakdownLabel="operators" [groupId]="airline.id" [groupName]="airline.name"
-                    [isShowingAllTypes]="isShowingAllTypes()" (typesToggled)="isShowingAllTypes.set(!isShowingAllTypes())" />
+                    [isShowingAllTypes]="isShowingAllTypes()" (typesToggled)="isShowingAllTypes.set(!isShowingAllTypes())">
+                    <dl class="type-metadata" aria-label="Aircraft type details">
+                      <dt>ICAO</dt>
+                      <dd>{{ airline.id }}</dd>
+                    </dl>
+                  </app-aircraft-group-details>
                 } @else {
                   <app-operator-details [operator]="airline" [isShowingAllTypes]="isShowingAllTypes()"
                     (typesToggled)="isShowingAllTypes.set(!isShowingAllTypes())" />

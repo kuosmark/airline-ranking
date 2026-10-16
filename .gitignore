@@ -7,3 +7,4 @@ dist/
 cdk.out/
 .DS_Store
 .cache/
+__pycache__/

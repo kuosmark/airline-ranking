@@ -17,14 +17,16 @@ function snapshot(records) {
   return countAircraft({ aircraft, total_count: aircraft.length, timestamp: updatedAt }, now);
 }
 
-test('resolves FAA codes and verified model aliases without guessing unfamiliar or generic types', () => {
+test('resolves Mictronics codes and verified model aliases without guessing unfamiliar or generic types', () => {
   for (const label of ['B738', ' THE BOEING COMPANY  b738 ', 'Boeing 737-800']) {
-    assert.deepEqual(resolveAircraftType(label), { id: 'B738', name: 'Boeing 737-800' });
+    assert.deepEqual(resolveAircraftType(label), { id: 'B738', name: 'BOEING 737-800' });
   }
+  assert.deepEqual(resolveAircraftType('M20P'), { id: 'M20P', name: 'MOONEY M-20' });
   assert.equal(resolveAircraftType('BOEING 737-8').id, 'B38M');
   assert.equal(resolveAircraftType('BOEING 737-9').id, 'B39M');
-  assert.equal(resolveAircraftType('SCHEMPP-HIRTH DUOD').id, 'DUOD');
-  for (const label of [null, '', 42, 'BOEING 737-UNKNOWN', 'ZZZZ', 'GLID', 'BALL', 'ULAC']) {
+  // Mictronics does not list DUOD; do not guess a replacement code.
+  assert.equal(resolveAircraftType('SCHEMPP-HIRTH DUOD'), null);
+  for (const label of [null, '', 42, 'BOEING 737-UNKNOWN', 'ZZZZ', 'GLID', 'GLIM', 'BALL', 'ULAC']) {
     assert.equal(resolveAircraftType(label), null);
   }
 });

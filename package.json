@@ -11,7 +11,7 @@
     "lint:fix": "npm run lint -- --fix",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "typecheck:backend": "tsc -p backend/tsconfig.json",
-    "check": "npm run lint && npm run typecheck:backend && npm run typecheck:infra && npm test && npm run build && npm run infra:synth",
+    "check": "python3 -m unittest discover -s tests -p \"*_test.py\" && npm run lint && npm run typecheck:backend && npm run typecheck:infra && npm test && npm run build && npm run infra:synth",
     "typecheck:infra": "tsc -p infra/tsconfig.json",
     "infra:synth": "cdk synth --strict --no-lookups",
     "infra:diff": "cdk diff",

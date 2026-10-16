@@ -1,4 +1,4 @@
-import reference from './data/faa-aircraft-types.json' with { type: 'json' };
+import reference from './data/mictronics-aircraft-types.json' with { type: 'json' };
 
 // Common designators present in the saved SkyLink snapshot, checked against:
 // https://www.faa.gov/air_traffic/publications/atpubs/foa_html/appendix_3.html
@@ -75,8 +75,7 @@ export function aircraftTypeName(value: unknown): string {
   return canonicalNames.get(label) ?? names.get(code) ?? label;
 }
 
-// A code may cover several models/manufacturers. The reference label is a
-// representative model; familiar display names above preserve that distinction.
+// Use the reference family name for rankings, rather than picking a model variant.
 const typeReference = new Map(Object.entries(reference));
 const canonicalCodes = new Map(Array.from(names, ([code, name]) => [name.toUpperCase(), code]));
 
@@ -86,5 +85,5 @@ export function resolveAircraftType(value: unknown): { id: string; name: string 
   const code = aliases.get(label) ?? canonicalCodes.get(label) ?? label.split(' ').at(-1) ?? '';
   const type = typeReference.get(code);
   if (!type) { return null; }
-  return { id: code, name: names.get(code) ?? `${type.manufacturer} ${type.model}` };
+  return { id: code, name: type };
 }
