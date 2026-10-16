@@ -1,7 +1,13 @@
 <div class="search-toolbar">
-  <input #operatorSearch type="search" [attr.aria-label]="isTypeView() ? 'Search aircraft types by name or ICAO code' : 'Search operators by name, ICAO, IATA or country'"
+  <div class="search-field">
+    <input #operatorSearch type="search" [attr.aria-label]="isTypeView() ? 'Search aircraft types by name or ICAO code' : 'Search operators by name, ICAO, IATA or country'"
     [placeholder]="isTypeView() ? 'Search aircraft type or code' : 'Search name, code or country'"
     [value]="searchQuery()" (input)="searchChanged.emit(operatorSearch.value)">
+    @if (searchQuery()) {
+      <button class="clear-search" type="button" aria-label="Clear search"
+        (click)="searchChanged.emit(''); operatorSearch.focus()"><span aria-hidden="true">×</span></button>
+    }
+  </div>
   <div class="ranking-status">
     @if (airborneCount() !== undefined) {
       <span class="airborne-total">{{ airborneCount() | number }} aircraft</span>
