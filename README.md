@@ -1,6 +1,6 @@
 # Airline Ranking
 
-An Angular leaderboard covering observed airborne aircraft and ranking identifiable operator prefixes, built as a personal learning project.
+An Angular leaderboard covering observed airborne aircraft and ranking operators or aircraft types, built as a personal learning project.
 
 Live app: [airlines.markuskuosmanen.com](https://airlines.markuskuosmanen.com/).
 
@@ -54,7 +54,28 @@ Rank indicators compare each operator's position with the previous successful, d
 
 Comparison happens in the backend, so browser reloads and different viewers receive the same indicators. Repeated timestamps, name-only updates and failed fetches do not advance the comparison. After an outage, the next successful snapshot compares with the last successful one, even if the gap exceeds 15 minutes. The local backend holds comparison state in memory, so its first snapshot after a restart has no indicators. The scheduled Lambda handler persists the latest comparison in S3 across invocations. Neither mode stores a historical archive or adds provider calls for comparisons.
 
-Aircraft types come from SkyLink's `aircraft_type` field. Common ICAO designators and a few exact model aliases are normalized using the [FAA type table](https://www.faa.gov/air_traffic/publications/atpubs/foa_html/appendix_3.html), with labels in `backend/aircraft-types.ts`. Exact canonical names match regardless of casing or whitespace. Specific Airbus model labels observed in the payload are checked against the [EASA model list](https://ad.easa.europa.eu/ad/2026-0064) and retain their model suffixes; they are not merged into broader types. Distinct variants remain separate. Unrecognized labels retain the provider wording with normalized whitespace and capitalization; missing or invalid values become “Unknown type”. Metadata can be incomplete or incorrect, and unfamiliar aliases may remain separate. Breakdown counts always sum to the airline total.
+The **Operators / Aircraft types** switch selects two rankings built from the same
+filtered, deduplicated SkyLink observations. Switching clears search, pagination
+and the open drawer. Type search matches the display name or ICAO type code.
+Aircraft types are grouped by verified ICAO designator, ordered by airborne count
+and then code. Each drawer shows operator counts (including Unknown operator) and
+the aircraft map. Unknown types have their own expandable section outside the
+ranked list. Both rankings reconcile to the same total, even when positions are
+missing. Type rank changes use a separate previous-snapshot comparison; the first
+snapshot after upgrading has no type movement indicators.
+
+`backend/data/faa-aircraft-types.json` is a bundled reference from FAA Order
+JO 7360.1K; see [reference provenance and update instructions](backend/data/README.md).
+The lookup adds no runtime requests. It validates trailing type codes and the
+small verified alias set in `backend/aircraft-types.ts`; unresolved model labels
+and generic codes remain in Unknown type. Display names are representative labels,
+not guarantees of the exact model variant. The snapshot adds optional
+`aircraftTypeRankings` and `unknownAircraftType` fields together. Older snapshots
+remain supported and show an availability message in the type view until refresh.
+Operator names in type drawers come from the existing enriched operator directory.
+
+
+Operator drawer type breakdown labels come from SkyLink's `aircraft_type` field. Common ICAO designators and a few exact model aliases are normalized using the [FAA type table](https://www.faa.gov/air_traffic/publications/atpubs/foa_html/appendix_3.html), with labels in `backend/aircraft-types.ts`. Exact canonical names match regardless of casing or whitespace. Specific Airbus model labels observed in the payload are checked against the [EASA model list](https://ad.easa.europa.eu/ad/2026-0064) and retain their model suffixes; they are not merged into broader types. Distinct variants remain separate. Unrecognized labels retain the provider wording with normalized whitespace and capitalization; missing or invalid values become “Unknown type”. Metadata can be incomplete or incorrect, and unfamiliar aliases may remain separate. Breakdown counts always sum to the airline total.
 
 One continuously running local backend makes approximately 96 aircraft-snapshot requests per day. Every local backend restart adds an immediate request; opening more browser tabs does not trigger more provider requests. Failed requests are retried at the next scheduled refresh.
 

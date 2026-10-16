@@ -1,13 +1,13 @@
 @let group = aircraft();
 <div class="details-panel">
   <ng-content />
-  <h2>Airborne aircraft by type</h2>
+  <h2>{{ heading() }}</h2>
   @if (group.count === 0) {
     <p class="no-aircraft">No aircraft currently observed airborne.</p>
   } @else {
-    @let visibleTypes = isShowingAllTypes() ? group.aircraftTypes : group.aircraftTypes.slice(0, collapsedTypeLimit);
-    <dl aria-label="Aircraft types" [id]="'type-list-' + groupId()">
-      @for (type of visibleTypes; track type.name) {
+    @let visibleTypes = isShowingAllTypes() ? breakdown() : breakdown().slice(0, collapsedTypeLimit);
+    <dl [attr.aria-label]="breakdownLabel()" [id]="'type-list-' + groupId()">
+      @for (type of visibleTypes; track $index) {
         <div class="aircraft-type">
           <dt>{{ type.name }}</dt>
           <dd>{{ type.count | number }}</dd>
@@ -15,16 +15,16 @@
       }
     </dl>
     <div class="types-footer">
-      <span>{{ visibleTypes.length }} of {{ group.aircraftTypes.length }} types</span>
-      @if (group.aircraftTypes.length > collapsedTypeLimit) {
+      <span>{{ visibleTypes.length }} of {{ breakdown().length }} {{ breakdownLabel() }}</span>
+      @if (breakdown().length > collapsedTypeLimit) {
         <button class="types-toggle" type="button" (click)="typesToggled.emit()"
           [attr.aria-expanded]="isShowingAllTypes()" [attr.aria-controls]="'type-list-' + groupId()">
           @if (isShowingAllTypes()) {
             Show fewer
           } @else {
-            Show {{ group.aircraftTypes.length - collapsedTypeLimit }} more
+            Show {{ breakdown().length - collapsedTypeLimit }} more
           }
-          <span class="visually-hidden"> aircraft types for {{ groupName() }}</span>
+          <span class="visually-hidden"> {{ breakdownLabel() }} for {{ groupName() }}</span>
         </button>
       }
     </div>

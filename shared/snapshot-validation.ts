@@ -1,4 +1,4 @@
-import { isValidCoordinates, type AircraftGroup, type Snapshot } from './ranking.ts';
+import { isValidCoordinates, type AircraftGroup, type AircraftTypeGroup, type Snapshot } from './ranking.ts';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -46,10 +46,39 @@ function isAirline(value: unknown): boolean {
   if (iata !== undefined && iata !== null && (typeof iata !== 'string' || !/^[A-Z\d]{2}$/.test(iata))) { return false; }
   if (icao !== undefined && icao !== null && icao !== id) { return false; }
 
-  const movement = value['rankChange'];
-  if (movement !== undefined && movement !== 'new' &&
-      (typeof movement !== 'number' || !Number.isInteger(movement))) { return false; }
-  return true;
+  return isRankChange(value['rankChange']);
+}
+
+function isRankChange(value: unknown): boolean {
+  return value === undefined || value === 'new' || (typeof value === 'number' && Number.isInteger(value));
+}
+
+function isAircraftTypeGroup(value: unknown): value is AircraftTypeGroup {
+  if (!isRecord(value)) { return false; }
+  const count = value['count'];
+  const positions = value['positions'];
+  const operators = value['operators'];
+  if (typeof count !== 'number' || !Number.isInteger(count) || count < 0 || !Array.isArray(operators)) { return false; }
+  if (positions !== undefined && (!Array.isArray(positions) || positions.length > count || !positions.every(isAircraftPosition))) { return false; }
+  if (!operators.every((operator: unknown) => isRecord(operator) &&
+    (operator['id'] === null || (typeof operator['id'] === 'string' && /^[A-Z]{3}$/.test(operator['id']))) &&
+    typeof operator['count'] === 'number' && Number.isInteger(operator['count']) && operator['count'] > 0)) { return false; }
+  const entries = operators as AircraftTypeGroup['operators'];
+  return new Set(entries.map(operator => operator.id)).size === entries.length &&
+    entries.reduce((total, operator) => total + operator.count, 0) === count;
+}
+
+function hasValidTypeRanking(value: Record<string, unknown>): boolean {
+  const types = value['aircraftTypeRankings'];
+  const unknown = value['unknownAircraftType'];
+  if (types === undefined && unknown === undefined) { return true; }
+  if (!Array.isArray(types) || !isAircraftTypeGroup(unknown)) { return false; }
+  if (!types.every((type: unknown) => isRecord(type) && typeof type['id'] === 'string' &&
+    /^[A-Z0-9]{2,4}$/.test(type['id']) && typeof type['name'] === 'string' &&
+    isRankChange(type['rankChange']) && isAircraftTypeGroup(type))) { return false; }
+  const rows = types as (AircraftTypeGroup & { id: string })[];
+  return new Set(rows.map(type => type.id)).size === rows.length &&
+    rows.reduce((total, type) => total + type.count, unknown.count) === value['airborneCount'];
 }
 
 function hasConsistentTypeCounts(group: AircraftGroup): boolean {
@@ -61,6 +90,7 @@ export function isSnapshot(value: unknown): value is Snapshot {
       typeof value['isStale'] !== 'boolean' || !Array.isArray(value['airlines']) || !value['airlines'].every(isAirline)) {
     return false;
   }
+  if (!hasValidTypeRanking(value)) { return false; }
   const airborneCount = value['airborneCount'];
   const unassigned = value['unassignedAircraft'];
   if (airborneCount === undefined && unassigned === undefined) { return true; }

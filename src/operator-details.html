@@ -1,5 +1,5 @@
 @let airline = operator();
-<app-aircraft-group-details [aircraft]="airline" [groupId]="airline.id" [groupName]="airline.name"
+<app-aircraft-group-details [aircraft]="airline" [breakdown]="airline.aircraftTypes" [groupId]="airline.id" [groupName]="airline.name"
   [isShowingAllTypes]="isShowingAllTypes()" (typesToggled)="typesToggled.emit()">
   <dl class="operator-details" aria-label="Operator details">
     <div>
