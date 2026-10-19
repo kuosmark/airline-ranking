@@ -23,6 +23,7 @@ class ReferenceUpdateTest(unittest.TestCase):
     def write_archive(self, records, license_text=LICENSE):
         with zipfile.ZipFile(self.archive, 'w') as archive:
             archive.writestr('types.json', records)
+            archive.writestr('aircrafts.json', json.dumps({'ABC123': ['N-123', 'B738', '00']}))
             archive.writestr('LICENSE', license_text)
 
     def test_import_is_deterministic_and_excludes_generic_codes(self):
@@ -46,6 +47,28 @@ class ReferenceUpdateTest(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     reference.update(self.archive, self.root)
                 self.assertEqual(self.target.read_text(), original)
+
+    def test_aircraft_reference_validation_and_normalization(self):
+        def write_aircraft(records):
+            with zipfile.ZipFile(self.archive, 'w') as archive:
+                archive.writestr('types.json', '{"B738":["BOEING 737-800","L2J","M"]}')
+                archive.writestr('aircrafts.json', records)
+                archive.writestr('LICENSE', LICENSE)
+        write_aircraft(json.dumps({'ABC123': [' n-123 ', 'B738', '00', ''],
+                                  '000001': ['N1', 'ZZZZ', '00']}))
+        reference.update(self.archive, self.root)
+        target = self.root / 'mictronics-aircraft.json'
+        self.assertEqual(json.loads(target.read_text()), {'abc123': ['B738', 'N123']})
+        original = target.read_bytes()
+        for records in ['{}', '{"NOTHEX":["N1","B738","00"]}',
+                        '{"abc123":[null,"B738","00"]}',
+                        '{"ABC123":["N1","B738","00"],"abc123":["N1","B738","00"]}',
+                        '{"000002":["N1","B738","00"]}']:
+            write_aircraft(records)
+            with self.assertRaises(ValueError):
+                reference.update(self.archive, self.root)
+            self.assertEqual(target.read_bytes(), original)
+
 
     def test_changed_license_requires_review(self):
         self.write_archive('{"B738":["BOEING 737-800","L2J","M"]}')

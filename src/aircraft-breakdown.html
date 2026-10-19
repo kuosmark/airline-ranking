@@ -1,0 +1,28 @@
+<h2>{{ heading() }}</h2>
+@if (count() === 0) {
+  <p class="no-aircraft">No aircraft currently observed airborne.</p>
+} @else {
+  @let visibleTypes = isShowingAllTypes() ? breakdown() : breakdown().slice(0, collapsedTypeLimit);
+  <dl [attr.aria-label]="breakdownLabel()" [id]="'type-list-' + groupId()">
+    @for (type of visibleTypes; track $index) {
+      <div class="aircraft-type">
+        <dt>{{ type.name }}</dt>
+        <dd>{{ type.count | number }}</dd>
+      </div>
+    }
+  </dl>
+  <div class="types-footer">
+    <span>{{ visibleTypes.length }} of {{ breakdown().length }} {{ breakdownLabel() }}</span>
+    @if (breakdown().length > collapsedTypeLimit) {
+      <button class="types-toggle" type="button" (click)="typesToggled.emit()"
+        [attr.aria-expanded]="isShowingAllTypes()" [attr.aria-controls]="'type-list-' + groupId()">
+        @if (isShowingAllTypes()) {
+          Show fewer
+        } @else {
+          Show {{ breakdown().length - collapsedTypeLimit }} more
+        }
+        <span class="visually-hidden"> {{ breakdownLabel() }} for {{ groupName() }}</span>
+      </button>
+    }
+  </div>
+}

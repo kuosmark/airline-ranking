@@ -35,6 +35,10 @@ export interface AircraftTypeGroup {
   operators: { id: string | null; count: number }[];
 }
 
+export interface UnknownAircraftType extends AircraftTypeGroup {
+  descriptions?: { name: string; count: number }[];
+}
+
 export interface AircraftTypeRanking extends AircraftTypeGroup {
   id: string;
   name: string;
@@ -52,7 +56,7 @@ export interface Snapshot {
   unassignedAircraft?: AircraftGroup;
   // Absent together until the first snapshot with aircraft-type rankings.
   aircraftTypeRankings?: AircraftTypeRanking[];
-  unknownAircraftType?: AircraftTypeGroup;
+  unknownAircraftType?: UnknownAircraftType;
   isStale: boolean;
 }
 

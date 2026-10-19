@@ -63,8 +63,7 @@ and then code. Each drawer shows its ICAO code, operator counts (including Unkno
 operator) and the aircraft map. The operator breakdown initially shows five entries
 and can be expanded. Unknown type contains airborne aircraft whose type is missing
 or could not be matched to a specific ICAO aircraft type. This includes generic
-designators and provider model descriptions without a recognized code or verified
-alias. These aircraft remain included in the total and have their own expandable
+descriptions for which neither code/name matching nor the ICAO24 fallback provides a specific type. These aircraft remain included in the total and have their own expandable
 operator breakdown and map outside the ranked list; the section remains visible
 during search and is omitted when empty. Both rankings reconcile to the same
 total, even when positions are missing. Type rank changes use a separate previous-snapshot comparison; the first
@@ -72,16 +71,30 @@ snapshot after upgrading has no type movement indicators.
 
 `backend/data/mictronics-aircraft-types.json` is derived from the Mictronics aircraft
 database under the Open Data Commons Attribution License; see [reference provenance and update instructions](backend/data/README.md).
-The lookup adds no runtime requests. It validates trailing type codes and the
-small verified alias set in `backend/aircraft-types.ts`; unresolved model labels
-and generic codes remain in Unknown type. Display names are representative labels,
-not guarantees of the exact model variant. The snapshot adds optional
+The lookup adds no runtime requests. It trims SkyLink's `aircraft_type`, takes the
+last whitespace-separated word and uppercases that code for a Mictronics lookup.
+If the code lookup fails, it compares the entire description against all bundled
+reference names, ignoring case, whitespace and hyphens. Only names belonging to
+exactly one ICAO code are accepted; ambiguous names remain unmatched.
+If neither matches, a bundled ICAO24 aircraft reference supplies the type code,
+unless both sources provide registrations and they disagree after removing spaces
+and hyphens and ignoring case. The resulting code must exist in the type-name
+reference. Missing registrations permit the fallback; reference records can be
+outdated, so this is not a verified aircraft identification. Existing code/name
+matches take priority. Both tabs, operator breakdowns and map details use the
+resolved reference name unchanged.
+There are no manual aliases or name overrides. Missing, generic and unmatched
+values remain in the Unknown type group when the ICAO24 fallback also fails. Operator breakdowns and map details
+preserve non-empty unmatched SkyLink descriptions, trimming only surrounding
+whitespace; missing descriptions display as Unknown type. A matching code is a heuristic, not a guarantee
+of the provider's classification. Display names represent types rather than exact
+model variants. The snapshot adds optional
 `aircraftTypeRankings` and `unknownAircraftType` fields together. Older snapshots
 remain supported and show an availability message in the type view until refresh.
 Operator names in type drawers come from the existing enriched operator directory.
+The Unknown type drawer also lists reported SkyLink descriptions with counts, including aircraft without positions. Missing descriptions appear as “Description unavailable”. This breakdown does not assign ICAO codes or add ranked types.
 
-
-Operator drawer type breakdown labels come from SkyLink's `aircraft_type` field. Common ICAO designators and a few exact model aliases are normalized using the [FAA type table](https://www.faa.gov/air_traffic/publications/atpubs/foa_html/appendix_3.html), with labels in `backend/aircraft-types.ts`. Exact canonical names match regardless of casing or whitespace. Specific Airbus model labels observed in the payload are checked against the [EASA model list](https://ad.easa.europa.eu/ad/2026-0064) and retain their model suffixes; they are not merged into broader types. Distinct variants remain separate. Unrecognized labels retain the provider wording with normalized whitespace and capitalization; missing or invalid values become “Unknown type”. Metadata can be incomplete or incorrect, and unfamiliar aliases may remain separate. Breakdown counts always sum to the airline total.
+Operator drawer type breakdowns use the same Mictronics lookup as the aircraft-type ranking. Unmatched labels retain the original SkyLink description with surrounding whitespace trimmed; missing descriptions share an Unknown type entry. Breakdown counts always sum to the operator total.
 
 One continuously running local backend makes approximately 96 aircraft-snapshot requests per day. Every local backend restart adds an immediate request; opening more browser tabs does not trigger more provider requests. Failed requests are retried at the next scheduled refresh.
 
@@ -199,6 +212,13 @@ Before deploying, finish domain registration and verify any registrant email AWS
 Polling is **disabled by default**. Lambda has one reserved concurrent execution, a two-minute timeout and no automatic retries; Scheduler retries are also disabled. Logs expire after seven days. The state bucket retains its current objects and seven days of superseded versions. Both buckets survive stack removal, and termination protection is enabled. Retained resources continue to incur storage charges; review them explicitly when retiring the application. Version history is for recovery, not for resetting the lookup budget.
 
 CloudFront honors each object's cache headers, with a 30-second default and no minimum TTL. The ranking expires after 30 seconds; missing objects return an error instead of the Angular page. Only `/` is an application route. The refresh alarm emails when both evaluated 15-minute periods contain a Lambda execution error, rather than notifying on an isolated failure. Missing data is treated as non-breaching, and recovery does not send an email. The alarm does not cover every possible scheduling or delivery failure; also check snapshot freshness after enabling polling.
+
+The refresh Lambda uses 512 MB of memory. Its aircraft reference is packaged as
+`data/mictronics-aircraft.json`, separately from the JavaScript bundle, and loaded
+once per execution environment. Local backend commands load the same file from
+`backend/data` and must run from the repository root. The reference stays on the
+backend; browsers receive only the resulting snapshot. Deploy the infrastructure
+memory change before using a code-only release; that release checks for 512 MB.
 
 ### First deployment
 

@@ -1,12 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
+import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { AircraftBreakdownComponent } from './aircraft-breakdown';
 import type { AircraftGroup } from '../shared/ranking';
 import { AircraftMapComponent } from './aircraft-map';
 
 @Component({
   selector: 'app-aircraft-group-details',
   standalone: true,
-  imports: [DecimalPipe, AircraftMapComponent],
+  imports: [AircraftBreakdownComponent, AircraftMapComponent],
   templateUrl: './aircraft-group-details.html',
   styleUrl: './aircraft-group-details.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -20,5 +20,6 @@ export class AircraftGroupDetailsComponent {
   readonly groupName = input.required<string>();
   readonly isShowingAllTypes = input.required<boolean>();
   readonly typesToggled = output();
-  readonly collapsedTypeLimit = 5;
+  readonly descriptions = input<{ name: string; count: number }[] | undefined>();
+  readonly isShowingAllDescriptions = signal(false);
 }

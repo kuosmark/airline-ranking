@@ -1,4 +1,4 @@
-"""Import only type names from the Mictronics indexedDB export (standard library only)."""
+"""Import type names and aircraft identities from the Mictronics indexedDB export (standard library only)."""
 import json
 import re
 import sys
@@ -38,24 +38,57 @@ def read_names(archive):
     return dict(sorted(names.items()))
 
 
+def read_aircraft(archive, names):
+    records = json.loads(archive.read('aircrafts.json'), object_pairs_hook=unique_pairs)
+    if not isinstance(records, dict) or not records:
+        raise ValueError('Expected a nonempty aircraft dictionary')
+    aircraft = {}
+    seen = set()
+    for address, fields in records.items():
+        if not re.fullmatch(r'[A-Fa-f0-9]{6}', address):
+            raise ValueError(f'Invalid ICAO24 address: {address}')
+        address = address.lower()
+        if address in seen:
+            raise ValueError(f'Duplicate ICAO24 address: {address}')
+        seen.add(address)
+        if not isinstance(fields, list) or len(fields) not in (3, 4) or not all(isinstance(field, str) for field in fields):
+            raise ValueError(f'Invalid aircraft entry: {address}')
+        registration, code = fields[:2]
+        if code not in names:
+            continue
+        aircraft[address] = [code, re.sub(r'[-\s]', '', registration).upper()]
+    if not aircraft:
+        raise ValueError('No aircraft with recognized types')
+    return dict(sorted(aircraft.items()))
+
+
+def report_changes(target, records, label):
+    previous = json.loads(target.read_text()) if target.exists() else {}
+    removed = previous.keys() - records.keys()
+    if previous and len(removed) > len(previous) * 0.05:
+        raise ValueError(f'More than 5% of existing {label} removed; review the source')
+    added = records.keys() - previous.keys()
+    changed = [key for key in records.keys() & previous.keys() if records[key] != previous[key]]
+    print(f'{len(records)} {label}: {len(added)} added, {len(removed)} removed, {len(changed)} changed')
+
+
 def update(archive_path, data_dir=DATA):
     target = data_dir / 'mictronics-aircraft-types.json'
+    aircraft_target = data_dir / 'mictronics-aircraft.json'
     license_path = data_dir / 'mictronics-LICENSE.txt'
     with zipfile.ZipFile(archive_path) as archive:
         names = read_names(archive)
+        aircraft = read_aircraft(archive, names)
         license_text = archive.read('LICENSE').decode('utf-8')
     if license_path.exists() and license_path.read_text() != license_text:
         raise ValueError('Upstream licence changed; review it before updating')
     if 'ODC Attribution License (ODC-By)' not in license_text:
         raise ValueError('Expected the ODC Attribution licence')
-    previous = json.loads(target.read_text()) if target.exists() else {}
-    removed = previous.keys() - names.keys()
-    if previous and len(removed) > len(previous) * 0.05:
-        raise ValueError('More than 5% of existing codes removed; review the source')
-    added = names.keys() - previous.keys()
-    changed = [code for code in names.keys() & previous.keys() if names[code] != previous[code]]
-    print(f'{len(names)} types: {len(added)} added, {len(removed)} removed, {len(changed)} renamed')
+    report_changes(target, names, 'types')
+    report_changes(aircraft_target, aircraft, 'aircraft')
     target.write_text(json.dumps(names, indent=2, ensure_ascii=False) + '\n')
+    lines = [json.dumps(key) + ': ' + json.dumps(value) for key, value in aircraft.items()]
+    aircraft_target.write_text('{\n' + ',\n'.join(lines) + '\n}\n')
     license_path.write_text(license_text)
 
 

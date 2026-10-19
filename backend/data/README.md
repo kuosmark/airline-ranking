@@ -1,4 +1,4 @@
-# Aircraft type reference
+# Aircraft reference
 
 `mictronics-aircraft-types.json` is derived from `types.json` in the
 [Mictronics aircraft database](https://github.com/Mictronics/aircraft-database)
@@ -11,19 +11,24 @@ This adapted database is available under the
 [Open Data Commons Attribution License](https://opendatacommons.org/licenses/by/1-0/).
 The supplied licence is retained in `mictronics-LICENSE.txt`, and the application's
 “How does it work?” section credits Mictronics. Keep both when updating.
-Operator-drawer labels retain their existing normalization rules.
+`mictronics-aircraft.json` is derived from `aircrafts.json` in the same export.
+Each lowercase ICAO24 address maps to `[typeCode, registration]`. Registrations
+are uppercased with whitespace and hyphens removed. Only records with a type code
+in the bundled type-name reference are retained. It contains no owner details.
+The backend uses these records only when code/name matching fails, rejecting
+conflicting nonempty registrations. Both files use the same attribution and licence.
 
 ## Updates
 
-The backend bundles this file, so application use makes no reference-data requests.
-The GitHub Actions **Update aircraft type reference** workflow runs on the first
+The backend packages the type names and the separate aircraft JSON file, so application use makes no reference-data requests.
+The GitHub Actions **Update aircraft reference** workflow runs on the first
 of each month at 07:23 UTC, or manually through **Run workflow**. Scheduling is
 best-effort and becomes active only after the workflow is merged into main.
 
-It downloads the full export, imports only names, and rejects malformed entries,
-duplicate codes, a changed licence or removal of more than 5% of existing codes.
-Unchanged names produce no PR. Changed names run `npm run check`, then open or
-update one PR on `codex/update-aircraft-types`. The owner reviews changed names
+It downloads the full export, imports names and aircraft identities, and rejects malformed entries,
+duplicate codes or ICAO24 addresses, a changed licence or removal of more than 5% of either reference.
+Unchanged references produce no PR. Changed references run `npm run check`, then open or
+update one PR on `codex/update-aircraft-types`. The owner reviews changed names and aircraft records
 and approves merging; the workflow never merges or deploys. A failed update
 leaves the deployed reference unchanged. Investigate failed Actions runs rather
 than bypassing validation.
@@ -42,5 +47,4 @@ python3 scripts/update-aircraft-types.py /tmp/mictronics.zip
 npm run check
 ```
 
-Python 3 uses only its standard library. Review the JSON diff, particularly code
-removals and family-name changes. Do not infer additional aliases from similar names.
+Python 3 uses only its standard library. Review the JSON diff, particularly removals, registration/type reassignments and family-name changes. Do not infer additional aliases from similar names.

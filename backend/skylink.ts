@@ -1,6 +1,7 @@
 import { isValidCoordinates, rankAirlines, type AircraftPosition, type AircraftGroup, type Snapshot } from '../shared/ranking.ts';
 import { buildAircraftTypeRanking } from './type-ranking.ts';
-import { aircraftTypeName } from './aircraft-types.ts';
+import { aircraftReferenceType } from './aircraft-reference.ts';
+import { aircraftTypeName, resolveAircraftType } from './aircraft-types.ts';
 
 const OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15_000;
@@ -25,6 +26,7 @@ interface AircraftObservation {
   callsign: string;
   isAirborne: boolean;
   aircraftType: unknown;
+  resolvedType: { id: string; name: string } | null;
   registration: string;
   latitude: unknown;
   longitude: unknown;
@@ -35,14 +37,17 @@ function parseObservation(record: unknown): AircraftObservation {
   if (!isRecord(record) || typeof record['icao24'] !== 'string' || !/^[\da-f]{6}$/i.test(record['icao24'])) {
     throw new Error('Invalid SkyLink aircraft identifier');
   }
+  const id = record['icao24'].toLowerCase();
+  const registration = typeof record['registration'] === 'string'
+    ? record['registration'].replace(/[-\s]/g, '').toUpperCase() : '';
+  const resolvedType = resolveAircraftType(record['aircraft_type']) ?? aircraftReferenceType(id, registration);
   return {
-    id: record['icao24'].toLowerCase(),
+    id,
+    resolvedType,
     seen: timestamp(record['last_seen']),
     callsign: typeof record['callsign'] === 'string' ? record['callsign'].trim().toUpperCase() : '',
     isAirborne: record['is_on_ground'] === false,
-    registration: typeof record['registration'] === 'string'
-      ? record['registration'].replace(/[-\s]/g, '').toUpperCase()
-      : '',
+    registration,
     aircraftType: record['aircraft_type'],
     latitude: record['latitude'],
     longitude: record['longitude'],
@@ -94,7 +99,7 @@ function createGroup(): AircraftGroupBuilder {
 }
 
 function addAircraft(group: AircraftGroupBuilder, observation: AircraftObservation): void {
-  const name = aircraftTypeName(observation.aircraftType);
+  const name = observation.resolvedType?.name ?? aircraftTypeName(observation.aircraftType);
   group.types.set(name, (group.types.get(name) ?? 0) + 1);
   const position = aircraftPosition(observation, name);
   if (position) { group.positions.push(position); }
@@ -121,8 +126,9 @@ function groupAircraft(observations: AircraftObservation[], snapshotTime: number
     const prefix = operatorPrefix(observation);
     typeObservations.push({
       label: observation.aircraftType,
+      type: observation.resolvedType,
       operatorId: prefix,
-      position: aircraftPosition(observation, aircraftTypeName(observation.aircraftType)),
+      position: aircraftPosition(observation, observation.resolvedType?.name ?? aircraftTypeName(observation.aircraftType)),
     });
     if (prefix === null) {
       addAircraft(unassigned, observation);

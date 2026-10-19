@@ -23,7 +23,7 @@ test('polling starts disabled with bounded concurrency, execution time and no au
     }),
   });
   template.hasResourceProperties('AWS::Lambda::Function', {
-    Runtime: 'nodejs22.x', Architectures: ['arm64'], MemorySize: 256,
+    Runtime: 'nodejs22.x', Architectures: ['arm64'], MemorySize: 512,
     Timeout: 120, ReservedConcurrentExecutions: 1,
     Environment: { Variables: Match.objectLike({ SKYLINK_KEY_PARAMETER: '/airline-ranking/skylink-api-key' }) },
   });

@@ -103,7 +103,7 @@ test('treats timezone-less provider timestamps as UTC and honors explicit offset
   }
 });
 
-test('groups verified type labels, preserves variants and unfamiliar labels, and accounts for unknown types', () => {
+test('groups trailing reference codes and preserves unmatched descriptions', () => {
   const types = ['B738', ' Boeing  B738 ', 'THE BOEING COMPANY B738', 'Boeing 737-800',
     'Airbus A320', 'a20n', 'Boeing 737-8', 'B38M', 'New model 123', ' new  MODEL 123 ',
     null, undefined, '', '   ', 42];
@@ -113,45 +113,17 @@ test('groups verified type labels, preserves variants and unfamiliar labels, and
   assert.equal(airline.count, types.length);
   assert.deepEqual(airline.aircraftTypes, [
     { name: 'Unknown type', count: 5 },
-    { name: 'Boeing 737-800', count: 4 },
-    { name: 'Boeing 737 MAX 8', count: 2 },
-    { name: 'NEW MODEL 123', count: 2 },
-    { name: 'Airbus A320', count: 1 },
-    { name: 'Airbus A320neo', count: 1 },
+    { name: 'BOEING 737-800', count: 4 },
+    { name: 'AIRBUS A-320', count: 1 },
+    { name: 'AIRBUS A-320neo', count: 1 },
+    { name: 'BOEING 737 MAX 8', count: 1 },
+    { name: 'Boeing 737-8', count: 1 },
+    { name: 'new  MODEL 123', count: 1 },
+    { name: 'New model 123', count: 1 },
   ]);
   for (const row of snapshot.airlines) {
     assert.equal(row.aircraftTypes.reduce((total, type) => total + type.count, 0), row.count);
   }
-});
-
-test('combines canonical model names and designators regardless of casing or whitespace', () => {
-  const types = ['B77W', 'Boeing 777-300ER', ' BOEING  777-300ER ', 'Boeing 777-300',
-    'B38M', 'boeing 737 MAX 8', 'B738', 'Boeing 737-800'];
-  const records = types.map((aircraft_type, i) => aircraft({ icao24: i.toString(16).padStart(6, '0'), aircraft_type }));
-  const airline = countAircraft(payload(records), now).airlines[0];
-  assert.equal(airline.count, types.length);
-  assert.deepEqual(airline.aircraftTypes, [
-    { name: 'Boeing 777-300ER', count: 3 },
-    { name: 'Boeing 737 MAX 8', count: 2 },
-    { name: 'Boeing 737-800', count: 2 },
-    { name: 'BOEING 777-300', count: 1 },
-  ]);
-});
-
-test('cleans verified Airbus model labels without merging specific variants into broad types', () => {
-  const types = ['AIRBUS S A S A321-271NX', 'Airbus A321-271NX', 'AIRBUS S A S A321-271NY',
-    'AIRBUS INDUSTRIE A319-131', 'A21N', 'A319', 'Airbus A321-999'];
-  const records = types.map((aircraft_type, i) => aircraft({ icao24: i.toString(16).padStart(6, '0'), aircraft_type }));
-  const airline = countAircraft(payload(records), now).airlines[0];
-  assert.equal(airline.count, types.length);
-  assert.deepEqual(airline.aircraftTypes, [
-    { name: 'Airbus A321-271NX', count: 2 },
-    { name: 'Airbus A319', count: 1 },
-    { name: 'Airbus A319-131', count: 1 },
-    { name: 'Airbus A321-271NY', count: 1 },
-    { name: 'AIRBUS A321-999', count: 1 },
-    { name: 'Airbus A321neo', count: 1 },
-  ]);
 });
 
 test('uses only the newest eligible observation for both the type breakdown and airline total', () => {
@@ -168,9 +140,9 @@ test('uses only the newest eligible observation for both the type breakdown and 
   for (const records of [[older, newer], [newer, older]]) {
     const snapshot = countAircraft(payload([...records, ...excluded]), now);
     assert.deepEqual(snapshot.airlines.find(item => item.id === 'AAL').aircraftTypes,
-      [{ name: 'Airbus A350-900', count: 1 }]);
+      [{ name: 'AIRBUS A-350-900', count: 1 }]);
     assert.deepEqual(snapshot.airlines.find(item => item.id === 'FIN').aircraftTypes,
-      [{ name: 'Boeing 737-800', count: 1 }]);
+      [{ name: 'BOEING 737-800', count: 1 }]);
     assert.equal(count(snapshot, 'AAL'), 1);
   }
 });
@@ -323,7 +295,7 @@ test('retains locations only for the same deduplicated eligible airborne aircraf
   ];
   const airline = countAircraft(payload(records), now).airlines[0];
   assert.equal(airline.count, 1);
-  assert.deepEqual(airline.positions, [{ id: '000001', callsign: 'AAL123', aircraftType: 'Airbus A320', latitude: 11, longitude: 21, altitudeFt: 35000 }]);
+  assert.deepEqual(airline.positions, [{ id: '000001', callsign: 'AAL123', aircraftType: 'AIRBUS A-320', latitude: 11, longitude: 21, altitudeFt: 35000 }]);
 });
 
 test('missing or invalid coordinates omit locations without reducing aircraft counts', () => {
@@ -366,7 +338,7 @@ test('partitions fresh airborne aircraft exactly once, independently of operator
   assert.equal(result.unassignedAircraft.count, 2);
   assert.deepEqual(result.unassignedAircraft.positions.map(position => position.id), ['000002']);
   assert.deepEqual(result.unassignedAircraft.aircraftTypes, [
-    { name: 'Airbus A320', count: 1 }, { name: 'Unknown type', count: 1 },
+    { name: 'AIRBUS A-320', count: 1 }, { name: 'Unknown type', count: 1 },
   ]);
   assert.deepEqual(countAircraft(payload([...records].reverse()), now), result);
   const onlyUnassigned = countAircraft(payload(records.slice(1)), now);
