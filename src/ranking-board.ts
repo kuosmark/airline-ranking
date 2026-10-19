@@ -121,7 +121,7 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
     }
 
     frame = requestAnimationFrame(() => {
-      // Angular applies the drawer animation classes after rendering.
+      // Read animations after the updated drawers have been laid out.
       const drawerAnimations = this.getDrawerAnimations();
       let isAnimating = drawerAnimations.length > 0;
       void Promise.allSettled(drawerAnimations.map(animation => animation.finished)).then(() => {
