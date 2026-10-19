@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { compactSnapshot } from '../shared/snapshot-wire.ts';
 import { createServer } from 'node:http';
 import { compareRanks, isSnapshotStale, type Snapshot } from '../shared/ranking.ts';
 
@@ -44,7 +46,7 @@ export function createRankingServer(service: Pick<ReturnType<typeof createRankin
   return createServer((request, response) => {
     response.setHeader('Content-Type', 'application/json; charset=utf-8');
     response.setHeader('Cache-Control', 'no-store');
-    if (request.url !== '/api/ranking') {
+    if (request.url !== '/api/ranking' && request.url !== '/api/ranking-v2') {
       response.writeHead(404).end(JSON.stringify({ error: 'Not found' }));
       return;
     }
@@ -54,6 +56,17 @@ export function createRankingServer(service: Pick<ReturnType<typeof createRankin
       return;
     }
     const snapshot = service.read();
-    response.writeHead(snapshot ? 200 : 503).end(JSON.stringify(snapshot ?? { error: 'Ranking is not available yet' }));
+    if (!snapshot) {
+      response.writeHead(503).end(JSON.stringify({ error: 'Ranking is not available yet' }));
+      return;
+    }
+    const body = JSON.stringify(request.url === '/api/ranking-v2' ? compactSnapshot(snapshot) : snapshot);
+    const etag = `"${createHash('sha256').update(body).digest('hex')}"`;
+    response.setHeader('ETag', etag);
+    if (request.headers['if-none-match'] === etag) {
+      response.writeHead(304).end();
+      return;
+    }
+    response.writeHead(200).end(body);
   });
 }

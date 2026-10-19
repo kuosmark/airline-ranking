@@ -4,7 +4,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function isAircraftPosition(value: unknown): boolean {
+export function isAircraftPosition(value: unknown): boolean {
   if (!isRecord(value)) { return false; }
   const altitude = value['altitudeFt'];
   return typeof value['id'] === 'string' && /^[a-f\d]{6}$/.test(value['id']) &&

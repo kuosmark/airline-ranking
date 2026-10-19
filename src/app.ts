@@ -3,7 +3,8 @@ import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/c
 import { DatePipe } from '@angular/common';
 import type { Snapshot } from '../shared/ranking';
 import { isSnapshotStale } from '../shared/ranking';
-import { isSnapshot } from '../shared/snapshot-validation';
+import { createRankingClient } from './ranking-client';
+import { startVisiblePolling } from './visible-polling';
 import { formatSnapshotAge } from './snapshot-age';
 import { RankingBoardComponent } from './ranking-board';
 
@@ -17,7 +18,8 @@ import { RankingBoardComponent } from './ranking-board';
 })
 export class AppComponent implements OnInit, OnDestroy {
   private readonly abort = new AbortController();
-  private pollTimer?: ReturnType<typeof setInterval>;
+  private readonly fetchRanking = createRankingClient();
+  private stopPolling?: () => void;
 
   readonly snapshot = signal<Snapshot | null>(null);
   private readonly now = signal(Date.now());
@@ -32,20 +34,14 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly error = signal<string | null>(null);
 
   ngOnInit(): void {
-    void this.loadRanking();
-    this.pollTimer = setInterval(() => { void this.loadRanking(); }, 60_000);
+    this.stopPolling = startVisiblePolling(document, () => this.loadRanking());
   }
 
   private async loadRanking(): Promise<void> {
     this.now.set(Date.now());
     try {
-      const response = await fetch('/api/ranking', {
-        signal: AbortSignal.any([this.abort.signal, AbortSignal.timeout(10_000)]),
-      });
-      if (!response.ok) { throw new Error('Ranking request failed'); }
-      const snapshot: unknown = await response.json();
+      const snapshot = await this.fetchRanking(AbortSignal.any([this.abort.signal, AbortSignal.timeout(10_000)]));
       if (this.abort.signal.aborted) { return; }
-      if (!isSnapshot(snapshot)) { throw new Error('Invalid ranking response'); }
       this.error.set(null);
       this.snapshot.set(snapshot);
     } catch {
@@ -56,7 +52,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopPolling?.();
     this.abort.abort();
-    clearInterval(this.pollTimer);
   }
 }
