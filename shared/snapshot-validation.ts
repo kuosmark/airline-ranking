@@ -13,7 +13,7 @@ function isAircraftPosition(value: unknown): boolean {
     (altitude === undefined || (typeof altitude === 'number' && Number.isFinite(altitude)));
 }
 
-function isAircraftType(value: unknown): boolean {
+function isAircraftType(value: unknown): value is { name: string; count: number } {
   if (!isRecord(value)) { return false; }
   const count = value['count'];
   return typeof value['name'] === 'string' && typeof count === 'number' &&
@@ -73,6 +73,9 @@ function hasValidTypeRanking(value: Record<string, unknown>): boolean {
   const unknown = value['unknownAircraftType'];
   if (types === undefined && unknown === undefined) { return true; }
   if (!Array.isArray(types) || !isAircraftTypeGroup(unknown)) { return false; }
+  const descriptions = (unknown as AircraftTypeGroup & { descriptions?: unknown }).descriptions;
+  if (descriptions !== undefined && (!Array.isArray(descriptions) || !descriptions.every(isAircraftType) ||
+      descriptions.reduce((total, entry) => total + entry.count, 0) !== unknown.count)) { return false; }
   if (!types.every((type: unknown) => isRecord(type) && typeof type['id'] === 'string' &&
     /^[A-Z0-9]{2,4}$/.test(type['id']) && typeof type['name'] === 'string' &&
     isRankChange(type['rankChange']) && isAircraftTypeGroup(type))) { return false; }

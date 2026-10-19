@@ -1,3 +1,4 @@
+import process from 'node:process';
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
@@ -12,7 +13,7 @@ import { packageBackend, releaseBackend, validateFunctionArn } from '../infra/re
 
 const functionArn = 'arn:aws:lambda:eu-north-1:123456789012:function:AirlineRanking-Refresh';
 const code = Buffer.from('test package');
-const configuration = { Runtime: 'nodejs22.x', Handler: 'index.handler', Architectures: ['arm64'],
+const configuration = { MemorySize: 512, Runtime: 'nodejs22.x', Handler: 'index.handler', Architectures: ['arm64'],
   RevisionId: 'existing-revision', LastUpdateStatus: 'Successful' };
 
 test('backend package contains a bundled index.handler without invoking the provider', async t => {
@@ -22,11 +23,17 @@ test('backend package contains a bundled index.handler without invoking the prov
   t.after(() => rm(directory, { recursive: true, force: true }));
   const index = join(directory, 'index.js');
   const files = execFileSync('python3', ['-c',
-    'import io, sys, zipfile; z = zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())); print(z.namelist()); z.extract("index.js", sys.argv[1])',
+    'import io, sys, zipfile; z = zipfile.ZipFile(io.BytesIO(sys.stdin.buffer.read())); print(z.namelist()); z.extractall(sys.argv[1])',
     directory], { input: archive }).toString().trim();
-  assert.equal(files, "['index.js']");
+  assert.ok(files.includes('data/mictronics-aircraft.json'));
   // Load the exact extracted bundle; matching source text cannot verify its exports.
   const require = createRequire(import.meta.url);
+  const previousRoot = process.env.LAMBDA_TASK_ROOT;
+  process.env.LAMBDA_TASK_ROOT = directory;
+  t.after(() => {
+    if (previousRoot === undefined) { delete process.env.LAMBDA_TASK_ROOT; }
+    else { process.env.LAMBDA_TASK_ROOT = previousRoot; }
+  });
   const packaged = require(index);
   assert.equal(typeof packaged.handler, 'function');
   assert.equal(fetch.mock.callCount(), 0);
@@ -49,7 +56,7 @@ test('release updates only code with a revision guard and verifies the deployed 
 });
 
 test('releases reject unreviewed runtime settings and overlapping updates before changing code', async t => {
-  for (const changed of [{ Runtime: 'nodejs24.x' }, { Handler: 'other.handler' }, { Architectures: ['x86_64'] },
+  for (const changed of [{ MemorySize: 256 }, { Runtime: 'nodejs24.x' }, { Handler: 'other.handler' }, { Architectures: ['x86_64'] },
     { RevisionId: undefined }, { LastUpdateStatus: 'InProgress' }]) {
     const send = t.mock.method(LambdaClient.prototype, 'send', async () => ({ ...configuration, ...changed }));
     await assert.rejects(releaseBackend(code, functionArn), /configuration changed/);

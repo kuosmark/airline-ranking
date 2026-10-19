@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -27,8 +27,12 @@ export async function packageBackend(): Promise<Buffer> {
       entryPoints: [fileURLToPath(new URL('../backend/lambda.ts', import.meta.url))],
       outfile: index, bundle: true, platform: 'node', target: 'node22', minify: false,
     });
+    const data = join(directory, 'data');
+    await mkdir(data);
+    await copyFile(fileURLToPath(new URL('../backend/data/mictronics-aircraft.json', import.meta.url)),
+      join(data, 'mictronics-aircraft.json'));
     const archive = join(directory, 'backend.zip');
-    await run('python3', ['-m', 'zipfile', '-c', archive, index]);
+    await run('python3', ['-m', 'zipfile', '-c', archive, index, data]);
     return await readFile(archive);
   } finally {
     await rm(directory, { recursive: true, force: true });
@@ -40,7 +44,7 @@ export async function releaseBackend(code: Uint8Array, functionArn: string): Pro
   const client = new LambdaClient({ region: 'eu-north-1', maxAttempts: 1 });
   try {
     const current = await client.send(new GetFunctionConfigurationCommand({ FunctionName: functionArn }));
-    if (current.Runtime !== 'nodejs22.x' || current.Handler !== 'index.handler' ||
+    if (current.MemorySize !== 512 || current.Runtime !== 'nodejs22.x' || current.Handler !== 'index.handler' ||
         current.Architectures?.length !== 1 || current.Architectures[0] !== 'arm64' ||
         !current.RevisionId || current.LastUpdateStatus !== 'Successful') {
       throw new Error('Lambda configuration changed; review infrastructure before releasing');

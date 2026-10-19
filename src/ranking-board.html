@@ -117,7 +117,7 @@
       @if (isExpanded) {
         <div class="aircraft-details" id="types-unassigned" animate.enter="details-enter" animate.leave="details-leave">
           <div class="details-content">
-            <app-aircraft-group-details [aircraft]="unassigned" [breakdown]="unknownBreakdown()" [breakdownLabel]="isTypeView() ? 'operators' : 'types'" groupId="unassigned" [groupName]="unknownLabel()"
+            <app-aircraft-group-details [descriptions]="isTypeView() ? snapshot()?.unknownAircraftType?.descriptions : undefined" [aircraft]="unassigned" [breakdown]="unknownBreakdown()" [breakdownLabel]="isTypeView() ? 'operators' : 'types'" groupId="unassigned" [groupName]="unknownLabel()"
               [isShowingAllTypes]="isShowingAllTypes()" (typesToggled)="isShowingAllTypes.set(!isShowingAllTypes())" />
           </div>
         </div>

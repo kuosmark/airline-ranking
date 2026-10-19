@@ -17,16 +17,14 @@ function snapshot(records) {
   return countAircraft({ aircraft, total_count: aircraft.length, timestamp: updatedAt }, now);
 }
 
-test('resolves Mictronics codes and verified model aliases without guessing unfamiliar or generic types', () => {
-  for (const label of ['B738', ' THE BOEING COMPANY  b738 ', 'Boeing 737-800']) {
+test('resolves trailing Mictronics codes without guessing model aliases or generic types', () => {
+  for (const label of ['B738', ' THE BOEING COMPANY  b738 ', 'Boeing\tB738']) {
     assert.deepEqual(resolveAircraftType(label), { id: 'B738', name: 'BOEING 737-800' });
   }
   assert.deepEqual(resolveAircraftType('M20P'), { id: 'M20P', name: 'MOONEY M-20' });
-  assert.equal(resolveAircraftType('BOEING 737-8').id, 'B38M');
-  assert.equal(resolveAircraftType('BOEING 737-9').id, 'B39M');
   // Mictronics does not list DUOD; do not guess a replacement code.
   assert.equal(resolveAircraftType('SCHEMPP-HIRTH DUOD'), null);
-  for (const label of [null, '', 42, 'BOEING 737-UNKNOWN', 'ZZZZ', 'GLID', 'GLIM', 'BALL', 'ULAC']) {
+  for (const label of [null, '', 42, 'BOEING 737-8', 'BOEING 737-9', 'AIRBUS A321-271NX', 'BOEING 737-UNKNOWN', 'ZZZZ', 'GLID', 'GLIM', 'BALL', 'ULAC']) {
     assert.equal(resolveAircraftType(label), null);
   }
 });
@@ -34,7 +32,7 @@ test('resolves Mictronics codes and verified model aliases without guessing unfa
 test('both rankings count the same eligible aircraft, including unknown operators and missing positions', () => {
   const result = snapshot([
     {}, { aircraft_type: 'Boeing B738', callsign: 'AAL12' },
-    { aircraft_type: 'Boeing 737-800', callsign: 'N123AB', registration: 'N123AB', latitude: null },
+    { aircraft_type: 'B738', callsign: 'N123AB', registration: 'N123AB', latitude: null },
     { aircraft_type: 'A320', callsign: '' },
     { aircraft_type: 'Unverified model', callsign: 'AAL13' },
     { aircraft_type: null, callsign: '' },
@@ -102,4 +100,76 @@ test('type search matches names and codes and retains original ranks', () => {
   assert.deepEqual(filterOperators(rows, ' a320 ').map(row => row.rank), [2]);
   assert.deepEqual(filterOperators(rows, 'Boeing').map(row => row.airline.id), ['B738']);
   assert.equal(filterOperators(rows, 'Finland').length, 0);
+});
+
+test('uses the same names in type ranks, operator breakdowns and map details', () => {
+  for (const label of ['B738', 'BOEING B738', 'A20N', 'M20P', '  boeing 737-800 ', 'Embraer ERJ 190-400']) {
+    const result = snapshot([{ aircraft_type: label }]);
+    const type = result.aircraftTypeRankings[0];
+    const operator = result.airlines[0];
+    assert.deepEqual(operator.aircraftTypes, [{ name: type.name, count: 1 }]);
+    assert.equal(operator.positions[0].aircraftType, type.name);
+    assert.equal(type.positions[0].aircraftType, type.name);
+  }
+});
+
+test('preserves unmatched descriptions in breakdowns and maps without assigning a ranked type', () => {
+  const result = snapshot([{ aircraft_type: '  SkyLink  Model-123  ' }]);
+  assert.deepEqual(result.aircraftTypeRankings, []);
+  assert.equal(result.unknownAircraftType.count, 1);
+  assert.deepEqual(result.airlines[0].aircraftTypes, [{ name: 'SkyLink  Model-123', count: 1 }]);
+  assert.equal(result.airlines[0].positions[0].aircraftType, 'SkyLink  Model-123');
+  assert.equal(result.unknownAircraftType.positions[0].aircraftType, 'SkyLink  Model-123');
+});
+
+test('unknown descriptions include aircraft without positions and preserve classification', () => {
+  const result = snapshot([
+    { aircraft_type: ' Some model ', latitude: null },
+    { aircraft_type: 'Some model' },
+    { aircraft_type: null },
+    { aircraft_type: 'B738' },
+  ]);
+  assert.deepEqual(result.unknownAircraftType.descriptions, [
+    { name: 'Some model', count: 2 }, { name: 'Description unavailable', count: 1 },
+  ]);
+  assert.equal(result.unknownAircraftType.positions.length, 2);
+  assert.equal(isSnapshot(result), true);
+  assert.equal(isSnapshot({ ...result, unknownAircraftType: { ...result.unknownAircraftType, descriptions: undefined } }), true);
+  assert.equal(isSnapshot({ ...result, unknownAircraftType: { ...result.unknownAircraftType, descriptions: [{ name: 'bad', count: 4 }] } }), false);
+});
+
+test('matches only unique full reference names ignoring case, whitespace and hyphens', () => {
+  for (const label of [' boeing 737-800 ', 'BOEING\t737 800', 'Boeing737800']) {
+    assert.deepEqual(resolveAircraftType(label), { id: 'B738', name: 'BOEING 737-800' });
+  }
+  assert.deepEqual(resolveAircraftType('Diamond DA 62'), { id: 'DA62', name: 'DIAMOND DA-62' });
+  for (const label of ['HILLER UH-12', 'PIEL Super Emeraude', '737-800', 'BOEING 737-8', 'BOEING 737-800 extra']) {
+    assert.equal(resolveAircraftType(label), null);
+  }
+  assert.deepEqual(resolveAircraftType('HILLER UH-12 H12T'), { id: 'H12T', name: 'Hiller UH-12' });
+  const result = snapshot([{ aircraft_type: 'B738' }, { aircraft_type: 'Boeing 737-800', latitude: null }]);
+  assert.equal(result.aircraftTypeRankings[0].count, 2);
+  assert.equal(result.unknownAircraftType.count, 0);
+  assert.deepEqual(result.airlines[0].aircraftTypes, [{ name: 'BOEING 737-800', count: 2 }]);
+  assert.equal(isSnapshot(result), true);
+});
+
+test('ICAO24 fallback is shared by rankings and maps, respects registrations and preserves explicit types', () => {
+  const fallback = snapshot([{ icao24: '004002', aircraft_type: 'Unidentified model', registration: 'z-wpa' }]);
+  assert.equal(fallback.aircraftTypeRankings[0].id, 'B732');
+  const name = fallback.aircraftTypeRankings[0].name;
+  assert.deepEqual(fallback.airlines[0].aircraftTypes, [{ name, count: 1 }]);
+  assert.equal(fallback.airlines[0].positions[0].aircraftType, name);
+  assert.equal(fallback.aircraftTypeRankings[0].positions[0].aircraftType, name);
+  assert.equal(fallback.unknownAircraftType.count, 0);
+  assert.equal(isSnapshot(fallback), true);
+  const withoutRegistration = snapshot([{ icao24: '004002', aircraft_type: null, latitude: null }]);
+  assert.equal(withoutRegistration.aircraftTypeRankings[0].id, 'B732');
+  assert.equal(withoutRegistration.aircraftTypeRankings[0].positions.length, 0);
+  const conflict = snapshot([{ icao24: '004002', aircraft_type: 'Unidentified model', registration: 'OTHER' }]);
+  assert.equal(conflict.unknownAircraftType.count, 1);
+  assert.equal(conflict.airlines[0].aircraftTypes[0].name, 'Unidentified model');
+  for (const aircraft_type of ['B738', 'Boeing 737-800']) {
+    assert.equal(snapshot([{ icao24: '004002', aircraft_type }]).aircraftTypeRankings[0].id, 'B738');
+  }
 });

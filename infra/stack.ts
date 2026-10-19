@@ -124,13 +124,23 @@ export class AirlineRankingStack extends Stack {
       handler: 'handler',
       runtime: lambda.Runtime.NODEJS_22_X,
       architecture: lambda.Architecture.ARM_64,
-      memorySize: 256,
+      memorySize: 512,
       timeout: Duration.minutes(2),
       reservedConcurrentExecutions: 1,
       logGroup,
       retryAttempts: 0,
       maxEventAge: Duration.minutes(1),
-      bundling: { externalModules: [], target: 'node22', minify: false },
+      bundling: {
+        externalModules: [], target: 'node22', minify: false,
+        commandHooks: {
+          beforeBundling: () => [],
+          beforeInstall: () => [],
+          afterBundling: (inputDir, outputDir) => [
+            `mkdir -p '${outputDir}/data'`,
+            `cp '${inputDir}/backend/data/mictronics-aircraft.json' '${outputDir}/data/mictronics-aircraft.json'`,
+          ],
+        },
+      },
       environment: {
         STATE_BUCKET: state.bucketName,
         WEBSITE_BUCKET: this.website.bucketName,
