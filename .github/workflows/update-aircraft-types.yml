@@ -22,40 +22,38 @@ jobs:
         with:
           ref: main
           persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
       - name: Download and validate reference
         run: |
           curl --fail --location --retry 3 --max-time 120 \
             https://raw.githubusercontent.com/Mictronics/aircraft-database/main/indexedDB.zip \
             --output "$RUNNER_TEMP/mictronics.zip"
-          python3 scripts/update-aircraft-types.py "$RUNNER_TEMP/mictronics.zip"
+          node --experimental-strip-types scripts/update-aircraft-types.ts "$RUNNER_TEMP/mictronics.zip"
       - name: Detect changes
         id: changes
         run: |
           if ! git diff --quiet -- backend/data/mictronics-aircraft-types.json backend/data/mictronics-aircraft.json; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
-      - uses: actions/setup-node@v7
-        if: steps.changes.outputs.changed == 'true'
-        with:
-          node-version: '22'
-          cache: npm
-      - if: steps.changes.outputs.changed == 'true'
-        run: npm ci
       - if: steps.changes.outputs.changed == 'true'
         run: npm run check
       - name: Prepare pull request description
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('.github/pull_request_template.md').read_text()
+          node --input-type=module - <<'JS'
+          import { readFileSync, writeFileSync } from 'node:fs';
+          let text = readFileSync('.github/pull_request_template.md', 'utf8');
           text = text.replace('Describe the problem and resulting behavior.',
-              'Refresh bundled aircraft type names and ICAO24 reference records from Mictronics. No runtime requests are added.')
+              'Refresh bundled aircraft type names and ICAO24 reference records from Mictronics. No runtime requests are added.');
           text = text.replace('List commands and results, plus relevant manual checks or screenshots. For UI changes, record the tested viewport widths and verify wrapping, overflow, spacing, and changed interactions.',
-              'The importer validated the data and unchanged licence. npm run check passed in the update workflow. Inspect changed names in the UI before merging.')
+              'The importer validated the data and unchanged licence. npm run check passed in the update workflow. Inspect changed names in the UI before merging.');
           text = text.replace('Summarize the review approach, findings, resolutions, and any remaining limitations.',
-              'Human review is pending. Compare added, removed and changed type codes and aircraft records with the upstream export. Approve the PR workflows if GitHub requests it, and confirm checks pass for this revision.')
-          Path('/tmp/type-update-pr.md').write_text(text)
-          PY
+              'Human review is pending. Compare added, removed and changed type codes and aircraft records with the upstream export. Approve the PR workflows if GitHub requests it, and confirm checks pass for this revision.');
+          writeFileSync('/tmp/type-update-pr.md', text);
+          JS
       - uses: peter-evans/create-pull-request@v8
         with:
           branch: codex/update-aircraft-types

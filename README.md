@@ -12,7 +12,7 @@ Preview uses synthetic data to illustrate rank indicators, operator metadata and
 
 ## Run locally
 
-Requires Node.js 22.13+ (22.x) or 24.x. Checks and backend release packaging also require Python 3. GitHub Actions uses Node.js 22 and its runner includes Python 3.
+Requires Node.js 22.13+ (22.x) or 24.x. Reference updates and their tests require the `unzip` and `zip` command-line utilities (available on macOS and the Ubuntu GitHub Actions runner). Backend release packaging and its regression test still require Python 3. GitHub Actions uses Node.js 22.
 
 ```sh
 npm ci
@@ -93,6 +93,8 @@ model variants. The snapshot adds optional
 remain supported and show an availability message in the type view until refresh.
 Operator names in type drawers come from the existing enriched operator directory.
 The Unknown type drawer also lists reported SkyLink descriptions with counts, including aircraft without positions. Missing descriptions appear as “Description unavailable”. This breakdown does not assign ICAO codes or add ranked types.
+
+The monthly reference workflow runs `scripts/update-aircraft-types.ts` with Node.js. For a local import, run `node --experimental-strip-types scripts/update-aircraft-types.ts PATH_TO_EXPORT.zip`. The importer rejects duplicate JSON keys, malformed records, changed licences and removals exceeding 5% of either existing reference. All validation completes before reference files are written. Its tests run with the JavaScript suite in `npm run check`.
 
 Operator drawer type breakdowns use the same Mictronics lookup as the aircraft-type ranking. Unmatched labels retain the original SkyLink description with surrounding whitespace trimmed; missing descriptions share an Unknown type entry. Breakdown counts always sum to the operator total.
 
