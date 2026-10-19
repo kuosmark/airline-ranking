@@ -268,6 +268,13 @@ test('serves cached rankings, returns 503 before success, and rejects other rout
     assert.equal(response.headers.get('cache-control'), 'no-store');
     assert.equal(count(await response.json(), 'AAL'), 1);
   }
+  const compact = await globalThis.fetch(url + '-v2');
+  const etag = compact.headers.get('etag');
+  assert.ok(etag);
+  assert.ok(Array.isArray((await compact.json()).positions));
+  const unchanged = await globalThis.fetch(url + '-v2', { headers: { 'If-None-Match': etag } });
+  assert.equal(unchanged.status, 304);
+  assert.equal(await unchanged.text(), '');
   assert.equal(calls, 2);
   assert.equal((await globalThis.fetch(url + '/unknown')).status, 404);
   const rejected = await globalThis.fetch(url, { method: 'POST' });

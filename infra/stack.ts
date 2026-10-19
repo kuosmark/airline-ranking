@@ -154,7 +154,7 @@ export class AirlineRankingStack extends Stack {
     }));
     refresh.addToRolePolicy(new iam.PolicyStatement({
       actions: ['s3:PutObject'],
-      resources: [this.website.arnForObjects('api/ranking')],
+      resources: [this.website.arnForObjects('api/ranking'), this.website.arnForObjects('api/ranking-v2')],
     }));
     const apiKey = ssm.StringParameter.fromSecureStringParameterAttributes(this, 'ApiKey', {
       parameterName: '/airline-ranking/skylink-api-key',

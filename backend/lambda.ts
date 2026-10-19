@@ -1,3 +1,4 @@
+import { compactSnapshot } from '../shared/snapshot-wire.ts';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { createOperatorDirectory } from './operator-directory.ts';
@@ -39,10 +40,15 @@ export async function handler(event: { scheduledAt: string }, context: { getRema
       },
       publish: async snapshot => {
         stage = 'Publishing ranking';
-        await s3.send(new PutObjectCommand({
-          Bucket: websiteBucket, Key: 'api/ranking', Body: JSON.stringify(snapshot),
-          ContentType: 'application/json', CacheControl: 'public, max-age=30',
-        }), { abortSignal: AbortSignal.timeout(5_000) });
+        for (const [key, body] of [
+          ['api/ranking', JSON.stringify(snapshot)],
+          ['api/ranking-v2', JSON.stringify(compactSnapshot(snapshot))],
+        ]) {
+          await s3.send(new PutObjectCommand({
+            Bucket: websiteBucket, Key: key, Body: body,
+            ContentType: 'application/json', CacheControl: 'public, max-age=30',
+          }), { abortSignal: AbortSignal.timeout(5_000) });
+        }
         stage = 'Refreshing ranking';
       },
     });

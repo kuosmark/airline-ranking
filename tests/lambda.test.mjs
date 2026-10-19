@@ -86,6 +86,9 @@ test('successful Lambda refresh still completes with stage diagnostics enabled',
   const logs = setup(t);
   await handler({ scheduledAt: new Date().toISOString() }, { getRemainingTimeInMillis: () => 120_000 });
   assert.deepEqual(logs, []);
+  const keys = S3Client.prototype.send.mock.calls.map(call => call.arguments[0].input.Key);
+  assert.ok(keys.includes('api/ranking'));
+  assert.ok(keys.includes('api/ranking-v2'));
 });
 
 
