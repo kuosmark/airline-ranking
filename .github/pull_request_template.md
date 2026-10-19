@@ -4,7 +4,9 @@ Describe the problem and resulting behavior.
 
 ## Verification
 
-List commands and results, plus relevant manual checks or screenshots. For UI changes, record the tested viewport widths and verify wrapping, overflow, spacing, and changed interactions.
+List commands and results. For manual checks, describe the behavior tested, the observed result, and the relevant environment. For UI changes, include screenshots, the browser and viewport widths, and the interactions checked; verify wrapping, overflow, and spacing.
+
+For bug fixes, describe the reproduction and regression test, or how the fix was verified if an automated test was impractical. For performance changes, include comparable before/after measurements and the dataset sizes used.
 
 ## Review
 
@@ -13,6 +15,8 @@ Summarize the review approach, findings, resolutions, and any remaining limitati
 For refactors, explain how existing behavior was verified and why any tests needed to change. Review component responsibilities and template/style ownership.
 
 ## Before merging
+
+Check each item only after verification. Explain any item that does not apply before marking it checked; leave no unresolved items at merge time.
 
 - [ ] Changes match the agreed scope and introduce only necessary complexity.
 - [ ] Review is complete and blocking findings are resolved.

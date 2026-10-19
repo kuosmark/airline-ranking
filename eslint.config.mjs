@@ -5,6 +5,7 @@ import angular from 'angular-eslint';
 
 export default defineConfig(
   { ignores: ['dist/**', '.angular/**', 'node_modules/**'] },
+  { linterOptions: { reportUnusedInlineConfigs: 'error' } },
   { files: ['tests/**/*.mjs'], extends: [js.configs.recommended] },
   {
     files: ['src/**/*.ts', 'shared/**/*.ts', 'backend/**/*.ts', 'infra/**/*.ts', 'scripts/**/*.ts'],

@@ -2,16 +2,13 @@
 
 Keep this project small and simple. Add only what is absolutely necessary for the current agreed task.
 
-- Do not build for hypothetical future requirements.
-- Do not add speculative features, dependencies, abstractions, infrastructure, documentation, or tooling.
-- Prefer the simplest implementation that meets the current requirements.
+- Prefer the simplest implementation that meets the agreed requirements. Reuse existing code where appropriate; add features, dependencies, abstractions, infrastructure, documentation, or tooling only for a concrete current need.
 - Prioritize readability over brevity. Use clear names and intermediate variables when they make logic easier to follow; avoid dense expressions and unnecessary verbosity.
 - Prefer small, clearly named functions with shallow control flow and a clear responsibility.
 - Give Angular components one clear UI responsibility. Keep substantial templates in separate HTML files and component-specific styles in their own CSS files; reserve global CSS for document defaults and shared utilities.
 - Format CSS with one declaration per line and keep related responsive rules with their component styles.
 - Extract components when they clarify ownership; avoid arbitrary file-length limits or components for every small element.
-- Reuse existing code where appropriate. Add dependencies or abstractions only when the current change has a concrete need for them.
-- Keep changes focused; avoid unrelated refactoring, duplicate logic, and configuration for hypothetical use cases.
+- Keep changes focused; avoid unrelated refactoring and duplicate logic.
 - Name project-owned boolean variables, parameters, and properties with an `is` prefix and a descriptive condition, such as `isAirborne` or `isStale`. Preserve names required by external APIs and libraries.
 - Keep explanations and plans concise and concrete.
 - Keep public documentation, comments, commit messages, and pull requests factual and focused on the software.
@@ -20,6 +17,9 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 ## Development workflow
 
 - Agree on the scope and expected behavior before substantial implementation work.
+- Before fixing a bug, reproduce the reported behavior and identify its cause. If reproduction is blocked, state the limitation rather than treating a suspected cause as confirmed. For performance issues, compare representative small and large datasets in the affected browser or runtime and record before/after measurements.
+- For bug fixes, add or adjust a behavior-focused regression test that fails before the fix and passes afterward where practical; otherwise record how the fix was verified.
+- Lint suppressions, TypeScript suppression comments, and skipped tests need a short, specific reason and the narrowest practical scope.
 - Keep `main` working. Make all changes through pull requests from short-lived `codex/<description>` branches, including documentation fixes.
 - Ask the repository owner for explicit approval before opening a pull request. Approval to implement a change does not authorize opening a PR.
 - The monthly Mictronics update workflow may open or update reference-data PRs automatically. These still require owner approval to merge.
@@ -31,6 +31,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - For meaningful code changes, delegate a review of the proposed commit to a separate agent with fresh context. Provide the requirements, base and head commits, and repository instructions. The reviewer must not edit files. Small documentation-only changes may use self-review.
 - Verify review findings, resolve blocking issues, and rerun affected checks after fixes. Request another review of significant code changes made after review.
 - Before merging, confirm CI passes for the latest revision and present the verification and review results to the repository owner.
+- Before merging, update the PR description so every checklist item is verified and checked, including latest-revision CI and explicit owner merge approval. Resolve pending items before proceeding; never check an item merely to complete the checklist. If an item is not applicable, state why and mark it checked. After merging, verify the saved checklist is complete before moving on.
 - When reviewing substantial new functionality, suggest a milestone release to the repository owner. Create a release only after explicit owner approval and successful deployment verification; do not suggest a release for every PR.
 - Merge a pull request only after the repository owner explicitly approves merging the current revision. Approval to implement work or open a PR is not merge approval. New commits require renewed merge approval.
 - Squash-merge with a descriptive title, delete the feature branch, and update local `main` afterward.
