@@ -212,6 +212,8 @@ li:last-child {
 .aircraft-details {
   display: grid;
   grid-template-rows: 1fr;
+  /* Start on insertion, before Angular's delayed enter classes can flash the full drawer. */
+  animation: reveal-details 200ms ease-out;
 }
 
 .details-content {
@@ -273,12 +275,8 @@ li:last-child {
   text-align: center;
 }
 
-.details-enter {
-  animation: reveal-details 200ms ease-out;
-}
-
 .details-leave {
-  animation: reveal-details 200ms ease-in reverse;
+  animation: conceal-details 200ms ease-in;
 }
 
 @keyframes reveal-details {
@@ -290,6 +288,18 @@ li:last-child {
   to {
     grid-template-rows: 1fr;
     opacity: 1;
+  }
+}
+
+@keyframes conceal-details {
+  from {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  to {
+    grid-template-rows: 0fr;
+    opacity: 0;
   }
 }
 
@@ -335,7 +345,7 @@ li:last-child {
     transition: none;
   }
 
-  .details-enter, .details-leave {
+  .aircraft-details, .details-leave {
     animation: none;
   }
 }

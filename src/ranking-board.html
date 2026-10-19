@@ -57,7 +57,7 @@
             <span class="chevron" aria-hidden="true"></span>
           </button>
           @if (isExpanded) {
-            <div class="aircraft-details" [id]="'types-' + airline.id" animate.enter="details-enter" animate.leave="details-leave">
+            <div class="aircraft-details" [id]="'types-' + airline.id" animate.leave="details-leave">
               <div class="details-content">
                 @if (isAircraftType(airline)) {
                   <app-aircraft-group-details [aircraft]="airline" [breakdown]="operatorBreakdown(airline)"
@@ -115,7 +115,7 @@
         <span class="chevron" aria-hidden="true"></span>
       </button>
       @if (isExpanded) {
-        <div class="aircraft-details" id="types-unassigned" animate.enter="details-enter" animate.leave="details-leave">
+        <div class="aircraft-details" id="types-unassigned" animate.leave="details-leave">
           <div class="details-content">
             <app-aircraft-group-details [descriptions]="isTypeView() ? snapshot()?.unknownAircraftType?.descriptions : undefined" [aircraft]="unassigned" [breakdown]="unknownBreakdown()" [breakdownLabel]="isTypeView() ? 'operators' : 'types'" groupId="unassigned" [groupName]="unknownLabel()"
               [isShowingAllTypes]="isShowingAllTypes()" (typesToggled)="isShowingAllTypes.set(!isShowingAllTypes())" />
