@@ -35,10 +35,27 @@ test('builds check and release application code without deploying infrastructure
   assert.deepEqual(spec.phases.install.commands, ['npm ci']);
   assert.equal(spec.phases.install['runtime-versions'].nodejs, 22);
   const commands = spec.phases.build.commands;
-  assert.deepEqual(commands, ['npm run check', 'npm run infra:release -- "$WEBSITE_BUCKET" "$DISTRIBUTION_ID" "$REFRESH_FUNCTION"']);
-  assert.deepEqual(Object.keys(template.toJSON().Parameters).sort(), ['BootstrapVersion', 'ConnectionArn']);
+  assert.deepEqual(commands, ['npm run check', 'npm run infra:release -- "$WEBSITE_BUCKET" "$DISTRIBUTION_ID" "$REFRESH_FUNCTION"', 'npm run infra:verify']);
+  assert.deepEqual(Object.keys(template.toJSON().Parameters).sort(), ['AlertEmail', 'BootstrapVersion', 'ConnectionArn']);
   assert.deepEqual(project.Properties.Environment.EnvironmentVariables.map(variable => variable.Name).sort(),
     ['DISTRIBUTION_ID', 'REFRESH_FUNCTION', 'WEBSITE_BUCKET']);
+});
+
+test('only failed executions of this pipeline send an email notification', () => {
+  const pipelineArn = deployment.resolve(deployment.node.findChild('Pipeline').pipelineArn);
+  const [topicId] = Object.keys(template.findResources('AWS::SNS::Topic'));
+  template.hasResourceProperties('AWS::SNS::Subscription', {
+    Protocol: 'email', Endpoint: { Ref: 'AlertEmail' }, TopicArn: { Ref: topicId },
+  });
+  template.hasResourceProperties('AWS::Events::Rule', {
+    EventPattern: {
+      source: ['aws.codepipeline'],
+      'detail-type': ['CodePipeline Pipeline Execution State Change'],
+      resources: [pipelineArn],
+      detail: { state: ['FAILED'] },
+    },
+    Targets: [Match.objectLike({ Arn: { Ref: topicId } })],
+  });
 });
 
 test('artifacts and build logs expire after seven days without public bucket access', () => {

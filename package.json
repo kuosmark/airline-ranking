@@ -18,6 +18,7 @@
     "infra:deploy": "cdk deploy",
     "infra:publish": "node --experimental-strip-types infra/publish.ts",
     "infra:release": "node --experimental-strip-types infra/release.ts",
+    "infra:verify": "node --experimental-strip-types infra/verify.ts",
     "typecheck:scripts": "tsc -p scripts/tsconfig.json"
   },
   "dependencies": {
