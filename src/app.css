@@ -5,13 +5,13 @@ main {
 }
 
 .page-header {
-  margin-bottom: 22px;
+  margin-bottom: 28px;
 }
 
 h1 {
-  font-size: clamp(32px, 6vw, 46px);
+  font-size: clamp(32px, 6vw, 44px);
   line-height: 1.12;
-  letter-spacing: -.055em;
+  letter-spacing: -.025em;
   font-weight: 600;
   margin: 0 0 10px;
 }
@@ -68,7 +68,7 @@ h1 {
   }
 
   .page-header {
-    margin-bottom: 18px;
+    margin-bottom: 24px;
     padding: 0 4px;
   }
 }

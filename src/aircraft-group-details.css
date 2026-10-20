@@ -4,7 +4,7 @@
 
 .details-panel {
   container-type: inline-size;
-  padding: 4px clamp(16px, 7%, 52px) 24px var(--drawer-inset, 24px);
+  padding: 4px clamp(16px, 7%, 52px) 28px var(--drawer-inset, 24px);
 }
 
 app-aircraft-breakdown + app-aircraft-breakdown {
@@ -13,7 +13,7 @@ app-aircraft-breakdown + app-aircraft-breakdown {
 
 @media (max-width: 480px) {
   .details-panel {
-    padding-bottom: 22px;
+    padding-bottom: 24px;
   }
 }
 

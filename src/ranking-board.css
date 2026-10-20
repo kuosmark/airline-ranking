@@ -13,7 +13,7 @@
   display: flex;
   gap: 5px;
   margin: 0;
-  padding-bottom: 16px;
+  padding-bottom: 24px;
   color: #626c76;
   font-size: 12px;
   line-height: 1.5;
@@ -28,9 +28,8 @@
 .leaderboard {
   overflow-anchor: none;
   background: #fff;
-  border: 1px solid #e5e8eb;
-  border-radius: 16px;
-  box-shadow: 0 4px 22px #18263503;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--surface-radius);
 }
 
 .board-header {
@@ -39,7 +38,7 @@
   top: 0;
   z-index: 1;
   background: #fff;
-  border-radius: 16px 16px 0 0;
+  border-radius: var(--surface-radius) var(--surface-radius) 0 0;
   border-bottom: 1px solid #e5e8eb;
 }
 
@@ -84,7 +83,7 @@ li:last-child {
 }
 
 .leaderboard > :last-child, .leaderboard > ol:last-child > li:last-child {
-  border-radius: 0 0 16px 16px;
+  border-radius: 0 0 var(--surface-radius) var(--surface-radius);
 }
 
 .airline-toggle {
@@ -102,17 +101,17 @@ li:last-child {
 }
 
 .is-expanded {
-  background: #edf4ef;
+  background: #f2f7f3;
 }
 
 @media (hover: hover) {
   li:not(.is-expanded):hover, .unassigned-row:not(.is-expanded):hover, .operators-more button:hover {
-    background: #f3f4f6;
+    background: var(--hover-background);
   }
 }
 
 .airline-toggle:focus-visible {
-  outline: 2px solid #617a70;
+  outline: 2px solid var(--focus-color);
   outline-offset: -3px;
 }
 
@@ -160,7 +159,7 @@ li:last-child {
 .airline-name {
   font-size: 15px;
   font-weight: 500;
-  letter-spacing: -.015em;
+  letter-spacing: normal;
   line-height: 22px;
   overflow-wrap: anywhere;
 }
@@ -179,7 +178,7 @@ li:last-child {
   justify-self: end;
   font-size: 21px;
   line-height: 22px;
-  font-weight: 550;
+  font-weight: 600;
   letter-spacing: -.025em;
   font-variant-numeric: tabular-nums;
   padding: 0 4px;
@@ -257,7 +256,7 @@ li:last-child {
 }
 
 .operators-more button:focus-visible {
-  outline: 2px solid #617a70;
+  outline: 2px solid var(--focus-color);
   outline-offset: -3px;
 }
 
@@ -353,8 +352,8 @@ li:last-child {
 .unassigned-row {
   --drawer-inset: var(--row-padding-inline);
   margin-top: 16px;
-  border: 1px solid #e5e8eb;
-  border-radius: 16px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--surface-radius);
   overflow-anchor: none;
 }
 
@@ -372,15 +371,16 @@ li:last-child {
   gap: 4px;
   padding: 4px;
   margin-bottom: 16px;
-  border: 1px solid #dce3df;
-  border-radius: 10px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--surface-radius);
   background: #edf2ef;
 }
 
 .ranking-switch button {
-  padding: 9px 16px;
+  min-height: 44px;
+  padding: 10px 18px;
   border: 0;
-  border-radius: 7px;
+  border-radius: var(--control-radius);
   background: transparent;
   color: #515e58;
   font: inherit;
@@ -391,10 +391,11 @@ li:last-child {
 .ranking-switch button[aria-pressed="true"] {
   background: #fff;
   color: #171c24;
+  font-weight: 600;
   box-shadow: 0 1px 3px #17251d18;
 }
 
 .ranking-switch button:focus-visible {
-  outline: 2px solid #617a70;
+  outline: 2px solid var(--focus-color);
   outline-offset: 2px;
 }

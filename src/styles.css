@@ -1,4 +1,9 @@
 :root {
+  --surface-border: #dce3e0;
+  --surface-radius: 12px;
+  --control-radius: 8px;
+  --focus-color: #27745c;
+  --hover-background: #f3f6f4;
   color-scheme: light;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   color: #171c24;
