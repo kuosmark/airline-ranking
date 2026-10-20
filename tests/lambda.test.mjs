@@ -91,6 +91,37 @@ test('successful Lambda refresh still completes with stage diagnostics enabled',
   assert.ok(keys.includes('api/ranking-v2'));
 });
 
+for (const [scenario, category, response] of [
+  ['rate limit', 'HTTP 429', () => new globalThis.Response(secret, { status: 429 })],
+  ['provider failure', 'HTTP 503', () => new globalThis.Response(secret, { status: 503 })],
+  ['malformed JSON', 'invalid JSON', () => new globalThis.Response(`{"secret":"${secret}"`)],
+  ['incomplete snapshot', 'incomplete snapshot', () => globalThis.Response.json({ aircraft: [], secret })],
+  ['invalid timestamp', 'invalid timestamp', () => globalThis.Response.json({
+    timestamp: secret, total_count: 1, aircraft: [{}],
+  })],
+  ['stale snapshot', 'stale snapshot', () => globalThis.Response.json({
+    timestamp: '2020-01-01T00:00:00Z', total_count: 1, aircraft: [{}],
+  })],
+  ['invalid identifier', 'invalid aircraft identifier', () => globalThis.Response.json({
+    timestamp: new Date().toISOString(), total_count: 1, aircraft: [{ icao24: secret }],
+  })],
+]) {
+  test(`reports SkyLink ${scenario} without exposing response contents`, async t => {
+    const logs = setup(t);
+    t.mock.method(globalThis, 'fetch', async () => response());
+    await assert.rejects(
+      handler({ scheduledAt: new Date().toISOString() }, { getRemainingTimeInMillis: () => 120_000 }),
+      error => {
+        assert.equal(error.message, `Fetching SkyLink snapshot failed. Category: ${category}.`);
+        assert.equal(error.cause, undefined);
+        assert.equal(error.stack.includes(secret), false);
+        return true;
+      },
+    );
+    assert.equal(logs.join('\n').includes(secret), false);
+  });
+}
+
 
 test('duplicate delivery can republish saved ranking when the operator cache is unavailable', async t => {
   setup(t, 'recovery-cache');

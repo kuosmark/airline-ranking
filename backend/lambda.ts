@@ -4,7 +4,7 @@ import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { createOperatorDirectory } from './operator-directory.ts';
 import { refreshScheduledRanking } from './scheduled-refresh.ts';
 import { s3Store } from './s3-storage.ts';
-import { fetchSnapshot } from './skylink.ts';
+import { fetchSnapshot, SkyLinkError } from './skylink.ts';
 
 const s3 = new S3Client({ maxAttempts: 1, requestHandler: { connectionTimeout: 3_000, requestTimeout: 5_000, throwOnRequestTimeout: true } });
 const ssm = new SSMClient({ maxAttempts: 1, requestHandler: { connectionTimeout: 3_000, requestTimeout: 5_000, throwOnRequestTimeout: true } });
@@ -59,6 +59,13 @@ export async function handler(event: { scheduledAt: string }, context: { getRema
     if (['AbortError', 'TimeoutError', 'RequestTimeout'].includes(name)) { category = 'timeout'; }
     else if (['AccessDenied', 'AccessDeniedException'].includes(name)) { category = 'access denied'; }
     else if (['PreconditionFailed', 'ConditionalRequestConflict'].includes(name)) { category = 'conflicting write'; }
+    else if (error instanceof SkyLinkError) {
+      category = error.category;
+      if (error.category === 'HTTP error' && typeof error.status === 'number' &&
+          Number.isInteger(error.status) && error.status >= 400 && error.status <= 599) {
+        category = `HTTP ${error.status}`;
+      }
+    }
     // eslint-disable-next-line preserve-caught-error -- Attaching the original cause would expose unsanitized errors in Lambda logs.
     throw new Error(`${stage} failed. Category: ${category}.`);
   }

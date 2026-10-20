@@ -105,11 +105,11 @@ test('the refresh role can access only its state objects, published ranking and 
   for (const statement of statements) assert.equal(JSON.stringify(statement.Resource).includes('*'), false);
 });
 
-test('refresh failures notify the deployment-supplied email', () => {
+test('three consecutive failing periods notify the deployment-supplied email', () => {
   template.hasResourceProperties('AWS::SNS::Subscription', { Protocol: 'email', Endpoint: { Ref: 'AlertEmail' } });
   template.hasResourceProperties('AWS::CloudWatch::Alarm', {
     Namespace: 'AWS/Lambda', MetricName: 'Errors', Period: 900, Threshold: 1,
-    EvaluationPeriods: 2, DatapointsToAlarm: 2,
+    EvaluationPeriods: 3, DatapointsToAlarm: 3,
     TreatMissingData: 'notBreaching', AlarmActions: [Match.anyValue()],
     OKActions: Match.absent(), InsufficientDataActions: Match.absent(),
   });
