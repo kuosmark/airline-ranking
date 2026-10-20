@@ -1,17 +1,17 @@
 h2 {
-  margin: 0 0 8px;
+  margin: 0 0 12px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .aircraft-map {
-  margin-top: 22px;
+  margin-top: 28px;
 }
 
 .map-surface {
   background: #fff;
-  border: 1px solid #d6e1d8;
-  border-radius: 8px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--control-radius);
   overflow: hidden;
 }
 
@@ -61,7 +61,7 @@ h2 {
 }
 
 .map-coverage {
-  margin: 0 0 8px;
+  margin: 0 0 12px;
 }
 
 .map-altitude {

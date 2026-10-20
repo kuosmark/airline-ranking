@@ -9,17 +9,19 @@
     }
   </div>
   <div class="ranking-status">
-    @if (airborneCount() !== undefined) {
-      <span class="airborne-total">{{ airborneCount() | number }} aircraft</span>
-      <span class="status-separator" aria-hidden="true">·</span>
-    }
-    <span class="search-results" role="status">
-      @if (searchQuery().trim()) {
-        {{ matchingCount() }} of {{ totalCount() }} {{ isTypeView() ? 'types' : 'operators' }}
-      } @else {
-        {{ totalCount() }} {{ isTypeView() ? 'types' : 'operators' }}
+    <div class="ranking-counts">
+      @if (airborneCount() !== undefined) {
+        <span class="airborne-total"><strong>{{ airborneCount() | number }}</strong> aircraft</span>
+        <span aria-hidden="true">·</span>
       }
-    </span>
+      <span class="search-results" role="status">
+        @if (searchQuery().trim()) {
+          <strong>{{ matchingCount() }}</strong> of <strong>{{ totalCount() }}</strong> {{ isTypeView() ? 'types' : 'operators' }}
+        } @else {
+          <strong>{{ totalCount() }}</strong> {{ isTypeView() ? 'types' : 'operators' }}
+        }
+      </span>
+    </div>
     <span class="status-separator" aria-hidden="true">·</span>
     <span class="snapshot-status">Updated {{ snapshotAge() }}</span>
   </div>

@@ -11,11 +11,19 @@
 
 .ranking-status {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: flex-end;
   flex-shrink: 0;
-  gap: 6px;
+  gap: 6px 10px;
   color: #626c76;
+}
+
+.ranking-counts {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .search-toolbar {
@@ -23,7 +31,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .search-field {
@@ -36,8 +44,8 @@
   width: 100%;
   min-height: 44px;
   padding: 11px 44px 11px 14px;
-  border: 1px solid #e5e8eb;
-  border-radius: 10px;
+  border: 1px solid var(--surface-border);
+  border-radius: var(--control-radius);
   background: #fff;
   color: inherit;
   font: inherit;
@@ -57,7 +65,7 @@
   min-height: 44px;
   padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--control-radius);
   background: transparent;
   color: #626c76;
   font-size: 22px;
@@ -65,21 +73,21 @@
 }
 
 .clear-search:hover {
-  background: #18263508;
+  background: var(--hover-background);
 }
 
 .search-toolbar input:focus-visible, .clear-search:focus-visible {
-  outline: 2px solid #617a70;
+  outline: 2px solid var(--focus-color);
   outline-offset: 2px;
 }
 
 .search-results, .airborne-total {
   color: #515e58;
-  font-size: 12px;
+  font-size: 13px;
   white-space: nowrap;
 }
 
-@media (min-width: 481px) and (max-width: 900px) {
+@media (max-width: 900px) {
   .ranking-status {
     flex-direction: column;
     align-items: flex-end;
@@ -106,14 +114,13 @@
     font-size: 16px;
   }
 
-  .status-separator {
-    display: none;
-  }
-
   .ranking-status {
-    justify-content: flex-start;
-    flex-direction: column;
     align-items: flex-start;
-    gap: 4px;
   }
+}
+
+.ranking-status strong {
+  color: #263c32;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
