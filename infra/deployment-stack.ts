@@ -7,6 +7,9 @@ import * as actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as sns from 'aws-cdk-lib/aws-sns';
+import * as subscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
+import * as targets from 'aws-cdk-lib/aws-events-targets';
 import type { IDistribution } from 'aws-cdk-lib/aws-cloudfront';
 import type { IFunction } from 'aws-cdk-lib/aws-lambda';
 
@@ -35,6 +38,20 @@ export class DeploymentStack extends Stack {
     const build = this.createReleaseBuild(props);
     const pipeline = this.createPipeline(artifacts, build, connection.valueAsString);
     this.restrictSourceConnection(pipeline.role, connection.valueAsString);
+    this.createFailureNotification(pipeline);
+  }
+
+  private createFailureNotification(pipeline: codepipeline.Pipeline): void {
+    const email = new CfnParameter(this, 'AlertEmail', {
+      type: 'String',
+      description: 'Email address for failed deployment notifications.',
+    });
+    const alerts = new sns.Topic(this, 'DeploymentAlerts');
+    alerts.addSubscription(new subscriptions.EmailSubscription(email.valueAsString));
+    pipeline.onStateChange('DeploymentFailed', {
+      eventPattern: { detail: { state: ['FAILED'] } },
+      target: new targets.SnsTopic(alerts),
+    });
   }
 
   private createReleaseBuild(props: DeploymentProps): codebuild.PipelineProject {
@@ -92,6 +109,7 @@ export class DeploymentStack extends Stack {
           commands: [
             'npm run check',
             'npm run infra:release -- "$WEBSITE_BUCKET" "$DISTRIBUTION_ID" "$REFRESH_FUNCTION"',
+            'npm run infra:verify',
           ],
         },
       },
