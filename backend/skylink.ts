@@ -6,17 +6,31 @@ import { aircraftTypeName, resolveAircraftType } from './aircraft-types.ts';
 const OBSERVATION_MAX_AGE_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 15_000;
 
+type SkyLinkErrorCategory = 'invalid timestamp' | 'invalid aircraft identifier' | 'incomplete snapshot' |
+  'stale snapshot' | 'invalid JSON' | 'HTTP error';
+
+export class SkyLinkError extends Error {
+  readonly category: SkyLinkErrorCategory;
+  readonly status?: number;
+
+  constructor(category: SkyLinkErrorCategory, message: string, status?: number) {
+    super(message);
+    this.category = category;
+    this.status = status;
+  }
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function timestamp(value: unknown): number {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/.test(value)) {
-    throw new Error('Invalid SkyLink timestamp');
+    throw new SkyLinkError('invalid timestamp', 'Invalid SkyLink timestamp');
   }
   // SkyLink also returns UTC timestamps without a timezone suffix.
   const time = Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/.test(value) ? value : `${value}Z`);
-  if (!Number.isFinite(time)) { throw new Error('Invalid SkyLink timestamp'); }
+  if (!Number.isFinite(time)) { throw new SkyLinkError('invalid timestamp', 'Invalid SkyLink timestamp'); }
   return time;
 }
 
@@ -35,7 +49,7 @@ interface AircraftObservation {
 
 function parseObservation(record: unknown): AircraftObservation {
   if (!isRecord(record) || typeof record['icao24'] !== 'string' || !/^[\da-f]{6}$/i.test(record['icao24'])) {
-    throw new Error('Invalid SkyLink aircraft identifier');
+    throw new SkyLinkError('invalid aircraft identifier', 'Invalid SkyLink aircraft identifier');
   }
   const id = record['icao24'].toLowerCase();
   const registration = typeof record['registration'] === 'string'
@@ -145,11 +159,11 @@ function groupAircraft(observations: AircraftObservation[], snapshotTime: number
 export function countAircraft(payload: unknown, now = Date.now()): Snapshot {
   if (!isRecord(payload) || !Array.isArray(payload['aircraft']) ||
       payload['aircraft'].length === 0 || payload['total_count'] !== payload['aircraft'].length) {
-    throw new Error('Invalid or incomplete SkyLink snapshot');
+    throw new SkyLinkError('incomplete snapshot', 'Invalid or incomplete SkyLink snapshot');
   }
   const snapshotTime = timestamp(payload['timestamp']);
   if (now - snapshotTime > OBSERVATION_MAX_AGE_MS || snapshotTime - now > 60_000) {
-    throw new Error('SkyLink snapshot is not current');
+    throw new SkyLinkError('stale snapshot', 'SkyLink snapshot is not current');
   }
   const observations = deduplicateObservations(payload['aircraft'] as unknown[]);
   return {
@@ -165,7 +179,14 @@ export async function fetchSnapshot(apiKey: string): Promise<Snapshot> {
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     redirect: 'error',
   });
-  if (!response.ok) { throw new Error(`SkyLink request failed (${response.status})`); }
-  const payload: unknown = await response.json();
+  if (!response.ok) { throw new SkyLinkError('HTTP error', `SkyLink request failed (${response.status})`, response.status); }
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch (error) {
+    if (!(error instanceof SyntaxError)) { throw error; }
+    // Do not retain the parser error: it can contain provider response data.
+    throw new SkyLinkError('invalid JSON', 'Invalid SkyLink JSON');
+  }
   return countAircraft(payload);
 }
