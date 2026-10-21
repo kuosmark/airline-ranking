@@ -27,7 +27,8 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Before committing, run `npm run check` and review the diff. Check UI changes in the browser at 320px, a typical mobile width, and a desktop width. Verify text wrapping, horizontal overflow, spacing, and changed interactions.
 - Never commit `.env`, API keys, private information, or generated build files.
 - Use `.github/pull_request_template.md` to describe the change, verification, and review outcome. Include a clear screenshot of the final UI for visible changes, with readable text, complete framing, and no prototype labels or accidental focus indicators.
-- Update relevant existing documentation when a change affects setup, commands, or behavior. Reviewers should verify that it remains accurate.
+- Update relevant existing documentation when a change affects setup, commands, or behavior, including screenshots and diagrams made inaccurate by the change. Reviewers should verify that it remains accurate.
+- Use visuals when they clarify the interface, architecture, or data flow. Capture sharp screenshots with readable text, consistent framing and representative data; exclude private information, browser clutter, clipped content, prototype labels and accidental focus indicators. Add descriptive alt text and useful captions. Inspect the rendered Markdown and images at their intended display size before committing.
 - For meaningful code changes, delegate a review of the proposed commit to a separate agent with fresh context. Provide the requirements, base and head commits, and repository instructions. The reviewer must not edit files. Small documentation-only changes may use self-review.
 - Verify review findings, resolve blocking issues, and rerun affected checks after fixes. Request another review of significant code changes made after review.
 - Before merging, confirm CI passes for the latest revision and present the verification and review results to the repository owner.
@@ -35,7 +36,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - When reviewing substantial new functionality, suggest a milestone release to the repository owner. Create a release only after explicit owner approval and successful deployment verification; do not suggest a release for every PR.
 - Merge a pull request only after the repository owner explicitly approves merging the current revision. Approval to implement work or open a PR is not merge approval. New commits require renewed merge approval.
 - Squash-merge with a descriptive title, delete the feature branch, and update local `main` afterward.
-- For owner-approved releases, follow the release procedure in `README.md`: tag the exact verified deployed commit, publish concise GitHub release notes, and never move a published tag.
+- For owner-approved releases, follow the release procedure in `docs/deployment.md`: tag the exact verified deployed commit, publish concise GitHub release notes, and never move a published tag.
 
 ## Code review
 
@@ -52,4 +53,4 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Use `eu-north-1` for Regional resources. Do not introduce cross-Region resources or Lambda@Edge; CloudFront remains global.
 - Confirm the monthly project spend limit in AWS Settings before infrastructure deployment. The project is on Paid; do not activate advanced features without explicit owner approval.
 - Use the relevant AWS skill for infrastructure work and review resource and IAM changes before deployment.
-- Preserve the restricted deployment roles, polling controls and provider quota history. Follow the deployment and retirement procedures in `README.md`.
+- Preserve the restricted deployment roles, polling controls and provider quota history. Follow the deployment and retirement procedures in `docs/deployment.md`.
