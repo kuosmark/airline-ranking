@@ -80,6 +80,13 @@ The deployment stack also subscribes the supplied email address to a separate SN
 
 The pipeline can start immediately after creation. Verify automatic change detection after the next approved merge to `main`: the execution history must show a repository event trigger and the merged commit ID. A successful manually started release does not verify this trigger. Automatic releases preserve the deployed schedule, concurrency, environment and IAM permissions. Polling is controlled only by reviewed manual deployments of the application stack with an explicit `-c isPollingEnabled` value. A synthesized template in CI is validation, not an infrastructure deployment.
 
+After merging, use the following checks before considering a manual deployment:
+
+1. Find the automatic execution for the exact merged commit. A successful execution for an older commit does not confirm that the latest change is deployed.
+2. Allow at least 15 minutes for the trigger to arrive; a webhook has previously taken over 10 minutes. If an execution is queued or running, follow its progress. If it failed, investigate that failure instead of starting another deployment.
+3. If no execution appears after the waiting period, investigate the connection and trigger configuration. The waiting period is an investigation threshold, not an instruction to start a manual deployment automatically.
+4. Immediately before any manual start, recheck execution history for the intended commit and pin the execution to that commit. A delayed webhook may still arrive afterward, so a manual start can still cause a duplicate deployment.
+
 Infrastructure remains defined in CDK. Changes to either stack require a reviewed manual deployment; the pipeline cannot assume CDK bootstrap roles, deploy CloudFormation, manage IAM, change scheduling or upgrade the AWS plan. Its application permissions cover code updates and configuration reads for the existing refresh Lambda, frontend HTML/JavaScript/CSS uploads, and invalidation of the existing distribution. Artifact and log access is limited to its own resources. Connection policies constrain repository and branch requests to this repository's `main` branch.
 
 Direct Lambda code releases do not update CloudFormation's recorded code asset. Before a manual infrastructure deployment, check out the latest approved `main`, run the checks and review `cdk diff`; CDK bundles that revision's backend and may update Lambda code again. Do not deploy an older checkout unless intentionally rolling back. Keep polling context explicit. Bootstrap administrator permissions remain available for manual infrastructure administration, but are not reachable through pipeline roles.
