@@ -1,0 +1,54 @@
+# Development
+
+[Back to overview](../README.md)
+
+## Run locally
+
+Requires Node.js 22.13+ (22.x) or 24.x. Reference updates and their tests require the `unzip` and `zip` command-line utilities (available on macOS and the Ubuntu GitHub Actions runner). Backend release packaging and its regression test still require Python 3. GitHub Actions uses Node.js 22.
+
+```sh
+npm ci
+```
+
+Create an untracked `.env` file in the project root:
+
+```dotenv
+SKYLINK_API_KEY=your-api-key
+```
+
+The local backend makes an immediate provider request on startup and polls every 15 minutes. Use one active poller per API key; stop the cloud schedule before starting a local backend with the same key.
+
+Start the backend and frontend in separate terminals:
+
+```sh
+npm run backend
+```
+
+```sh
+npm start
+```
+
+Open http://127.0.0.1:4200. Both services listen on loopback only. Angular proxies `/api/*` to the backend on port 3000; the API key stays on the backend.
+
+## Checks
+
+Run `npm run check` before committing. GitHub Actions runs the same command on pull requests and pushes to `main`.
+
+| Command | Purpose |
+| --- | --- |
+| `npm run check` | Run linting, backend/script/infra type checking, tests, the production build, and strict CDK synthesis |
+| `npm run lint` | Check strict TypeScript rules, Angular conventions, and template accessibility |
+| `npm run lint:fix` | Apply automatic lint fixes |
+| `npm run typecheck:scripts` | Type-check reference updater scripts |
+| `npm run typecheck:backend` | Type-check the backend and shared ranking types |
+| `npm test` | Test ranking, caching, provider cost controls, HTTP behavior, scheduled refreshes, infrastructure and release safeguards |
+| `npm run build` | Build the frontend into `dist/airline-ranking/browser` |
+| `npm run typecheck:infra` | Type-check the CDK application |
+| `npm run infra:synth` | Bundle Lambda and validate the generated CloudFormation template without AWS lookups |
+| `npm run infra:diff` | Compare the stack with deployed resources |
+| `npm run infra:deploy` | Deploy the stack after reviewing its diff |
+| `npm run infra:publish -- cdk.out/outputs.json` | Upload the frontend and wait for CloudFront cache invalidation |
+| `npm run infra:release -- BUCKET DISTRIBUTION FUNCTION_ARN` | Update the existing Lambda code and publish the frontend; requires Python 3 for ZIP packaging |
+
+Tests use Node's built-in test runner and synthetic data. They do not require an API key or contact either provider. Lint warnings fail the check. TypeScript rules prohibit unnecessary `else` branches after returns and shadowed names, and limit nesting to four levels. Drawer layout, responsive spacing and animations are checked manually in the browser; the unit tests do not verify their appearance.
+

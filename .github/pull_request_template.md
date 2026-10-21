@@ -6,6 +6,8 @@ Describe the problem and resulting behavior.
 
 List commands and results. For manual checks, describe the behavior tested, the observed result, and the relevant environment. For UI changes, include screenshots, the browser and viewport widths, and the interactions checked; verify wrapping, overflow, and spacing.
 
+For documentation visuals, inspect the rendered Markdown, readable text, framing and alt text. Explain whether existing screenshots or diagrams needed updating.
+
 For bug fixes, describe the reproduction and regression test, or how the fix was verified if an automated test was impractical. For performance changes, include comparable before/after measurements and the dataset sizes used.
 
 ## Review
@@ -22,6 +24,6 @@ Check each item only after verification. Explain any item that does not apply be
 - [ ] Review is complete and blocking findings are resolved.
 - [ ] Relevant checks and CI pass for the latest revision.
 - [ ] For UI/UX changes, the repository owner has inspected the actual UI and verified that it looks and behaves correctly in this revision, or no UI/UX changes are included.
-- [ ] Relevant documentation is updated, or no update is needed.
+- [ ] Documentation, screenshots and diagrams are accurate and updated where needed, or no update is needed.
 - [ ] No secrets or private information are included.
 - [ ] The repository owner has approved merging this revision.

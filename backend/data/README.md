@@ -43,8 +43,8 @@ To reproduce an update locally:
 
 ```sh
 curl --fail --location https://raw.githubusercontent.com/Mictronics/aircraft-database/main/indexedDB.zip --output /tmp/mictronics.zip
-python3 scripts/update-aircraft-types.py /tmp/mictronics.zip
+node --experimental-strip-types scripts/update-aircraft-types.ts /tmp/mictronics.zip
 npm run check
 ```
 
-Python 3 uses only its standard library. Review the JSON diff, particularly removals, registration/type reassignments and family-name changes. Do not infer additional aliases from similar names.
+The importer uses Node.js and the system `unzip` utility. Review the JSON diff, particularly removals, registration/type reassignments and family-name changes. Do not infer additional aliases from similar names.
