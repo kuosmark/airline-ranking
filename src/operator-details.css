@@ -13,8 +13,8 @@
 
 .operator-details > div {
   display: grid;
-  grid-template-columns: 50px minmax(0, 1fr);
-  gap: 5px;
+  grid-template-columns: 60px minmax(0, 1fr);
+  gap: 12px;
 }
 
 .operator-details dt, .operator-details dd {
@@ -37,7 +37,7 @@ dl {
   margin: 0;
 }
 
-@container (min-width: 440px) {
+@container (min-width: 480px) {
   .operator-details {
     grid-template-columns: minmax(0, max-content) auto auto;
     justify-content: start;
@@ -45,7 +45,7 @@ dl {
 
   .operator-details > div {
     display: flex;
-    gap: 5px;
+    gap: 12px;
   }
 }
 

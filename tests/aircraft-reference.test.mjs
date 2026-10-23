@@ -9,7 +9,7 @@ import { update } from '../scripts/update-aircraft-types.ts';
 const license = '# ODC Attribution License (ODC-By)';
 const types = '{"B738":["BOEING 737-800","L2J","M"]}';
 const aircraft = '{"ABC123":["N-123","B738","00"]}';
-const files = ['mictronics-aircraft-types.json', 'mictronics-aircraft.json', 'mictronics-LICENSE.txt'];
+const files = ['mictronics-aircraft-types.json', 'mictronics-aircraft.json', 'mictronics-LICENSE.txt', 'mictronics-aircraft-classifications.json'];
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'aircraft-reference-'));
@@ -37,6 +37,7 @@ test('reference import is deterministic, sorted and excludes generic codes', t =
     '{"ABC123":["N123","B738","00"],"100000":["N2","B738","00"],"000001":["N1","B738","00"]}');
   f.update();
   const first = f.contents();
+  assert.deepEqual(JSON.parse(first[3]), { B738: 'L2J' });
   f.update();
   assert.deepEqual(f.contents(), first);
   assert.equal(first[0], '{\n  "B738": "BOEING 737-800"\n}\n');
@@ -47,7 +48,7 @@ test('invalid type input preserves all existing reference files', t => {
   const f = fixture(t);
   f.write(); f.update();
   const original = f.contents();
-  for (const records of ['{}', '[]', '{"B738":["","L2J","M"]}',
+  for (const records of ['{}', '[]', '{"B738":["Boeing",null,"M"]}', '{"B738":["","L2J","M"]}',
     '{"B738":["Boeing","L2J","M"],"B738":["Other","L2J","M"]}',
     '{"B738":["Boeing","L2J","M"],"B\\u003738":["Other","L2J","M"]}',
     '{"BADCODE":["Boeing","L2J","M"]}', '{"A320":["AIRBUS A-320","L2J","M"]}',
@@ -78,7 +79,7 @@ test('changed or unexpected licence prevents reference updates', t => {
   const f = fixture(t);
   f.write(types, aircraft, 'Unknown licence');
   assert.throws(f.update);
-  assert.deepEqual(f.contents(), [null, null, null]);
+  assert.deepEqual(f.contents(), [null, null, null, null]);
   f.write(); f.update();
   const original = f.contents();
   for (const changedLicense of [license + ' changed', '\ufeff' + license]) {

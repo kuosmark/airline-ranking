@@ -64,8 +64,9 @@
                     breakdownLabel="operators" [groupId]="airline.id" [groupName]="airline.name"
                     [isShowingAllTypes]="isShowingAllTypes()" (typesToggled)="isShowingAllTypes.set(!isShowingAllTypes())">
                     <dl class="type-metadata" aria-label="Aircraft type details">
-                      <dt>ICAO</dt>
-                      <dd>{{ airline.id }}</dd>
+                      <div><dt>ICAO</dt><dd>{{ airline.id }}</dd></div>
+                      <div><dt>Category</dt><dd>{{ aircraftCategory(airline.classification) }}</dd></div>
+                      <div><dt>Engines</dt><dd>{{ aircraftEngines(airline.classification) }}</dd></div>
                     </dl>
                   </app-aircraft-group-details>
                 } @else {

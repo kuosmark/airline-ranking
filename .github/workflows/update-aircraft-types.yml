@@ -36,7 +36,7 @@ jobs:
       - name: Detect changes
         id: changes
         run: |
-          if ! git diff --quiet -- backend/data/mictronics-aircraft-types.json backend/data/mictronics-aircraft.json; then
+          if ! git diff --quiet -- backend/data/mictronics-aircraft-types.json backend/data/mictronics-aircraft.json backend/data/mictronics-aircraft-classifications.json; then
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
       - if: steps.changes.outputs.changed == 'true'
@@ -60,6 +60,7 @@ jobs:
           delete-branch: true
           add-paths: |
             backend/data/mictronics-aircraft-types.json
+            backend/data/mictronics-aircraft-classifications.json
             backend/data/mictronics-aircraft.json
           commit-message: Refresh Mictronics aircraft reference
           title: Refresh Mictronics aircraft reference

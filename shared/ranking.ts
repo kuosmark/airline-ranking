@@ -40,6 +40,7 @@ export interface UnknownAircraftType extends AircraftTypeGroup {
 }
 
 export interface AircraftTypeRanking extends AircraftTypeGroup {
+  classification?: string;
   id: string;
   name: string;
   rankChange?: number | 'new';

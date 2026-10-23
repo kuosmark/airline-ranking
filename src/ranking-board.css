@@ -10,13 +10,33 @@
 }
 
 .type-metadata {
-  display: flex;
-  gap: 5px;
+  display: grid;
+  gap: 8px 20px;
   margin: 0;
   padding-bottom: 24px;
   color: #626c76;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.type-metadata > div {
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.type-metadata dt, .type-metadata dd {
+  overflow-wrap: anywhere;
+}
+
+@container (min-width: 480px) {
+  .type-metadata {
+    grid-template-columns: repeat(3, max-content);
+  }
+
+  .type-metadata > div {
+    display: flex;
+  }
 }
 
 .type-metadata dd {

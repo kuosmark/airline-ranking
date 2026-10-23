@@ -23,7 +23,7 @@ filtered, deduplicated SkyLink observations. Switching clears search, pagination
 and the open drawer. Type search matches the display name or ICAO type code.
 Aircraft types are grouped by ICAO designator matched against the bundled
 reference, ordered by airborne count
-and then code. Each drawer shows its ICAO code, operator counts (including Unknown
+and then code. Each drawer shows its ICAO code, aircraft category and readable engine count/type from the bundled Mictronics classification. Missing or unsupported metadata displays as Unavailable; a zero engine-count code is treated as unknown. Classification labels follow [Mictronics readsb](https://github.com/Mictronics/readsb/blob/master/webapp/src/script/readsb/aircraftFilter.ts); turbine propulsion is described as turboprop for aeroplanes and turboshaft for rotorcraft. Older snapshots without classifications remain valid. Each drawer also shows operator counts (including Unknown
 operator) and the aircraft map. The operator breakdown initially shows five entries
 and can be expanded. Unknown type contains airborne aircraft whose type is missing
 or could not be matched to a specific ICAO aircraft type. This includes generic
@@ -108,3 +108,7 @@ SkyLink is used only for airborne snapshots. A single continuously running polle
 
 Older scheduled state records only the last attempted slot. Migration conservatively seeds snapshot history as if every slot in the preceding 32-day window through that slot was attempted, rather than granting a fresh budget. New installations with a null last slot start with empty history. Redeployments retain this history. Historical SkyLink directory attempts remain archived separately and still count toward provider billing during the transition. These guards apply to this production poller, **not the entire SkyLink subscription**: local backend startup and polling, manual tests, other instances and external usage are additional. SkyLink's [direct-subscription terms](https://skylinkapi.com/terms/) permit billed overage; monitor usage and any provider-side spending controls.
 
+
+![Aircraft type drawer showing ICAO code, category, engines, operator breakdown and aircraft locations](images/aircraft-type-details.png)
+
+*Aircraft type metadata and operator breakdown from an observed snapshot.*
