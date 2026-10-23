@@ -1,4 +1,5 @@
-import { aircraftCategory, aircraftEngines } from './aircraft-classification';
+import { AircraftCategoryFilterComponent } from './aircraft-category-filter';
+import { aircraftCategory, aircraftEngines, availableAircraftCategories } from './aircraft-classification';
 import type { AfterRenderRef, ElementRef, OnChanges, OnDestroy, QueryList, SimpleChanges } from '@angular/core';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Injector, ViewChildren, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
@@ -12,7 +13,7 @@ import { RankingToolbarComponent } from './ranking-toolbar';
 @Component({
   selector: 'app-ranking-board',
   standalone: true,
-  imports: [DecimalPipe, OperatorDetailsComponent, AircraftGroupDetailsComponent, RankingToolbarComponent],
+  imports: [AircraftCategoryFilterComponent, DecimalPipe, OperatorDetailsComponent, AircraftGroupDetailsComponent, RankingToolbarComponent],
   templateUrl: './ranking-board.html',
   styleUrl: './ranking-board.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -40,7 +41,11 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
   readonly searchQuery = signal('');
   readonly rowBatchSize = 100;
   readonly visibleLimit = signal(this.rowBatchSize);
-  readonly matchingRows = computed(() => filterOperators(this.rows(), this.searchQuery()));
+  readonly selectedCategory = signal('');
+  readonly availableCategories = computed(() => availableAircraftCategories(
+    this.snapshot()?.aircraftTypeRankings ?? [], this.selectedCategory(),
+  ));
+  readonly matchingRows = computed(() => filterOperators(this.rows(), this.searchQuery(), this.isTypeView() ? this.selectedCategory() : ''));
   readonly visibleRows = computed(() => this.matchingRows().slice(0, this.visibleLimit()));
   readonly nextBatchSize = computed(() => Math.min(this.rowBatchSize, this.matchingRows().length - this.visibleRows().length));
   readonly announcement = signal('');
@@ -70,6 +75,7 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
     this.pendingRender?.destroy();
     this.cancelAnimations();
     this.view.set(view);
+    this.selectedCategory.set('');
     this.updateSearch('');
     this.expandedGroupId.set(null);
     this.isShowingAllTypes.set(false);
@@ -92,6 +98,12 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
     const group = this.unknownGroup();
     if (!group) { return []; }
     return 'operators' in group ? this.operatorBreakdown(group) : group.aircraftTypes;
+  }
+
+  changeCategory(category: string): void {
+    this.selectedCategory.set(category);
+    this.visibleLimit.set(this.rowBatchSize);
+    this.expandedGroupId.set(null);
   }
 
   updateSearch(query: string): void {

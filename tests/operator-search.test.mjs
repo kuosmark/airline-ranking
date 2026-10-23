@@ -55,3 +55,15 @@ test('missing directory fields do not match placeholder labels or break prefix s
   assert.deepEqual(filterOperators(airlines, 'null'), []);
   assert.deepEqual(filterOperators(airlines, 'xyz'), [{ airline: airlines[3], rank: 4 }]);
 });
+
+test('category and text filters combine while preserving global type ranks', () => {
+  const types = [
+    { id: 'A320', name: 'Airbus A320', count: 100, classification: 'L2J', operators: [] },
+    { id: 'H135', name: 'Airbus H135', count: 30, classification: 'H2T', operators: [] },
+    { id: 'X', name: 'Unclassified', count: 2, operators: [] },
+  ];
+  assert.deepEqual(filterOperators(types, 'airbus', 'Helicopter'), [{ airline: types[1], rank: 2 }]);
+  assert.deepEqual(filterOperators(types, '', 'Unavailable'), [{ airline: types[2], rank: 3 }]);
+  assert.deepEqual(filterOperators(types, 'A320', 'Helicopter'), []);
+  assert.equal(filterOperators(types, '').length, 3);
+});

@@ -1,0 +1,12 @@
+<div class="categories" role="group" aria-label="Filter aircraft types by category">
+  <button type="button" [attr.aria-pressed]="selected() === ''" (click)="categoryChanged.emit('')">All categories</button>
+  @for (category of categories(); track category.category) {
+    <button type="button" [attr.aria-pressed]="selected() === category.category" (click)="categoryChanged.emit(category.category)">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <path class="body" [attr.d]="category.body" />
+        <path class="detail" [attr.d]="category.detail" />
+      </svg>
+      <span>{{ category.category }}</span>
+    </button>
+  }
+</div>
