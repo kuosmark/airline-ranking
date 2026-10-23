@@ -11,6 +11,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 })
 export class RankingToolbarComponent {
   readonly isTypeView = input(false);
+  readonly isCategoryFiltered = input(false);
   readonly searchQuery = input.required<string>();
   readonly matchingCount = input.required<number>();
   readonly airborneCount = input<number>();

@@ -1,0 +1,49 @@
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid #dce5df;
+  border-radius: 8px;
+  background: white;
+  color: #34473d;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+button:hover {
+  background: #f0f5f2;
+}
+button[aria-pressed="true"] {
+  background: #e6efea;
+  border-color: #546b5d;
+}
+button:focus-visible {
+  outline: 2px solid #34473d;
+  outline-offset: 2px;
+}
+svg {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+.body {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+.detail {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+}

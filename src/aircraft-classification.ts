@@ -20,3 +20,13 @@ export function aircraftEngines(classification?: string): string {
   if (!engineType) { return 'Unavailable'; }
   return `${count} ${engineType} ${count === '1' ? 'engine' : 'engines'}`;
 }
+
+export function availableAircraftCategories(
+  types: readonly { classification?: string; count: number }[],
+  selected = '',
+): Set<string> {
+  const available = new Set(types.filter(type => type.count > 0).map(type => aircraftCategory(type.classification)));
+  available.delete('Unavailable');
+  if (selected) { available.add(selected); }
+  return available;
+}

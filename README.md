@@ -20,7 +20,7 @@ Observed airborne aircraft, ranked by operator and aircraft type. Explore rank c
 - **Inclusive totals:** aircraft without an identified operator or type remain visible in separate expandable sections.
 - **Responsive controls:** keyboard-accessible maps, touch targets and reduced-motion support.
 
-![Aircraft-type ranking with airborne counts and rank changes](docs/images/aircraft-types.png)
+![Aircraft-type ranking with category filters, airborne counts and rank changes](docs/images/aircraft-types.png)
 
 <details>
 <summary>See the mobile layout</summary>

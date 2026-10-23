@@ -15,7 +15,7 @@
         <span aria-hidden="true">·</span>
       }
       <span class="search-results" role="status">
-        @if (searchQuery().trim()) {
+        @if (searchQuery().trim() || isCategoryFiltered()) {
           <strong>{{ matchingCount() }}</strong> of <strong>{{ totalCount() }}</strong> {{ isTypeView() ? 'types' : 'operators' }}
         } @else {
           <strong>{{ totalCount() }}</strong> {{ isTypeView() ? 'types' : 'operators' }}
