@@ -45,6 +45,19 @@ function readNames(text: string): Map<string, string> {
   return names;
 }
 
+function readClassifications(text: string, names: Map<string, string>): Map<string, string> {
+  const classifications = new Map<string, string>();
+  for (const [code, fields] of Object.entries(readRecords(text))) {
+    if (!names.has(code)) { continue; }
+    const classification: unknown = (fields as unknown[])[1];
+    if (typeof classification !== 'string' || !/^[A-Z-][A-Z0-9][A-Z-]$/.test(classification)) {
+      throw new Error(`Invalid aircraft classification: ${code}`);
+    }
+    classifications.set(code, classification);
+  }
+  return classifications;
+}
+
 function readAircraft(text: string, names: Map<string, string>): Map<string, [string, string]> {
   const aircraft = new Map<string, [string, string]>();
   const seen = new Set<string>();
@@ -96,9 +109,12 @@ export function update(archive: string, directory = dataDirectory): void {
   reportChanges(target, names, 'types');
   reportChanges(aircraftTarget, aircraft, 'aircraft');
   // Explicit sorting also preserves lexical order for all-numeric ICAO24 keys.
+  const classifications = readClassifications(readMember(archive, 'types.json'), names);
+  const classificationText = JSON.stringify(Object.fromEntries(sortedEntries(classifications)), null, 2) + '\n';
   const nameLines = sortedEntries(names).map(([code, name]) => `  ${JSON.stringify(code)}: ${JSON.stringify(name)}`);
   const aircraftLines = sortedEntries(aircraft).map(([address, [code, registration]]) =>
     `${JSON.stringify(address)}: [${JSON.stringify(code)}, ${asciiJson(registration)}]`);
+  writeFileSync(join(directory, 'mictronics-aircraft-classifications.json'), classificationText);
   writeFileSync(target, `{\n${nameLines.join(',\n')}\n}\n`);
   writeFileSync(aircraftTarget, `{\n${aircraftLines.join(',\n')}\n}\n`);
   writeFileSync(licensePath, license);

@@ -18,17 +18,19 @@ in the bundled type-name reference are retained. It contains no owner details.
 The backend uses these records only when code/name matching fails, rejecting
 conflicting nonempty registrations. Both files use the same attribution and licence.
 
+`mictronics-aircraft-classifications.json` retains the three-character category, engine-count and propulsion classification from `types.json`. It was initially imported from export version 527 and follows the same monthly update and licence. Unknown encodings remain unavailable in the UI; zero is not displayed as an engine count. Wake categories are not imported.
+
 ## Updates
 
-The backend packages the type names and the separate aircraft JSON file, so application use makes no reference-data requests.
+The backend packages the type names, classifications and the separate aircraft JSON file, so application use makes no reference-data requests.
 The GitHub Actions **Update aircraft reference** workflow runs on the first
 of each month at 07:23 UTC, or manually through **Run workflow**. Scheduling is
 best-effort and becomes active only after the workflow is merged into main.
 
-It downloads the full export, imports names and aircraft identities, and rejects malformed entries,
+It downloads the full export, imports names, classifications and aircraft identities, and rejects malformed entries,
 duplicate codes or ICAO24 addresses, a changed licence or removal of more than 5% of either reference.
 Unchanged references produce no PR. Changed references run `npm run check`, then open or
-update one PR on `codex/update-aircraft-types`. The owner reviews changed names and aircraft records
+update one PR on `codex/update-aircraft-types`. The owner reviews changed names, classifications and aircraft records
 and approves merging; the workflow never merges or deploys. A failed update
 leaves the deployed reference unchanged. Investigate failed Actions runs rather
 than bypassing validation.

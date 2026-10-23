@@ -1,4 +1,7 @@
+import classifications from './data/mictronics-aircraft-classifications.json' with { type: 'json' };
 import { rankAirlines, type AircraftPosition, type AircraftTypeGroup, type AircraftTypeRanking, type UnknownAircraftType } from '../shared/ranking.ts';
+
+const classificationByCode = new Map(Object.entries(classifications));
 
 interface TypeObservation {
   label: unknown;
@@ -50,7 +53,7 @@ export function buildAircraftTypeRanking(observations: TypeObservation[]): {
     if (observation.position) { group.positions.push(observation.position); }
   }
   return {
-    aircraftTypeRankings: rankAirlines(Array.from(groups, ([id, group]) => ({ id, name: group.name, ...finishGroup(group.aircraft) }))),
+    aircraftTypeRankings: rankAirlines(Array.from(groups, ([id, group]) => ({ id, name: group.name, classification: classificationByCode.get(id), ...finishGroup(group.aircraft) }))),
     unknownAircraftType: {
       ...finishGroup(unknown),
       descriptions: Array.from(descriptions, ([name, count]) => ({ name, count }))

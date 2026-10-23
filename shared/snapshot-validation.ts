@@ -78,6 +78,7 @@ function hasValidTypeRanking(value: Record<string, unknown>): boolean {
       descriptions.reduce((total, entry) => total + entry.count, 0) !== unknown.count)) { return false; }
   if (!types.every((type: unknown) => isRecord(type) && typeof type['id'] === 'string' &&
     /^[A-Z0-9]{2,4}$/.test(type['id']) && typeof type['name'] === 'string' &&
+    (type['classification'] === undefined || (typeof type['classification'] === 'string' && /^[A-Z-][A-Z0-9][A-Z-]$/.test(type['classification']))) &&
     isRankChange(type['rankChange']) && isAircraftTypeGroup(type))) { return false; }
   const rows = types as (AircraftTypeGroup & { id: string })[];
   return new Set(rows.map(type => type.id)).size === rows.length &&

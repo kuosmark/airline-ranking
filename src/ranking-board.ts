@@ -1,3 +1,4 @@
+import { aircraftCategory, aircraftEngines } from './aircraft-classification';
 import type { AfterRenderRef, ElementRef, OnChanges, OnDestroy, QueryList, SimpleChanges } from '@angular/core';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Injector, ViewChildren, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
@@ -17,6 +18,8 @@ import { RankingToolbarComponent } from './ranking-toolbar';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RankingBoardComponent implements OnChanges, OnDestroy {
+  readonly aircraftCategory = aircraftCategory;
+  readonly aircraftEngines = aircraftEngines;
   @ViewChildren('row') private rowElements!: QueryList<ElementRef<HTMLElement>>;
   private readonly changeDetector = inject(ChangeDetectorRef);
   private readonly injector = inject(Injector);

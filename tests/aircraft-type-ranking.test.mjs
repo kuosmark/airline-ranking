@@ -45,6 +45,7 @@ test('both rankings count the same eligible aircraft, including unknown operator
   assert.deepEqual(result.aircraftTypeRankings.map(row => [row.id, row.count]), [['B738', 3], ['A320', 1]]);
   const boeing = result.aircraftTypeRankings[0];
   assert.deepEqual(boeing.operators, [{ id: null, count: 1 }, { id: 'AAL', count: 1 }, { id: 'FIN', count: 1 }]);
+  assert.equal(boeing.classification, 'L2J');
   assert.equal(boeing.positions.length, 2);
   assert.equal(result.unknownAircraftType.count, 2);
   assert.equal(result.unknownAircraftType.positions.length, 2);
@@ -78,12 +79,15 @@ test('type rank changes use ICAO identities independently of operator ranks and 
 test('rejects partial, malformed or inconsistent type rankings while accepting old snapshots', () => {
   const valid = snapshot([{}, { aircraft_type: null }]);
   const type = valid.aircraftTypeRankings[0];
+  assert.equal(isSnapshot({ ...valid, aircraftTypeRankings: [{ ...type, classification: undefined }] }), true);
   assert.equal(isSnapshot(valid), true);
   for (const change of [
     { aircraftTypeRankings: undefined }, { unknownAircraftType: undefined },
     { aircraftTypeRankings: null }, { aircraftTypeRankings: [type, type] },
     { aircraftTypeRankings: [{ ...type, id: 'TOOLONG' }] },
     { aircraftTypeRankings: [{ ...type, name: null }] },
+    { aircraftTypeRankings: [{ ...type, classification: 'invalid' }] },
+    { aircraftTypeRankings: [{ ...type, classification: null }] },
     { aircraftTypeRankings: [{ ...type, rankChange: 'up' }] },
     { aircraftTypeRankings: [{ ...type, operators: [] }] },
     { aircraftTypeRankings: [{ ...type, operators: [{ id: 'bad', count: 1 }] }] },
