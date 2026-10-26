@@ -16,11 +16,12 @@ Observed airborne aircraft, ranked by operator and aircraft type. Explore rank c
 
 - **Two perspectives:** switch between operators and ICAO aircraft types, with rank movement since the previous snapshot.
 - **Fleet details:** expand a row for its breakdown and aircraft map; select a marker for callsign, type and reported altitude.
+- **Aircraft filters:** combine category silhouettes and engine counts with search; matching aircraft totals update while overall ranks stay unchanged.
 - **Search:** find operators by name, code or country, and aircraft types by name or ICAO code.
 - **Inclusive totals:** aircraft without an identified operator or type remain visible in separate expandable sections.
 - **Responsive controls:** keyboard-accessible maps, touch targets and reduced-motion support.
 
-![Aircraft-type ranking with category filters, airborne counts and rank changes](docs/images/aircraft-types.png)
+![Aircraft-type ranking with an expanded category and engine filter panel, airborne counts and rank changes](docs/images/aircraft-types.png)
 
 <details>
 <summary>See the mobile layout</summary>
@@ -85,4 +86,4 @@ Project-owned code and documentation are available under the [MIT licence](LICEN
 - **Natural Earth map outline:** [public domain](https://www.naturalearthdata.com/about/terms-of-use/).
 - **SkyLink observations and ADSBDB metadata:** supplied by their respective services; the project licence does not grant rights to provider data.
 
-Screenshots illustrate the application using observed data captured on 21 October 2026.
+Screenshots use saved observations from October 2026; delay notices reflect the age of the snapshots.

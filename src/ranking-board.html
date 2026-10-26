@@ -3,11 +3,12 @@
     <button type="button" [attr.aria-pressed]="!isTypeView()" (click)="changeView('operators')">Operators</button>
     <button type="button" [attr.aria-pressed]="isTypeView()" (click)="changeView('types')">Aircraft types</button>
   </div>
-  @if (isTypeView()) {
-    <app-aircraft-category-filter [available]="availableCategories()" [selected]="selectedCategory()" (categoryChanged)="changeCategory($event)" />
-  }
-  <app-ranking-toolbar [isCategoryFiltered]="!!selectedCategory()" [isTypeView]="isTypeView()" [searchQuery]="searchQuery()" [matchingCount]="matchingRows().length"
-    [totalCount]="rows().length" [airborneCount]="snapshot()?.airborneCount" [snapshotAge]="snapshotAge()" (searchChanged)="updateSearch($event)" />
+  <app-ranking-toolbar [activeFilterCount]="(selectedClass() ? 1 : 0) + (selectedEngineCount() ? 1 : 0)" [filterSummary]="filterSummary()" [isClassFiltered]="!!selectedClass() || !!selectedEngineCount()" [isTypeView]="isTypeView()" [searchQuery]="searchQuery()" [matchingCount]="matchingRows().length"
+    [totalCount]="rows().length" [airborneCount]="displayedAirborneCount()" [snapshotAge]="snapshotAge()" (searchChanged)="updateSearch($event)" (filtersReset)="resetFilters()">
+    @if (isTypeView()) {
+      <app-aircraft-class-filter [engineCounts]="engineCounts()" [selectedEngineCount]="selectedEngineCount()" (engineCountChanged)="changeEngineCount($event)" [available]="availableClasses()" [selected]="selectedClass()" (classChanged)="changeClass($event)" />
+    }
+  </app-ranking-toolbar>
 }
 
 <section class="leaderboard" [attr.aria-label]="isTypeView() ? 'Aircraft type leaderboard' : 'Operator leaderboard'">
@@ -66,6 +67,11 @@
                   <app-aircraft-group-details [aircraft]="airline" [breakdown]="operatorBreakdown(airline)"
                     breakdownLabel="operators" [groupId]="airline.id" [groupName]="airline.name"
                     [isShowingAllTypes]="isShowingAllTypes()" (typesToggled)="isShowingAllTypes.set(!isShowingAllTypes())">
+                    @let aircraftClass = resolveAircraftClass(airline.classification);
+                    <div class="aircraft-class">
+                      <app-aircraft-symbol [symbol]="aircraftClass.symbol" />
+                      <span>{{ aircraftClass.label }}</span>
+                    </div>
                     <dl class="type-metadata" aria-label="Aircraft type details">
                       <div><dt>ICAO</dt><dd>{{ airline.id }}</dd></div>
                       <div><dt>Category</dt><dd>{{ aircraftCategory(airline.classification) }}</dd></div>
@@ -95,7 +101,7 @@
         @if (isTypeView() && snapshot()?.aircraftTypeRankings === undefined) {
           Aircraft type ranking will be available after the next successful update.
         } @else {
-          {{ searchQuery().trim() || selectedCategory() ? 'No matches for the selected filters.' : 'No ' + (isTypeView() ? 'aircraft types' : 'operators') + ' identified in this snapshot.' }}
+          {{ searchQuery().trim() || selectedClass() || selectedEngineCount() ? 'No matches for the selected filters.' : 'No ' + (isTypeView() ? 'aircraft types' : 'operators') + ' identified in this snapshot.' }}
         }
       </p>
     }
@@ -106,7 +112,7 @@
   }
 </section>
 
-@if (!selectedCategory() && unknownGroup(); as unassigned) {
+@if (!selectedClass() && !selectedEngineCount() && unknownGroup(); as unassigned) {
   @if (unassigned.count > 0) {
     @let isExpanded = expandedGroupId() === 'unassigned';
     <section #row [attr.aria-label]="unknownLabel()" class="unassigned-row" data-id="unassigned" [class.is-expanded]="isExpanded">

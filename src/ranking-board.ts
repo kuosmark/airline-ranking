@@ -1,5 +1,7 @@
-import { AircraftCategoryFilterComponent } from './aircraft-category-filter';
-import { aircraftCategory, aircraftEngines, availableAircraftCategories } from './aircraft-classification';
+import { aircraftClasses, availableAircraftClasses, resolveAircraftClass } from './aircraft-classes';
+import { AircraftSymbolComponent } from './aircraft-symbol';
+import { AircraftClassFilterComponent } from './aircraft-class-filter';
+import { aircraftCategory, aircraftEngines } from './aircraft-classification';
 import type { AfterRenderRef, ElementRef, OnChanges, OnDestroy, QueryList, SimpleChanges } from '@angular/core';
 import { ChangeDetectionStrategy, ChangeDetectorRef, Component, Injector, ViewChildren, afterNextRender, computed, inject, input, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
@@ -13,12 +15,13 @@ import { RankingToolbarComponent } from './ranking-toolbar';
 @Component({
   selector: 'app-ranking-board',
   standalone: true,
-  imports: [AircraftCategoryFilterComponent, DecimalPipe, OperatorDetailsComponent, AircraftGroupDetailsComponent, RankingToolbarComponent],
+  imports: [AircraftSymbolComponent, AircraftClassFilterComponent, DecimalPipe, OperatorDetailsComponent, AircraftGroupDetailsComponent, RankingToolbarComponent],
   templateUrl: './ranking-board.html',
   styleUrl: './ranking-board.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class RankingBoardComponent implements OnChanges, OnDestroy {
+  readonly resolveAircraftClass = resolveAircraftClass;
   readonly aircraftCategory = aircraftCategory;
   readonly aircraftEngines = aircraftEngines;
   @ViewChildren('row') private rowElements!: QueryList<ElementRef<HTMLElement>>;
@@ -41,11 +44,31 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
   readonly searchQuery = signal('');
   readonly rowBatchSize = 100;
   readonly visibleLimit = signal(this.rowBatchSize);
-  readonly selectedCategory = signal('');
-  readonly availableCategories = computed(() => availableAircraftCategories(
-    this.snapshot()?.aircraftTypeRankings ?? [], this.selectedCategory(),
+  readonly selectedClass = signal('');
+  readonly selectedEngineCount = signal('');
+  readonly filterSummary = computed(() => {
+    const category = aircraftClasses.find(item => item.id === this.selectedClass())?.label ?? 'All aircraft';
+    const count = this.selectedEngineCount();
+    return `${category} · ${count ? count + (count === '1' ? ' engine' : ' engines') : 'Any engine count'}`;
+  });
+  readonly engineCounts = computed(() => {
+    const counts = new Set((this.snapshot()?.aircraftTypeRankings ?? [])
+      .filter(type => type.count > 0 && (!this.selectedClass() || resolveAircraftClass(type.classification).id === this.selectedClass()))
+      .map(type => type.classification?.[1] ?? '')
+      .filter(count => /^[1-9]$/.test(count))
+      .map(count => Number(count) >= 5 ? '5+' : count));
+    return [...counts].sort();
+  });
+  readonly availableClasses = computed(() => availableAircraftClasses(
+    this.snapshot()?.aircraftTypeRankings ?? [], this.selectedClass(),
   ));
-  readonly matchingRows = computed(() => filterOperators(this.rows(), this.searchQuery(), this.isTypeView() ? this.selectedCategory() : ''));
+  readonly matchingRows = computed(() => filterOperators(this.rows(), this.searchQuery(), this.isTypeView() ? this.selectedClass() : '', this.isTypeView() ? this.selectedEngineCount() : ''));
+  readonly displayedAirborneCount = computed(() => {
+    const isFiltered = this.searchQuery().trim() || (this.isTypeView() && (this.selectedClass() || this.selectedEngineCount()));
+    return isFiltered
+      ? this.matchingRows().reduce((total, row) => total + row.airline.count, 0)
+      : this.snapshot()?.airborneCount;
+  });
   readonly visibleRows = computed(() => this.matchingRows().slice(0, this.visibleLimit()));
   readonly nextBatchSize = computed(() => Math.min(this.rowBatchSize, this.matchingRows().length - this.visibleRows().length));
   readonly announcement = signal('');
@@ -75,7 +98,8 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
     this.pendingRender?.destroy();
     this.cancelAnimations();
     this.view.set(view);
-    this.selectedCategory.set('');
+    this.selectedClass.set('');
+    this.selectedEngineCount.set('');
     this.updateSearch('');
     this.expandedGroupId.set(null);
     this.isShowingAllTypes.set(false);
@@ -100,8 +124,22 @@ export class RankingBoardComponent implements OnChanges, OnDestroy {
     return 'operators' in group ? this.operatorBreakdown(group) : group.aircraftTypes;
   }
 
-  changeCategory(category: string): void {
-    this.selectedCategory.set(category);
+  resetFilters(): void {
+    this.selectedClass.set('');
+    this.selectedEngineCount.set('');
+    this.updateSearch('');
+    this.expandedGroupId.set(null);
+  }
+
+  changeClass(classId: string): void {
+    this.selectedClass.set(this.selectedClass() === classId ? '' : classId);
+    if (!this.engineCounts().includes(this.selectedEngineCount())) { this.selectedEngineCount.set(''); }
+    this.visibleLimit.set(this.rowBatchSize);
+    this.expandedGroupId.set(null);
+  }
+
+  changeEngineCount(count: string): void {
+    this.selectedEngineCount.set(count);
     this.visibleLimit.set(this.rowBatchSize);
     this.expandedGroupId.set(null);
   }
