@@ -8,6 +8,21 @@
         (click)="searchChanged.emit(''); operatorSearch.focus()"><span aria-hidden="true">×</span></button>
     }
   </div>
+  @if (isTypeView()) {
+    <button class="filter-toggle" type="button" [attr.aria-expanded]="isFiltersOpen()" aria-controls="aircraft-filters" (click)="isFiltersOpen.set(!isFiltersOpen())">
+      Filters@if (activeFilterCount()) { ({{ activeFilterCount() }}) } <span class="chevron" aria-hidden="true"></span>
+    </button>
+  }
+</div>
+@if (isTypeView()) {
+  <div id="aircraft-filters" class="filter-panel" [hidden]="!isFiltersOpen()">
+    <ng-content />
+  </div>
+  @if (!isFiltersOpen()) {
+    <p class="filter-summary">{{ filterSummary() }}</p>
+  }
+}
+<div class="results-toolbar">
   <div class="ranking-status">
     <div class="ranking-counts">
       @if (airborneCount() !== undefined) {
@@ -15,14 +30,17 @@
         <span aria-hidden="true">·</span>
       }
       <span class="search-results" role="status">
-        @if (searchQuery().trim()) {
+        @if (searchQuery().trim() || isClassFiltered()) {
           <strong>{{ matchingCount() }}</strong> of <strong>{{ totalCount() }}</strong> {{ isTypeView() ? 'types' : 'operators' }}
         } @else {
           <strong>{{ totalCount() }}</strong> {{ isTypeView() ? 'types' : 'operators' }}
         }
       </span>
     </div>
-    <span class="status-separator" aria-hidden="true">·</span>
+
+  </div>
+  <div class="result-actions">
+    <button class="reset-filters" type="button" [class.is-inactive]="!searchQuery().trim() && !isClassFiltered()" [disabled]="!searchQuery().trim() && !isClassFiltered()" (click)="filtersReset.emit()">Reset filters</button>
     <span class="snapshot-status">Updated {{ snapshotAge() }}</span>
   </div>
 </div>

@@ -1,0 +1,18 @@
+<div class="classes" role="group" aria-label="Aircraft category">
+  <button type="button" [attr.aria-pressed]="!selected()" (click)="classChanged.emit('')">All aircraft</button>
+  @for (aircraftClass of classes; track aircraftClass.id) {
+    <button type="button" [disabled]="!available().has(aircraftClass.id)" [attr.aria-pressed]="selected() === aircraftClass.id" (click)="classChanged.emit(aircraftClass.id)">
+      <app-aircraft-symbol [symbol]="aircraftClass.symbol" />
+      <span>{{ aircraftClass.label }}</span>
+    </button>
+  }
+</div>
+<div class="engine-filter" role="group" aria-label="Engine count">
+  <span class="engine-label">Engines</span>
+  <div class="engine-options">
+    <button type="button" [attr.aria-pressed]="!selectedEngineCount()" (click)="engineCountChanged.emit('')">Any</button>
+    @for (count of ['1', '2', '3', '4', '5+']; track count) {
+      <button type="button" [disabled]="!engineCounts().includes(count)" [attr.aria-label]="count + (count === '1' ? ' engine' : ' engines')" [attr.aria-pressed]="selectedEngineCount() === count" (click)="engineCountChanged.emit(count)">{{ count }}</button>
+    }
+  </div>
+</div>

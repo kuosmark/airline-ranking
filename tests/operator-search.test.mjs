@@ -55,3 +55,36 @@ test('missing directory fields do not match placeholder labels or break prefix s
   assert.deepEqual(filterOperators(airlines, 'null'), []);
   assert.deepEqual(filterOperators(airlines, 'xyz'), [{ airline: airlines[3], rank: 4 }]);
 });
+
+test('category and text filters combine while preserving global type ranks', () => {
+  const types = [
+    { id: 'A320', name: 'Airbus A320', count: 100, classification: 'L2J', operators: [] },
+    { id: 'H135', name: 'Airbus H135', count: 30, classification: 'H2T', operators: [] },
+    { id: 'X', name: 'Unclassified', count: 2, operators: [] },
+  ];
+  assert.deepEqual(filterOperators(types, 'airbus', 'helicopter'), [{ airline: types[1], rank: 2 }]);
+  assert.deepEqual(filterOperators(types, '', 'jet'), [{ airline: types[0], rank: 1 }]);
+  assert.deepEqual(filterOperators(types, 'A320', 'helicopter'), []);
+  assert.equal(filterOperators(types, '').length, 3);
+});
+
+test('engine count combines with class and search while preserving global ranks', () => {
+  const types = [
+    { id: 'ONE', name: 'Single', count: 5, classification: 'L1J', operators: [] },
+    { id: 'TWO', name: 'Twin jet', count: 4, classification: 'L2J', operators: [] },
+    { id: 'PROP', name: 'Twin prop', count: 3, classification: 'L2T', operators: [] },
+    { id: 'NONE', name: 'Unclassified', count: 2, operators: [] },
+  ];
+  assert.deepEqual(filterOperators(types, '', '', '2').map(row => row.rank), [2, 3]);
+  assert.deepEqual(filterOperators(types, 'jet', 'jet', '2').map(row => row.airline.id), ['TWO']);
+  assert.deepEqual(filterOperators(types, '', 'jet', '1').map(row => row.airline.id), ['ONE']);
+  assert.equal(filterOperators(types, '', '', '').length, 4);
+});
+
+test('5+ includes five through nine engines and excludes missing and unspecified counts', () => {
+  const types = ['L4J', 'L5J', 'L6J', 'L8J', 'L9J', 'L0T', undefined].map((classification, index) => ({
+    id: String(index), name: 'Aircraft', count: 1, classification, operators: [],
+  }));
+  assert.deepEqual(filterOperators(types, '', '', '5+').map(row => row.rank), [2, 3, 4, 5]);
+  assert.equal(filterOperators(types, '').length, 7);
+});

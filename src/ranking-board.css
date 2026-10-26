@@ -419,3 +419,16 @@ li:last-child {
   outline: 2px solid var(--focus-color);
   outline-offset: 2px;
 }
+
+.aircraft-class {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  color: #34473d;
+  font-weight: 600;
+}
+.aircraft-class app-aircraft-symbol {
+  width: 40px;
+  height: 40px;
+}
