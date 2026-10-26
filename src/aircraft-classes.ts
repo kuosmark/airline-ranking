@@ -18,13 +18,13 @@ const landplaneClasses: Readonly<Record<string, string>> = {
 const categoryClasses: Readonly<Record<string, string>> = {
   H: 'helicopter', S: 'seaplane', A: 'amphibian', G: 'gyrocopter', R: 'tiltrotor',
 };
-const unknownClass = { id: '', label: 'Classification unavailable', symbol: aircraftSymbols.unknown };
+const unknownClass = { id: '', label: 'Unknown category', symbol: aircraftSymbols.unknown };
 
 export function resolveAircraftClass(classification?: string) {
   const id = classification?.[0] === 'L'
     ? landplaneClasses[classification[2]] ?? 'landplane'
     : categoryClasses[classification?.[0] ?? ''];
-  if (id === 'landplane') { return { id: '', label: 'Landplane', symbol: aircraftSymbols.landplane }; }
+  if (id === 'landplane') { return { id: '', label: 'Other landplane', symbol: aircraftSymbols.landplane }; }
   return aircraftClasses.find(aircraftClass => aircraftClass.id === id) ?? unknownClass;
 }
 

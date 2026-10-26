@@ -34,7 +34,7 @@ test('classes intentionally share exactly the same symbol objects', () => {
 });
 
 test('unsupported landplane propulsion keeps its metadata without creating another filter', () => {
-  assert.equal(resolveAircraftClass('L1R').label, 'Landplane');
+  assert.equal(resolveAircraftClass('L1R').label, 'Other landplane');
   assert.equal(resolveAircraftClass('L1R').id, '');
-  assert.equal(resolveAircraftClass().label, 'Classification unavailable');
+  assert.equal(resolveAircraftClass().label, 'Unknown category');
 });
