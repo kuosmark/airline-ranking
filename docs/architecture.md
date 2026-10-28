@@ -29,6 +29,7 @@ The handler requires:
 | `STATE_BUCKET` | Private bucket containing operator cache and refresh state |
 | `WEBSITE_BUCKET` | Private bucket receiving the published ranking |
 | `SKYLINK_KEY_PARAMETER` | SSM SecureString parameter name containing the API key |
+| `IS_HISTORY_ENABLED` | Set to `true` by CDK to collect counts; absent or other values leave collection disabled |
 
 The scheduler must supply `scheduledAt` as its original scheduled UTC timestamp, run every 15 minutes, and use a single concurrent Lambda invocation. Events older than 15 minutes are rejected. A persistent slot reservation is written before fetching SkyLink; duplicate deliveries or restarts in that slot cannot repeat the paid snapshot call. Failed attempts wait until the next slot. A retry can republish the saved ranking without another provider request, preserving its operator details if the directory cache is unavailable.
 
@@ -40,3 +41,26 @@ Lambda errors identify a fixed failure stage: configuration, API key retrieval, 
 
 Use one active poller per API key. Stop the local backend when enabling the cloud schedule: local and S3 budgets are separate and cannot enforce an account-wide cap. Do not delete or replace cloud state as a refresh mechanism. Confirm AWS spending protection before deployment; application request controls do not cap AWS charges.
 
+## Counts-only history collection
+
+Production also archives aggregate counts in the private state bucket. This is collection only: no historical API, summaries or charts are provided yet, and the local backend does not collect history. There are no additional provider requests.
+
+`backend/history.ts` explicitly selects the historical fields; it never copies entire snapshot objects. Each record contains schema version 1, counting version 1, the SHA-256 fingerprint of the bundled Mictronics references, source `observedAt`, the original `scheduledSlot` (UTC epoch divided into 15-minute intervals), total airborne count, operator/type IDs, names and counts, and the two unknown counts. Names and classifications reflect collection time. Counting version must change when assignment/counting rules change; the reference fingerprint follows both infrastructure and code-only releases. These records cannot reconstruct or reclassify individual aircraft observations.
+
+Complete count dimensions are required, even though legacy live snapshots may omit them. Counts must be nonnegative safe integers, IDs unique and valid, and operator counts plus unknown operators and type counts plus unknown types must each equal the total. The unknown groups overlap and are not summed together. Coordinates, aircraft identifiers, callsigns, individual observations, reported descriptions and nested breakdowns are excluded. Empty complete snapshots are allowed; failed refreshes are gaps, not zero observations.
+
+`backend/history-storage.ts` writes gzip JSON using a source-timestamp key:
+
+```text
+history/counts/v1/YYYY-MM-DD/<observedAt>.json.gz
+```
+
+Conditional creation preserves the first record for an observation. An existing-object response is success; conflicts, timeouts and other errors remain failures. Source time controls the archive path and future time buckets. The original scheduled slot describes collection coverage, not observation time. Repeated source timestamps and duplicate deliveries do not become new observations; legacy saved snapshots are not backfilled.
+
+The workflow persists a counts-only `pendingHistory` record together with the new snapshot before attempting archival. Each invocation first retries any pending record, without fetching SkyLink. Successful archival clears the pending record through the existing conditional state store. Fresh records are archived separately from the two live publication steps, before initial publication. An archive request is bounded to five seconds and failure does not skip live publication or metadata enrichment. The invocation reports a failure after those steps so the existing Lambda alarm covers archival failures too.
+
+Recovery is deliberately bounded to one pending record. If its next recovery attempt fails and a new valid observation arrives, a fixed `Counts history dropped` log marks the gap before the newer pending record replaces it. A prolonged outage can therefore lose historical samples while live updates continue. Invalid new count projections are reported without archiving them. Existing state validation and paid-request reservation protections remain intact. A process failure between provider retrieval and state persistence can still lose that observation; history is not guaranteed delivery.
+
+Objects become eligible for S3 lifecycle expiration 365 days after creation. In the versioned state bucket, superseded versions remain for up to the configured seven-day lifecycle interval; expired delete markers are cleaned up. Lifecycle deletion is asynchronous. Future readers must independently enforce the observation-time retention window. CloudFront has no access to these archives, and the refresh role can only create objects under the history prefix, not list, read or delete them.
+
+The counts-only scope reduces replication of provider output but does not establish explicit long-term retention permission. SkyLink's published terms allow analysis and product display and restrict substantially replicating databases; continued retention and reuse remain subject to provider terms.

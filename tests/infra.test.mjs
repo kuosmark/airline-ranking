@@ -45,7 +45,7 @@ test('state stays private and survives stack removal with bounded version histor
   }
   template.hasResourceProperties('AWS::S3::Bucket', {
     VersioningConfiguration: { Status: 'Enabled' },
-    LifecycleConfiguration: { Rules: [Match.objectLike({ NoncurrentVersionExpiration: { NoncurrentDays: 7 } })] },
+    LifecycleConfiguration: { Rules: Match.arrayWith([Match.objectLike({ NoncurrentVersionExpiration: { NoncurrentDays: 7 } })]) },
   });
 });
 
@@ -90,7 +90,7 @@ test('the refresh role can access only its state objects, published ranking and 
     Array.isArray(statement.Action) && statement.Action.includes('s3:GetObject')));
   assert.ok(policy);
   const statements = policy.Properties.PolicyDocument.Statement;
-  assert.equal(statements.length, 3);
+  assert.equal(statements.length, 4);
   const state = statements.find(statement => [].concat(statement.Action).includes('s3:GetObject'));
   const ranking = statements.find(statement => statement.Action === 's3:PutObject');
   const key = statements.find(statement => statement.Action === 'ssm:GetParameter');
@@ -102,7 +102,13 @@ test('the refresh role can access only its state objects, published ranking and 
   assert.match(JSON.stringify(ranking.Resource), /\/api\/ranking/);
   assert.equal(key.Action, 'ssm:GetParameter');
   assert.match(JSON.stringify(key.Resource), /parameter\/airline-ranking\/skylink-api-key/);
-  for (const statement of statements) assert.equal(JSON.stringify(statement.Resource).includes('*'), false);
+  const history = statements.find(statement => JSON.stringify(statement.Resource).includes('/history/counts/v1/'));
+  assert.equal(history.Action, 's3:PutObject');
+  assert.deepEqual(history.Condition, { StringEquals: { 's3:if-none-match': '*' } });
+  assert.match(JSON.stringify(history.Resource), /history\/counts\/v1\/\*/);
+  for (const statement of statements.filter(item => item !== history)) {
+    assert.equal(JSON.stringify(statement.Resource).includes('*'), false);
+  }
 });
 
 test('three consecutive failing periods notify the deployment-supplied email', () => {
@@ -122,4 +128,20 @@ test('polling must be explicitly enabled and other Regions are rejected', () => 
   assert.throws(() => new AirlineRankingStack(new App(), 'WrongRegion', { env: { region: 'eu-west-1' } }), /eu-north-1/);
   const invalidApp = new App({ context: { isPollingEnabled: 'yes' } });
   assert.throws(() => new AirlineRankingStack(invalidApp, 'Invalid', { env: { region: 'eu-north-1' } }), /true or false/);
+});
+
+
+test('counts archives expire after a year without exposing them through CloudFront', () => {
+  template.hasResourceProperties('AWS::S3::Bucket', {
+    VersioningConfiguration: { Status: 'Enabled' },
+    LifecycleConfiguration: { Rules: Match.arrayWith([
+      Match.objectLike({ Prefix: 'history/counts/', ExpirationInDays: 365 }),
+      Match.objectLike({ Prefix: 'history/counts/', ExpiredObjectDeleteMarker: true }),
+    ]) },
+  });
+  template.hasResourceProperties('AWS::Lambda::Function', {
+    Environment: { Variables: Match.objectLike({ IS_HISTORY_ENABLED: 'true' }) },
+  });
+  const distribution = Object.values(template.findResources('AWS::CloudFront::Distribution'))[0];
+  assert.doesNotMatch(JSON.stringify(distribution), /State|history\/counts/);
 });

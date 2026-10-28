@@ -11,6 +11,7 @@ Keep this project small and simple. Add only what is absolutely necessary for th
 - Keep changes focused; avoid unrelated refactoring and duplicate logic.
 - Name project-owned boolean variables, parameters, and properties with an `is` prefix and a descriptive condition, such as `isAirborne` or `isStale`. Preserve names required by external APIs and libraries.
 - Keep explanations and plans concise and concrete.
+- End user-facing responses with **Needs you:** followed by the technical or design decision needed from the owner, or "Nothing right now" when none is needed.
 - Keep public documentation, comments, commit messages, and pull requests factual and focused on the software.
 - Include only the security measures and verification necessary for the current work.
 

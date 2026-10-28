@@ -110,7 +110,11 @@ export class AirlineRankingStack extends Stack {
       encryption: s3.BucketEncryption.S3_MANAGED,
       versioned: true,
       removalPolicy: RemovalPolicy.RETAIN,
-      lifecycleRules: [{ noncurrentVersionExpiration: Duration.days(7) }],
+      lifecycleRules: [
+        { noncurrentVersionExpiration: Duration.days(7) },
+        { prefix: 'history/counts/', expiration: Duration.days(365) },
+        { prefix: 'history/counts/', expiredObjectDeleteMarker: true },
+      ],
     });
   }
 
@@ -143,6 +147,7 @@ export class AirlineRankingStack extends Stack {
       },
       environment: {
         STATE_BUCKET: state.bucketName,
+        IS_HISTORY_ENABLED: 'true',
         WEBSITE_BUCKET: this.website.bucketName,
         SKYLINK_KEY_PARAMETER: '/airline-ranking/skylink-api-key',
       },
@@ -155,6 +160,11 @@ export class AirlineRankingStack extends Stack {
     refresh.addToRolePolicy(new iam.PolicyStatement({
       actions: ['s3:PutObject'],
       resources: [this.website.arnForObjects('api/ranking'), this.website.arnForObjects('api/ranking-v2')],
+    }));
+    refresh.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:PutObject'],
+      resources: [state.arnForObjects('history/counts/v1/*')],
+      conditions: { StringEquals: { 's3:if-none-match': '*' } },
     }));
     const apiKey = ssm.StringParameter.fromSecureStringParameterAttributes(this, 'ApiKey', {
       parameterName: '/airline-ranking/skylink-api-key',
