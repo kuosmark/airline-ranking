@@ -131,13 +131,12 @@ test('polling must be explicitly enabled and other Regions are rejected', () => 
 });
 
 
-test('counts archives expire after a year without exposing them through CloudFront', () => {
+test('counts archives remain retained without exposing them through CloudFront', () => {
   template.hasResourceProperties('AWS::S3::Bucket', {
     VersioningConfiguration: { Status: 'Enabled' },
-    LifecycleConfiguration: { Rules: Match.arrayWith([
-      Match.objectLike({ Prefix: 'history/counts/', ExpirationInDays: 365 }),
-      Match.objectLike({ Prefix: 'history/counts/', ExpiredObjectDeleteMarker: true }),
-    ]) },
+    LifecycleConfiguration: { Rules: [
+      { NoncurrentVersionExpiration: { NoncurrentDays: 7 }, Status: 'Enabled' },
+    ] },
   });
   template.hasResourceProperties('AWS::Lambda::Function', {
     Environment: { Variables: Match.objectLike({ IS_HISTORY_ENABLED: 'true' }) },

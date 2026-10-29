@@ -112,8 +112,6 @@ export class AirlineRankingStack extends Stack {
       removalPolicy: RemovalPolicy.RETAIN,
       lifecycleRules: [
         { noncurrentVersionExpiration: Duration.days(7) },
-        { prefix: 'history/counts/', expiration: Duration.days(365) },
-        { prefix: 'history/counts/', expiredObjectDeleteMarker: true },
       ],
     });
   }
