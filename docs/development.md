@@ -52,3 +52,6 @@ Run `npm run check` before committing. GitHub Actions runs the same command on p
 
 Tests use Node's built-in test runner and synthetic data. They do not require an API key or contact either provider. Lint warnings fail the check. TypeScript rules prohibit unnecessary `else` branches after returns and shadowed names, and limit nesting to four levels. Drawer layout, responsive spacing and animations are checked manually in the browser; the unit tests do not verify their appearance.
 
+## Map implementation
+
+The map uses a bundled Natural Earth 1:110m land outline, projected with `d3-geo` using Natural Earth I. Keep the bundled path in `src/world-outline.ts`, SVG viewBox and projection constants in `src/aircraft-map-projection.ts` aligned. Pointer selection uses the nearest dot within 12 screen pixels; the hover highlight and tooltip must use the same target.

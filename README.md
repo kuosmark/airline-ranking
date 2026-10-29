@@ -89,4 +89,4 @@ Project-owned code and documentation are available under the [MIT licence](LICEN
 - **Natural Earth map outline:** [public domain](https://www.naturalearthdata.com/about/terms-of-use/).
 - **SkyLink observations and ADSBDB metadata:** supplied by their respective services; the project licence does not grant rights to provider data.
 
-Screenshots use saved observations from October 2026; delay notices reflect the age of the snapshots.
+Screenshots show observed snapshots captured in October 2026.
