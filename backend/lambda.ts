@@ -3,6 +3,8 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import { createOperatorDirectory } from './operator-directory.ts';
 import { refreshScheduledRanking } from './scheduled-refresh.ts';
+import { aircraftReferenceVersion } from './aircraft-reference.ts';
+import { writeHistory } from './history-storage.ts';
 import { s3Store } from './s3-storage.ts';
 import { fetchSnapshot, SkyLinkError } from './skylink.ts';
 
@@ -32,6 +34,11 @@ export async function handler(event: { scheduledAt: string }, context: { getRema
     await refreshScheduledRanking({
       state: s3Store(s3, stateBucket, 'refresh-state.json'), directory,
       scheduledAt: event.scheduledAt, deadline,
+      history: process.env['IS_HISTORY_ENABLED'] === 'true' ? {
+        referenceVersion: aircraftReferenceVersion,
+        write: record => writeHistory(s3, stateBucket, record),
+        report: historyEvent => { console.error(`Counts history ${historyEvent}`); },
+      } : undefined,
       fetchSnapshot: async () => {
         stage = 'Fetching SkyLink snapshot';
         const snapshot = await fetchSnapshot(apiKey);

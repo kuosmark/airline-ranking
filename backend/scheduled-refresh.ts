@@ -1,4 +1,5 @@
 import { compareRanks, REFRESH_INTERVAL_MS, type Snapshot } from '../shared/ranking.ts';
+import { createHistoryRecord, type HistoryCollector } from './history.ts';
 import type { JsonStore } from './storage.ts';
 import { readRefreshState, SNAPSHOT_WINDOW_MS } from './refresh-state.ts';
 import type { createOperatorDirectory } from './operator-directory.ts';
@@ -12,6 +13,7 @@ interface RefreshOptions {
   scheduledAt: string;
   deadline: number;
   now?: () => number;
+  history?: HistoryCollector;
 }
 
 export async function refreshScheduledRanking(options: RefreshOptions): Promise<void> {
@@ -23,12 +25,31 @@ export async function refreshScheduledRanking(options: RefreshOptions): Promise<
   }
   const state = readRefreshState(await store.read());
   const slot = Math.floor(scheduledTime / REFRESH_INTERVAL_MS);
+  const history = options.history;
+  let isHistoryFailed = false;
+  async function recoverHistory(): Promise<void> {
+    if (!history || !state.pendingHistory) { return; }
+    try {
+      await history.write(state.pendingHistory);
+      state.pendingHistory = null;
+      await store.write(state);
+    } catch {
+      isHistoryFailed = true;
+      history.report('failed');
+    }
+  }
+  function finishHistory(): void {
+    // Report through the existing Lambda failure alarm, after live publication.
+    if (isHistoryFailed) { throw new Error('Counts history collection failed'); }
+  }
+  await recoverHistory();
   if (state.lastAttemptSlot !== null && slot <= state.lastAttemptSlot) {
     // Recover a failed publication without repeating the provider request.
     if (state.snapshot) {
       const snapshot = directory.isAvailable() ? directory.apply(state.snapshot) : state.snapshot;
       await publish(snapshot);
     }
+    finishHistory();
     return;
   }
   if (!directory.isAvailable() || now() + 30_000 >= deadline) { throw new Error('Refresh cannot safely start'); }
@@ -44,11 +65,23 @@ export async function refreshScheduledRanking(options: RefreshOptions): Promise<
   const previous = state.snapshot;
   const current = previous && next.updatedAt === previous.updatedAt ? previous : compareRanks(next, previous);
   state.snapshot = directory.apply(current);
+  if (history && (!previous || next.updatedAt !== previous.updatedAt)) {
+    try {
+      const record = createHistoryRecord(state.snapshot, slot, history.referenceVersion);
+      if (state.pendingHistory) { history.report('dropped'); }
+      state.pendingHistory = record;
+    } catch {
+      isHistoryFailed = true;
+      history.report('invalid');
+    }
+  }
   await store.write(state);
+  await recoverHistory();
   await publish(state.snapshot);
   await directory.refresh(state.snapshot.airlines.map(airline => airline.id), deadline - 10_000);
   if (!directory.isAvailable()) { throw new Error('Directory state persistence failed'); }
   state.snapshot = directory.apply(state.snapshot);
   await store.write(state);
   await publish(state.snapshot);
+  finishHistory();
 }

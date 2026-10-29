@@ -1,4 +1,5 @@
 import { REFRESH_INTERVAL_MS, type Snapshot } from '../shared/ranking.ts';
+import { isHistoryRecord, type HistoryRecord } from './history.ts';
 import { isSnapshot } from '../shared/snapshot-validation.ts';
 
 export const SNAPSHOT_WINDOW_MS = 32 * 24 * 60 * 60 * 1000;
@@ -7,6 +8,7 @@ interface RefreshState {
   lastAttemptSlot: number | null;
   snapshot: Snapshot | null;
   snapshotAttempts: number[];
+  pendingHistory: HistoryRecord | null;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -34,5 +36,7 @@ export function readRefreshState(value: unknown): RefreshState {
     }
     snapshotAttempts = attempts as number[];
   }
-  return { lastAttemptSlot: slot, snapshot, snapshotAttempts };
+  const pendingHistory = value['pendingHistory'] ?? null;
+  if (pendingHistory !== null && !isHistoryRecord(pendingHistory)) { throw new Error('Invalid pending history'); }
+  return { lastAttemptSlot: slot, snapshot, snapshotAttempts, pendingHistory };
 }
