@@ -12,7 +12,7 @@ Before deploying, finish domain registration and verify any registrant email AWS
 
 Polling is **disabled by default**. Lambda has one reserved concurrent execution, a two-minute timeout and no automatic retries; Scheduler retries are also disabled. Logs expire after seven days. The state bucket retains current operational state and seven days of superseded versions. Current counts-history objects have no automatic expiration and remain until explicitly deleted. Both buckets survive stack removal, and termination protection is enabled. Retained resources continue to incur storage charges; review them explicitly when retiring the application. Version history is for recovery, not for resetting the lookup budget.
 
-The browser uses `/api/ranking-v2`, which stores each aircraft position once and references it from both rankings. The client validates and expands these references into shared position objects. `/api/ranking` retains the original format for older browser tabs; the new client falls back to it if the compact endpoint is not published yet. Both versions come from the same refresh, with no additional provider requests. Before releasing this change, deploy the infrastructure permission update allowing the refresh Lambda to write `api/ranking-v2`; a code-only release cannot add that permission.
+The browser uses `/api/ranking-v2`, which stores each aircraft position once and references it from both rankings. The client validates and expands these references into shared position objects. `/api/ranking` retains the original format for older browser tabs; the new client falls back to it if the compact endpoint is not published yet. Both versions come from the same refresh, with no additional provider requests. The refresh role requires write permission for both objects. Older deployments that only allow `api/ranking` need an application-stack update before a code-only release.
 
 CloudFront honors each object's cache headers, with a 30-second default and no minimum TTL. The ranking expires after 30 seconds; missing objects return an error instead of the Angular page. Only `/` is an application route. The refresh alarm emails when all three evaluated 15-minute periods contain a Lambda execution error. Missing data is treated as non-breaching, and recovery does not send an email. The alarm does not cover every possible scheduling or delivery failure; also check snapshot freshness after enabling polling.
 
@@ -22,8 +22,7 @@ The refresh Lambda uses 512 MB of memory. Its aircraft reference is packaged as
 `data/mictronics-aircraft.json`, separately from the JavaScript bundle, and loaded
 once per execution environment. Local backend commands load the same file from
 `backend/data` and must run from the repository root. The reference stays on the
-backend; browsers receive only the resulting snapshot. Deploy the infrastructure
-memory change before using a code-only release; that release checks for 512 MB.
+backend; browsers receive only the resulting snapshot. Code-only releases require the deployed Lambda to have 512 MB. If an older deployment uses a different allocation, update the application stack first.
 
 ### Enabling counts history
 
@@ -84,7 +83,7 @@ npm run infra:diff -- AirlineRankingDeployment --exclusively --profile personal
 npm run infra:deploy -- AirlineRankingDeployment --exclusively --profile personal --parameters ConnectionArn=YOUR_CONNECTION_ARN --parameters AlertEmail=YOUR_EMAIL
 ```
 
-The deployment stack also subscribes the supplied email address to a separate SNS topic. Confirm its subscription email after deployment. An EventBridge rule sends notifications only when this pipeline execution enters `FAILED`, including source, build, release, or verification failures; successful executions send no email. The email contains the pipeline execution event, and detailed results remain in CodeBuild logs. Deploy the updated `AirlineRankingDeployment` stack to activate verification and notifications; merging these infrastructure definitions alone does not update the deployed build commands.
+The deployment stack also subscribes the supplied email address to a separate SNS topic. Confirm its subscription email after deployment. An EventBridge rule sends notifications only when this pipeline execution enters `FAILED`, including source, build, release, or verification failures; successful executions send no email. The email contains the pipeline execution event, and detailed results remain in CodeBuild logs. Build commands and notification resources are configured by the `AirlineRankingDeployment` stack; changes to them require a reviewed infrastructure deployment.
 
 The pipeline can start immediately after creation. Verify automatic change detection after the next approved merge to `main`: the execution history must show a repository event trigger and the merged commit ID. A successful manually started release does not verify this trigger. Automatic releases preserve the deployed schedule, concurrency, environment and IAM permissions. Polling is controlled only by reviewed manual deployments of the application stack with an explicit `-c isPollingEnabled` value. A synthesized template in CI is validation, not an infrastructure deployment.
 

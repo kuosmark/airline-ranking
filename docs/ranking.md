@@ -126,7 +126,7 @@ Operator names in type drawers come from the existing enriched operator director
 
 The Unknown type drawer also lists reported SkyLink descriptions with counts, including aircraft without positions. Missing descriptions appear as “Description unavailable”. This breakdown does not assign ICAO codes or add ranked types.
 
-The monthly reference workflow runs `scripts/update-aircraft-types.ts` with Node.js. For a local import, run `node --experimental-strip-types scripts/update-aircraft-types.ts PATH_TO_EXPORT.zip`. The importer rejects duplicate JSON keys, malformed records, changed licences and removals exceeding 5% of either existing reference. All validation completes before reference files are written. Its tests run with the JavaScript suite in `npm run check`.
+See [reference update instructions](../backend/data/README.md) for monthly imports and validation safeguards.
 
 Operator drawer type breakdowns use the same Mictronics lookup as the aircraft-type ranking. Unmatched labels retain the original SkyLink description with surrounding whitespace trimmed; missing descriptions share an Unknown type entry. Breakdown counts always sum to the operator total.
 
@@ -138,47 +138,7 @@ Names, countries, IATA codes and ICAO codes come exclusively from [ADSBDB's airl
 
 The backend publishes the ranking before directory lookups complete. Unresolved operators display their observed prefixes and unavailable metadata. Browsers receive resolved details on their next normal poll. Directory-only updates keep the snapshot timestamp and do not trigger movement or count highlights.
 
-### Cache and request limits
-
-`.cache/operator-names.json` is excluded from Git. AWS uses the same structure in the private `operator-names.json` state object:
-
-```json
-{
-  "source": "adsbdb",
-  "names": {
-    "FIN": { "name": "Finnair", "country": "Finland", "countryIso": "FI", "iata": "AY", "icao": "FIN", "checkedAt": "2026-10-07T12:00:00.000Z" }
-  },
-  "attempts": [1791374400000],
-  "cooldownUntil": 0
-}
-```
-
-The source marker separates ADSBDB metadata and its budget from the old SkyLink cache. On first load of a valid legacy cache, migration discards its labels and archives its paid `attempts` and `cooldownUntil` under `legacySkylink`. The new ADSBDB cache starts empty and the migration is persisted before provider requests. It happens once and retains the original state file and conditional S3 write protections; no additional storage resource is needed. Failed migrations disable requests. Do not delete state files to refresh metadata or reset quotas.
-
-Existing ADSBDB cache entries without `countryIso` remain valid and are eligible for a one-time refresh during scheduled directory enrichment. The existing per-refresh and rolling request limits still apply. Entries with unavailable ISO codes retain their normal expiry interval.
-
-`checkedAt` uses ISO timestamps; `attempts` and `cooldownUntil` use Unix milliseconds. Constants in `backend/operator-directory.ts` enforce:
-
-| ADSBDB control | Value |
-| --- | --- |
-| Known record refresh | 30 days |
-| Missing or ambiguous record refresh | 7 days |
-| Cooldown after a failed lookup | 24 hours |
-| Maximum lookup attempts | 5,000 per rolling 32 days |
-| Maximum attempts per refresh | 100 |
-| Minimum spacing between requests | 1 second |
-
-These are application guardrails, not purchased allowances. ADSBDB's [published rate limits](https://www.adsbdb.com/) currently block clients at 512+ requests within 60 seconds for 60 seconds, and at 1,024+ for 300 seconds. Its implementation limits by IP. Our sequential, paced lookups stay below these thresholds, but shared outgoing IPs or provider policy changes can still cause throttling.
-
-Expiry is checked only during snapshot refreshes for operators in the current snapshot. Every attempt is persisted before contacting ADSBDB, with a provisional cooldown to prevent immediate retries after crashes. Successful responses clear the cooldown. HTTP 404, empty results and ambiguous names are completed negative lookups; malformed responses, HTTP 429, server errors and timeouts stop the batch and retain previous ADSBDB data. Missing optional fields do not shorten a known record's TTL. No immediate retries or paid fallback occur. Lookup pacing survives restarts; the Lambda deadline can stop a batch before the batch limit, and remaining prefixes are checked on subsequent scheduled refreshes. Operators without cached details remain visible as prefixes while bounded batches populate their details over subsequent refreshes. Reads and searches never trigger provider calls.
-
-Local writes replace the cache via a temporary file and rename. Unreadable or invalid caches and failed writes disable lookups. The local cache requires a single backend process; sharing it between concurrent local processes is unsupported. Lambda uses conditional S3 writes to reject conflicting updates. Cached provider output remains outside the public repository.
-
-### Snapshot request limits
-
-SkyLink is used only for airborne snapshots. A single continuously running poller needs 2,976 requests in 31 days (3,072 in 32 days). Production reserves each 15-minute slot before fetching, with no automatic request retries, and persists a separate maximum of **3,100 snapshot attempts per rolling 32 days** in `refresh-state.json`. Failed requests consume their reservation. Reaching the cap stops paid snapshot fetches until attempts expire; the last published snapshot remains available and becomes stale. Storage failures prevent unreserved requests.
-
-Older scheduled state records only the last attempted slot. Migration conservatively seeds snapshot history as if every slot in the preceding 32-day window through that slot was attempted, rather than granting a fresh budget. New installations with a null last slot start with empty history. Redeployments retain this history. Historical SkyLink directory attempts remain archived separately and still count toward provider billing during the transition. These guards apply to this production poller, **not the entire SkyLink subscription**: local backend startup and polling, manual tests, other instances and external usage are additional. SkyLink's [direct-subscription terms](https://skylinkapi.com/terms/) permit billed overage; monitor usage and any provider-side spending controls.
+Cache structure, refresh intervals and request controls are described in [backend state and request limits](architecture.md#operator-cache-and-request-limits).
 
 ![Aircraft type drawer showing ICAO code, category, engines, operator breakdown and aircraft locations](images/aircraft-type-details.png)
 
